@@ -1,5 +1,31 @@
 # VCO Changelog
 
+## v2.3.11 (2026-02-25)
+
+- 新增 Python Clean Code Overlay（clean-code-python 增强，post-route advice-only，不替代 Pack 路由）：
+  - 新增配置（main + bundled）：
+    - `config/python-clean-code-overlay.json`
+    - `bundled/skills/vibe/config/python-clean-code-overlay.json`
+  - 路由器输出新增：
+    - `python_clean_code_advice`
+  - 自动触发行为：
+    - 优先使用 `.py/.pyi` 路径信号判定 Python 编写场景
+    - 叠加 Python 语义关键词、clean-code 原则组与反模式信号
+    - 通过 suppress 关键词降噪（generated/migration/vendor/docs-only 等）
+  - 语义行为：
+    - `shadow`：仅建议，不改 selected pack/skill
+    - `soft`：高风险仅给出 `confirm_recommended`
+    - `strict`：严格范围内且反模式证据充分时输出 `confirm_required` advice（仍不改路由分配）
+- 新增验证门禁：
+  - `scripts/verify/vibe-python-clean-code-overlay-gate.ps1`
+  - `scripts/verify/vibe-config-parity-gate.ps1` 纳入 `python-clean-code-overlay` main/bundled parity
+- 健康检查增强：
+  - `check.ps1`、`check.sh` 新增 `python-clean-code-overlay` 配置存在性检查
+- 新增设计文档：
+  - `docs/python-clean-code-overlay-integration.md`（main + bundled）
+- 文档同步：
+  - `README.md`、`SKILL.md`、`references/index.md`、`references/tool-registry.md` 更新 Python clean-code overlay 说明
+
 ## v2.3.10 (2026-02-25)
 
 - 新增 ML Lifecycle Overlay（Made-With-ML 增强，post-route advice-only，不替代 Pack 路由）：

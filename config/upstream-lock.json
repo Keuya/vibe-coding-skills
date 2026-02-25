@@ -104,6 +104,14 @@
       "integration_mode": "methodology-overlay",
       "local_rewrite_required": false,
       "notes": "Lifecycle governance methodology source for ml-lifecycle-overlay (post-route advisory integration)"
+    },
+    {
+      "id": "zedr/clean-code-python",
+      "upstream_repo": "https://github.com/zedr/clean-code-python",
+      "upstream_ref": "master",
+      "integration_mode": "methodology-overlay",
+      "local_rewrite_required": false,
+      "notes": "Python clean-code methodology source for python-clean-code-overlay (post-route advisory integration)"
     }
   ]
 }

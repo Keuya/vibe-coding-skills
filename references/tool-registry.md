@@ -19,6 +19,7 @@ Complete reference of VCO execution tools, their capabilities, APIs, state paths
 | 11 | fuck-u-code (optional quality debt analyzer) | External CLI | None | Analyzer workspace / report output | ⚠️ Optional |
 | 12 | ivy (optional framework interop backend) | Python library / optional CLI | None | Python runtime / interop artifacts | ⚠️ Optional |
 | 13 | Made-With-ML lifecycle patterns (optional governance source) | Methodology overlay | None | Config-driven advisory metadata | ⚠️ Optional |
+| 14 | clean-code-python patterns (optional Python quality source) | Methodology overlay | None | Config-driven advisory metadata | ⚠️ Optional |
 
 ## Verification Status Legend
 
@@ -349,3 +350,21 @@ Characteristics:
 - Does not replace `data-ml` pack routing or ML tool execution.
 - Does not mutate route selection; only emits lifecycle advice metadata.
 - Compatible with `data-scale`, `quality-debt`, and `framework-interop` overlays.
+
+---
+
+## 14. clean-code-python Patterns (Optional Python Quality Source)
+
+**Package/Repo**: `zedr/clean-code-python`  
+**Integration Type**: methodology and Python clean-code policy source (non-executable dependency)
+
+### Key Capabilities Imported into VCO
+- Python-specific clean-code principles (naming, function/class responsibilities, side effects, duplication discipline)
+- Practical anti-pattern framing for refactor readiness (long functions, flag args, magic numbers, god objects)
+- Review-time guidance for maintainability-focused Python change sets
+
+### VCO Integration Boundary
+- Integrated through `python-clean-code-overlay` as post-route advice only.
+- Does not replace `code-reviewer`, `tdd-guide`, or `quality-debt-overlay`.
+- Does not mutate route selection; only emits Python clean-code advice metadata.
+- Designed for automatic `.py/.pyi` signal detection with mode-gated confirm advice.
