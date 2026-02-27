@@ -280,6 +280,7 @@ function Get-RouteRuntimeStatePromptDigest {
         python_clean_code = "python_clean_code_advice"
         system_design = "system_design_advice"
         cuda_kernel = "cuda_kernel_advice"
+        exploration = "exploration_advice"
         retrieval = "retrieval_advice"
     }
 

@@ -312,6 +312,7 @@ function Test-OverlayConfirmRequired {
     if ($Result.python_clean_code_advice -and [bool]$Result.python_clean_code_advice.confirm_required) { return $true }
     if ($Result.system_design_advice -and [bool]$Result.system_design_advice.confirm_required) { return $true }
     if ($Result.cuda_kernel_advice -and [bool]$Result.cuda_kernel_advice.confirm_required) { return $true }
+    if ($Result.exploration_advice -and [bool]$Result.exploration_advice.confirm_required) { return $true }
     if ($Result.retrieval_advice -and [bool]$Result.retrieval_advice.confirm_required) { return $true }
     return $false
 }

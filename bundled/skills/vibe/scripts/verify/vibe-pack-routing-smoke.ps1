@@ -25,6 +25,16 @@ $aliasMapPath = Join-Path $configRoot "skill-alias-map.json"
 $thresholdPath = Join-Path $configRoot "router-thresholds.json"
 $skillKeywordIndexPath = Join-Path $configRoot "skill-keyword-index.json"
 $routingRulesPath = Join-Path $configRoot "skill-routing-rules.json"
+$deepDiscoveryPolicyPath = Join-Path $configRoot "deep-discovery-policy.json"
+$capabilityCatalogPath = Join-Path $configRoot "capability-catalog.json"
+$heartbeatPolicyPath = Join-Path $configRoot "heartbeat-policy.json"
+$retrievalPolicyPath = Join-Path $configRoot "retrieval-policy.json"
+$retrievalIntentProfilesPath = Join-Path $configRoot "retrieval-intent-profiles.json"
+$retrievalSourceRegistryPath = Join-Path $configRoot "retrieval-source-registry.json"
+$retrievalRerankWeightsPath = Join-Path $configRoot "retrieval-rerank-weights.json"
+$explorationPolicyPath = Join-Path $configRoot "exploration-policy.json"
+$explorationIntentProfilesPath = Join-Path $configRoot "exploration-intent-profiles.json"
+$explorationDomainMapPath = Join-Path $configRoot "exploration-domain-map.json"
 
 $results = @()
 
@@ -34,12 +44,32 @@ $results += Assert-True -Condition (Test-Path -LiteralPath $aliasMapPath) -Messa
 $results += Assert-True -Condition (Test-Path -LiteralPath $thresholdPath) -Message "router-thresholds.json exists"
 $results += Assert-True -Condition (Test-Path -LiteralPath $skillKeywordIndexPath) -Message "skill-keyword-index.json exists"
 $results += Assert-True -Condition (Test-Path -LiteralPath $routingRulesPath) -Message "skill-routing-rules.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $deepDiscoveryPolicyPath) -Message "deep-discovery-policy.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $capabilityCatalogPath) -Message "capability-catalog.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $heartbeatPolicyPath) -Message "heartbeat-policy.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $retrievalPolicyPath) -Message "retrieval-policy.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $retrievalIntentProfilesPath) -Message "retrieval-intent-profiles.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $retrievalSourceRegistryPath) -Message "retrieval-source-registry.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $retrievalRerankWeightsPath) -Message "retrieval-rerank-weights.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $explorationPolicyPath) -Message "exploration-policy.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $explorationIntentProfilesPath) -Message "exploration-intent-profiles.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $explorationDomainMapPath) -Message "exploration-domain-map.json exists"
 
 $packManifest = Get-Content -LiteralPath $packManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $aliasMap = Get-Content -LiteralPath $aliasMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $thresholds = Get-Content -LiteralPath $thresholdPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $skillKeywordIndex = Get-Content -LiteralPath $skillKeywordIndexPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $routingRules = Get-Content -LiteralPath $routingRulesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$deepDiscoveryPolicy = Get-Content -LiteralPath $deepDiscoveryPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$capabilityCatalog = Get-Content -LiteralPath $capabilityCatalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$heartbeatPolicy = Get-Content -LiteralPath $heartbeatPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$retrievalPolicy = Get-Content -LiteralPath $retrievalPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$retrievalIntentProfiles = Get-Content -LiteralPath $retrievalIntentProfilesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$retrievalSourceRegistry = Get-Content -LiteralPath $retrievalSourceRegistryPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$retrievalRerankWeights = Get-Content -LiteralPath $retrievalRerankWeightsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$explorationPolicy = Get-Content -LiteralPath $explorationPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$explorationIntentProfiles = Get-Content -LiteralPath $explorationIntentProfilesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$explorationDomainMap = Get-Content -LiteralPath $explorationDomainMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
 $requiredPackIds = @(
     "orchestration-core",
@@ -98,6 +128,22 @@ $results += Assert-True -Condition ($skillKeywordIndex.selection.weights.name_ma
 $results += Assert-True -Condition ($skillKeywordIndex.selection.fallback_to_first_when_score_below -ne $null) -Message "skill index fallback threshold is configured"
 $results += Assert-True -Condition ((@($skillKeywordIndex.skills.PSObject.Properties).Count -gt 0)) -Message "skill index contains skill mappings"
 $results += Assert-True -Condition ((@($routingRules.skills.PSObject.Properties).Count -gt 0)) -Message "routing rules contain skill mappings"
+$results += Assert-True -Condition ($deepDiscoveryPolicy.mode -ne $null) -Message "deep discovery mode configured"
+$results += Assert-True -Condition ((@($capabilityCatalog.capabilities).Count -gt 0)) -Message "capability catalog contains entries"
+$results += Assert-True -Condition ($heartbeatPolicy.mode -ne $null) -Message "heartbeat mode configured"
+$results += Assert-True -Condition ($heartbeatPolicy.timers.hard_stall_silence_sec -ne $null) -Message "heartbeat hard stall threshold configured"
+$results += Assert-True -Condition ($heartbeatPolicy.timers.user_brief_interval_sec -ne $null) -Message "heartbeat brief interval configured"
+$results += Assert-True -Condition ($retrievalPolicy.mode -ne $null) -Message "retrieval mode configured"
+$results += Assert-True -Condition ($retrievalPolicy.profile_selection.min_profile_confidence -ne $null) -Message "retrieval profile min confidence configured"
+$results += Assert-True -Condition ($retrievalPolicy.coverage.max_retrieve_rounds -ne $null) -Message "retrieval max retrieve rounds configured"
+$results += Assert-True -Condition ((@($retrievalIntentProfiles.profiles).Count -gt 0)) -Message "retrieval intent profiles configured"
+$results += Assert-True -Condition ((@($retrievalSourceRegistry.sources).Count -gt 0)) -Message "retrieval source registry configured"
+$results += Assert-True -Condition ($retrievalRerankWeights.modes -ne $null) -Message "retrieval rerank modes configured"
+$results += Assert-True -Condition ($explorationPolicy.mode -ne $null) -Message "exploration mode configured"
+$results += Assert-True -Condition ($explorationPolicy.intent_selection.min_intent_confidence -ne $null) -Message "exploration intent min confidence configured"
+$results += Assert-True -Condition ($explorationPolicy.domain_detection.min_domain_confidence -ne $null) -Message "exploration domain confidence configured"
+$results += Assert-True -Condition ((@($explorationIntentProfiles.profiles).Count -gt 0)) -Message "exploration intent profiles configured"
+$results += Assert-True -Condition ((@($explorationDomainMap.domains).Count -gt 0)) -Message "exploration domain map configured"
 
 foreach ($ruleProp in @($routingRules.skills.PSObject.Properties | Select-Object -First 10)) {
     $rule = $ruleProp.Value
@@ -155,3 +201,4 @@ if ($failCount -gt 0) {
 
 Write-Host "Pack routing smoke checks passed."
 exit 0
+

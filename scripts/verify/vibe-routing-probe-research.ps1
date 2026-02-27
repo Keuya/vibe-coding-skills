@@ -550,6 +550,7 @@ $expectedStages = @(
     "overlay.ai_rerank",
     "overlay.prompt",
     "overlay.data_scale",
+    "overlay.exploration",
     "overlay.retrieval",
     "overlay.bundle",
     "router.final"
@@ -569,6 +570,7 @@ $overlayPropertyMap = [ordered]@{
     python_clean_code = "python_clean_code_advice"
     system_design = "system_design_advice"
     cuda_kernel = "cuda_kernel_advice"
+    exploration = "exploration_advice"
     retrieval = "retrieval_advice"
 }
 

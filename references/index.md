@@ -29,6 +29,7 @@ Navigation guide for all VCO (Vibe Code Orchestrator) documentation.
 | [../docs/observability-consistency-governance.md](../docs/observability-consistency-governance.md) | Strict observability/consistency governance (lean telemetry + manual rollback confirmation policy) |
 | [../docs/ai-rerank-overlay-integration.md](../docs/ai-rerank-overlay-integration.md) | AI rerank B+ overlay design (Top-K constrained ambiguity rerank with shadow-safe rollout) |
 | [../docs/retrieval-overlay-integration.md](../docs/retrieval-overlay-integration.md) | Retrieval overlay design (profile-guided query/source/rerank strategy with mode-gated advisory enforcement) |
+| [../docs/exploration-overlay-integration.md](../docs/exploration-overlay-integration.md) | Exploration overlay design (intent/domain advisory for exploratory and mixed-domain prompts with soft-first confirmation) |
 | [../docs/blackbox-probe-and-enhancement-playbook.md](../docs/blackbox-probe-and-enhancement-playbook.md) | Unified playbook for blackbox route probing, user semantic overlay expansion, and threshold sensitivity tuning |
 | [../docs/deep-discovery-mode-design.md](../docs/deep-discovery-mode-design.md) | Deep Discovery mode design (trigger/interview/contract/filter prepack chain with probe-visible data contracts) |
 | [../docs/heartbeat-runtime-integration.md](../docs/heartbeat-runtime-integration.md) | Heartbeat runtime integration design (anti-silent-execution watchdog with stall diagnosis and progress telemetry) |

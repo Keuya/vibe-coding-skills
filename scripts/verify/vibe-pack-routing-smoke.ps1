@@ -32,6 +32,9 @@ $retrievalPolicyPath = Join-Path $configRoot "retrieval-policy.json"
 $retrievalIntentProfilesPath = Join-Path $configRoot "retrieval-intent-profiles.json"
 $retrievalSourceRegistryPath = Join-Path $configRoot "retrieval-source-registry.json"
 $retrievalRerankWeightsPath = Join-Path $configRoot "retrieval-rerank-weights.json"
+$explorationPolicyPath = Join-Path $configRoot "exploration-policy.json"
+$explorationIntentProfilesPath = Join-Path $configRoot "exploration-intent-profiles.json"
+$explorationDomainMapPath = Join-Path $configRoot "exploration-domain-map.json"
 
 $results = @()
 
@@ -48,6 +51,9 @@ $results += Assert-True -Condition (Test-Path -LiteralPath $retrievalPolicyPath)
 $results += Assert-True -Condition (Test-Path -LiteralPath $retrievalIntentProfilesPath) -Message "retrieval-intent-profiles.json exists"
 $results += Assert-True -Condition (Test-Path -LiteralPath $retrievalSourceRegistryPath) -Message "retrieval-source-registry.json exists"
 $results += Assert-True -Condition (Test-Path -LiteralPath $retrievalRerankWeightsPath) -Message "retrieval-rerank-weights.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $explorationPolicyPath) -Message "exploration-policy.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $explorationIntentProfilesPath) -Message "exploration-intent-profiles.json exists"
+$results += Assert-True -Condition (Test-Path -LiteralPath $explorationDomainMapPath) -Message "exploration-domain-map.json exists"
 
 $packManifest = Get-Content -LiteralPath $packManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $aliasMap = Get-Content -LiteralPath $aliasMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -61,6 +67,9 @@ $retrievalPolicy = Get-Content -LiteralPath $retrievalPolicyPath -Raw -Encoding 
 $retrievalIntentProfiles = Get-Content -LiteralPath $retrievalIntentProfilesPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $retrievalSourceRegistry = Get-Content -LiteralPath $retrievalSourceRegistryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $retrievalRerankWeights = Get-Content -LiteralPath $retrievalRerankWeightsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$explorationPolicy = Get-Content -LiteralPath $explorationPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$explorationIntentProfiles = Get-Content -LiteralPath $explorationIntentProfilesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$explorationDomainMap = Get-Content -LiteralPath $explorationDomainMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
 $requiredPackIds = @(
     "orchestration-core",
@@ -130,6 +139,11 @@ $results += Assert-True -Condition ($retrievalPolicy.coverage.max_retrieve_round
 $results += Assert-True -Condition ((@($retrievalIntentProfiles.profiles).Count -gt 0)) -Message "retrieval intent profiles configured"
 $results += Assert-True -Condition ((@($retrievalSourceRegistry.sources).Count -gt 0)) -Message "retrieval source registry configured"
 $results += Assert-True -Condition ($retrievalRerankWeights.modes -ne $null) -Message "retrieval rerank modes configured"
+$results += Assert-True -Condition ($explorationPolicy.mode -ne $null) -Message "exploration mode configured"
+$results += Assert-True -Condition ($explorationPolicy.intent_selection.min_intent_confidence -ne $null) -Message "exploration intent min confidence configured"
+$results += Assert-True -Condition ($explorationPolicy.domain_detection.min_domain_confidence -ne $null) -Message "exploration domain confidence configured"
+$results += Assert-True -Condition ((@($explorationIntentProfiles.profiles).Count -gt 0)) -Message "exploration intent profiles configured"
+$results += Assert-True -Condition ((@($explorationDomainMap.domains).Count -gt 0)) -Message "exploration domain map configured"
 
 foreach ($ruleProp in @($routingRules.skills.PSObject.Properties | Select-Object -First 10)) {
     $rule = $ruleProp.Value

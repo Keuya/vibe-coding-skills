@@ -191,7 +191,17 @@ $pairs = @(
     [pscustomobject]@{ id = "python-clean-code-overlay"; main = "config/python-clean-code-overlay.json"; bundled = "bundled/skills/vibe/config/python-clean-code-overlay.json" },
     [pscustomobject]@{ id = "system-design-overlay"; main = "config/system-design-overlay.json"; bundled = "bundled/skills/vibe/config/system-design-overlay.json" },
     [pscustomobject]@{ id = "cuda-kernel-overlay"; main = "config/cuda-kernel-overlay.json"; bundled = "bundled/skills/vibe/config/cuda-kernel-overlay.json" },
-    [pscustomobject]@{ id = "observability-policy"; main = "config/observability-policy.json"; bundled = "bundled/skills/vibe/config/observability-policy.json" }
+    [pscustomobject]@{ id = "retrieval-policy"; main = "config/retrieval-policy.json"; bundled = "bundled/skills/vibe/config/retrieval-policy.json" },
+    [pscustomobject]@{ id = "retrieval-intent-profiles"; main = "config/retrieval-intent-profiles.json"; bundled = "bundled/skills/vibe/config/retrieval-intent-profiles.json" },
+    [pscustomobject]@{ id = "retrieval-source-registry"; main = "config/retrieval-source-registry.json"; bundled = "bundled/skills/vibe/config/retrieval-source-registry.json" },
+    [pscustomobject]@{ id = "retrieval-rerank-weights"; main = "config/retrieval-rerank-weights.json"; bundled = "bundled/skills/vibe/config/retrieval-rerank-weights.json" },
+    [pscustomobject]@{ id = "exploration-policy"; main = "config/exploration-policy.json"; bundled = "bundled/skills/vibe/config/exploration-policy.json" },
+    [pscustomobject]@{ id = "exploration-intent-profiles"; main = "config/exploration-intent-profiles.json"; bundled = "bundled/skills/vibe/config/exploration-intent-profiles.json" },
+    [pscustomobject]@{ id = "exploration-domain-map"; main = "config/exploration-domain-map.json"; bundled = "bundled/skills/vibe/config/exploration-domain-map.json" },
+    [pscustomobject]@{ id = "observability-policy"; main = "config/observability-policy.json"; bundled = "bundled/skills/vibe/config/observability-policy.json" },
+    [pscustomobject]@{ id = "heartbeat-policy"; main = "config/heartbeat-policy.json"; bundled = "bundled/skills/vibe/config/heartbeat-policy.json" },
+    [pscustomobject]@{ id = "deep-discovery-policy"; main = "config/deep-discovery-policy.json"; bundled = "bundled/skills/vibe/config/deep-discovery-policy.json" },
+    [pscustomobject]@{ id = "capability-catalog"; main = "config/capability-catalog.json"; bundled = "bundled/skills/vibe/config/capability-catalog.json" }
 )
 
 $results = @()

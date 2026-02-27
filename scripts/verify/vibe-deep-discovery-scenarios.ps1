@@ -154,6 +154,7 @@ $expectedStages = @(
     "overlay.ai_rerank",
     "overlay.prompt",
     "overlay.data_scale",
+    "overlay.exploration",
     "overlay.retrieval",
     "overlay.bundle",
     "router.final"

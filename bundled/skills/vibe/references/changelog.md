@@ -1,5 +1,35 @@
 # VCO Changelog
 
+## v2.3.23 (2026-02-27)
+
+- 新增 Exploration Overlay（探索型任务增强，默认 `soft`，保持 post-route 非侵入）：
+  - 新增配置（main + bundled）：
+    - `config/exploration-policy.json`
+    - `config/exploration-intent-profiles.json`
+    - `config/exploration-domain-map.json`
+  - 新增模块：
+    - `scripts/router/modules/44-exploration-overlay.ps1`
+  - 路由入口接入：
+    - `scripts/router/resolve-pack-route.ps1`
+    - 新增阶段：`overlay.exploration`
+    - 路由输出新增：`exploration_advice`
+- 可观测与探针联动增强：
+  - `scripts/router/modules/11-route-probe.ps1` 将 exploration 纳入 runtime state prompt 与 final_state 摘要。
+  - `scripts/router/modules/22-intent-contract.ps1` 的 `runtime_state_prompt_digest` 纳入 exploration overlay。
+  - `scripts/router/modules/10-observability.ps1` 纳入 exploration intent/domain/confirm 遥测字段。
+  - `scripts/router/modules/00-core-utils.ps1` 的 `Test-OverlayConfirmRequired` 纳入 exploration confirm 信号。
+- 新增门禁与验证链路：
+  - `scripts/verify/vibe-exploration-overlay-gate.ps1`
+  - `scripts/verify/vibe-config-parity-gate.ps1` 纳入 exploration 配置 parity
+  - `scripts/verify/vibe-pack-routing-smoke.ps1` 纳入 exploration 配置结构校验
+  - `scripts/verify/vibe-routing-probe-research.ps1` 与 `scripts/verify/vibe-deep-discovery-scenarios.ps1` 更新 stage chain（含 `overlay.exploration`）
+  - `scripts/verify/README.md` 新增 exploration gate 入口
+- 文档与健康检查更新：
+  - `docs/exploration-overlay-integration.md`
+  - `docs/blackbox-probe-and-enhancement-playbook.md`、`docs/deep-discovery-mode-design.md`、`docs/retrieval-overlay-integration.md` 更新路由阶段链
+  - `references/index.md` 新增 exploration 文档入口
+  - `check.ps1` / `check.sh` 新增 exploration 配置存在性检查
+
 ## v2.3.22 (2026-02-27)
 
 - 新增 Retrieval Overlay（检索策略增强，默认 `shadow`，保持 post-route 非侵入）：

@@ -25,7 +25,7 @@ This document organizes the VCO blackbox inspection and enhancement scripts into
 
 Expected stage chain:
 
-`router.init -> router.config -> router.prepack -> deep_discovery.trigger -> deep_discovery.interview -> deep_discovery.contract -> deep_discovery.filter -> router.pack_scoring -> overlay.ai_rerank -> overlay.prompt -> overlay.data_scale -> overlay.retrieval -> overlay.bundle -> router.final`
+`router.init -> router.config -> router.prepack -> deep_discovery.trigger -> deep_discovery.interview -> deep_discovery.contract -> deep_discovery.filter -> router.pack_scoring -> overlay.ai_rerank -> overlay.prompt -> overlay.data_scale -> overlay.exploration -> overlay.retrieval -> overlay.bundle -> router.final`
 
 Key injection points:
 

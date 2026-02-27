@@ -54,6 +54,9 @@ Check-Path -Label "vibe retrieval policy config" -Path (Join-Path $TargetRoot "s
 Check-Path -Label "vibe retrieval intent profiles config" -Path (Join-Path $TargetRoot "skills\vibe\config\retrieval-intent-profiles.json")
 Check-Path -Label "vibe retrieval source registry config" -Path (Join-Path $TargetRoot "skills\vibe\config\retrieval-source-registry.json")
 Check-Path -Label "vibe retrieval rerank weights config" -Path (Join-Path $TargetRoot "skills\vibe\config\retrieval-rerank-weights.json")
+Check-Path -Label "vibe exploration policy config" -Path (Join-Path $TargetRoot "skills\vibe\config\exploration-policy.json")
+Check-Path -Label "vibe exploration intent profiles config" -Path (Join-Path $TargetRoot "skills\vibe\config\exploration-intent-profiles.json")
+Check-Path -Label "vibe exploration domain map config" -Path (Join-Path $TargetRoot "skills\vibe\config\exploration-domain-map.json")
 
 foreach ($name in $requiredWorkflow) {
   Check-Path -Label "workflow skill/$name" -Path (Join-Path $TargetRoot "skills\$name\SKILL.md")

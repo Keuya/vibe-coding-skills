@@ -51,6 +51,9 @@ check_path "vibe retrieval policy config" "${TARGET_ROOT}/skills/vibe/config/ret
 check_path "vibe retrieval intent profiles config" "${TARGET_ROOT}/skills/vibe/config/retrieval-intent-profiles.json"
 check_path "vibe retrieval source registry config" "${TARGET_ROOT}/skills/vibe/config/retrieval-source-registry.json"
 check_path "vibe retrieval rerank weights config" "${TARGET_ROOT}/skills/vibe/config/retrieval-rerank-weights.json"
+check_path "vibe exploration policy config" "${TARGET_ROOT}/skills/vibe/config/exploration-policy.json"
+check_path "vibe exploration intent profiles config" "${TARGET_ROOT}/skills/vibe/config/exploration-intent-profiles.json"
+check_path "vibe exploration domain map config" "${TARGET_ROOT}/skills/vibe/config/exploration-domain-map.json"
 for n in brainstorming writing-plans subagent-driven-development systematic-debugging; do
   check_path "workflow/${n}" "${TARGET_ROOT}/skills/${n}/SKILL.md"
 done

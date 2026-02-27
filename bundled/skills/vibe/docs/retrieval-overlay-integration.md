@@ -36,7 +36,7 @@ These configs define:
 
 Execution chain:
 
-`... -> overlay.ai_rerank -> overlay.prompt -> overlay.data_scale -> overlay.retrieval -> overlay.bundle -> router.final`
+`... -> overlay.ai_rerank -> overlay.prompt -> overlay.data_scale -> overlay.exploration -> overlay.retrieval -> overlay.bundle -> router.final`
 
 Implementation:
 
@@ -89,5 +89,4 @@ Updated gates:
 
 - `scripts/verify/vibe-config-parity-gate.ps1`
 - `scripts/verify/vibe-pack-routing-smoke.ps1`
-- route-probe scripts now expect `overlay.retrieval` stage in chain.
-
+- route-probe scripts now expect `overlay.exploration` + `overlay.retrieval` stages in chain.

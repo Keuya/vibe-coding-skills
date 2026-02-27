@@ -23,7 +23,7 @@ Deep Discovery inserts four stages between `router.prepack` and `router.pack_sco
 
 Full chain:
 
-`router.init -> router.config -> router.prepack -> deep_discovery.trigger -> deep_discovery.interview -> deep_discovery.contract -> deep_discovery.filter -> router.pack_scoring -> overlay.ai_rerank -> overlay.prompt -> overlay.data_scale -> overlay.retrieval -> overlay.bundle -> router.final`
+`router.init -> router.config -> router.prepack -> deep_discovery.trigger -> deep_discovery.interview -> deep_discovery.contract -> deep_discovery.filter -> router.pack_scoring -> overlay.ai_rerank -> overlay.prompt -> overlay.data_scale -> overlay.exploration -> overlay.retrieval -> overlay.bundle -> router.final`
 
 ## 3. Core Files
 
