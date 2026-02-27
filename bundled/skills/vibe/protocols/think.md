@@ -92,7 +92,7 @@ After generating initial design (via sc:design or brainstorming):
 3. If alternative is equally viable → present both to user with trade-off comparison
 4. If no viable alternative → proceed with original + document failure modes as risks
 
-Note: If user requested dialectical analysis, skip B2 Self-Check and route to
+Note: If user explicitly requested dialectic think-tank mode, skip B2 Self-Check and route to
 team.md Dialectic Mode instead.
 
 ### B3: Plan Documentation

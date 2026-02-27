@@ -39,13 +39,6 @@ function Get-RouteProbeAdviceSummary {
         "profile_id",
         "profile_confidence",
         "profile_ambiguous",
-        "intent_id",
-        "intent_confidence",
-        "intent_ambiguous",
-        "dominant_domain",
-        "multi_domain",
-        "confirm_recommended",
-        "recommended_execution_mode",
         "needs_requery",
         "coverage_score",
         "status",
@@ -230,6 +223,8 @@ function Get-RouteRuntimeStatePrompt {
     $foldedOverlays = @()
     $overlaySpecs = @(
         @{ Name = "deep_discovery"; Advice = $Result.deep_discovery_advice },
+        @{ Name = "dialectic_team"; Advice = $Result.dialectic_team_advice },
+        @{ Name = "daily_dialectic"; Advice = $Result.daily_dialectic_advice },
         @{ Name = "openspec"; Advice = $Result.openspec_advice },
         @{ Name = "gsd"; Advice = $Result.gsd_overlay_advice },
         @{ Name = "prompt"; Advice = $Result.prompt_overlay_advice },
@@ -242,7 +237,6 @@ function Get-RouteRuntimeStatePrompt {
         @{ Name = "python_clean_code"; Advice = $Result.python_clean_code_advice },
         @{ Name = "system_design"; Advice = $Result.system_design_advice },
         @{ Name = "cuda_kernel"; Advice = $Result.cuda_kernel_advice },
-        @{ Name = "exploration"; Advice = $Result.exploration_advice },
         @{ Name = "retrieval"; Advice = $Result.retrieval_advice }
     )
 
@@ -298,6 +292,11 @@ function Get-RouteRuntimeStatePrompt {
             $(if ($Result.deep_discovery_advice -and $Result.deep_discovery_advice.trigger_score -ne $null) { [double]$Result.deep_discovery_advice.trigger_score } else { 0.0 }), `
             $(if ($Result.intent_contract -and $Result.intent_contract.completeness -ne $null) { [double]$Result.intent_contract.completeness } else { 0.0 }), `
             [bool]$Result.deep_discovery_route_filter_applied),
+        ("Dialectic governance: team_explicit_requested={0}, team_mode={1}, daily_guard_scope={2}, daily_guard_confirm_required={3}" -f `
+            [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.explicit_requested), `
+            [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.should_apply_team_mode), `
+            [bool]($Result.daily_dialectic_advice -and $Result.daily_dialectic_advice.scope_applicable), `
+            [bool]($Result.daily_dialectic_advice -and $Result.daily_dialectic_advice.confirm_required)),
         ("Execution protocol hint: {0}" -f $protocolHint),
         "Quality contract: enforce P5 evidence, V2 completion gate, and V3 pipeline for coding tasks.",
         "Memory contract: state_store=session, Serena=decisions, ruflo=short cache, Cognee=long-term graph, episodic-memory=disabled.",
@@ -365,13 +364,6 @@ function Write-RouteProbeArtifact {
             ai_rerank_route_override = $Result.ai_rerank_route_override
             prompt_overlay_route_override = $Result.prompt_overlay_route_override
             data_scale_route_override = $Result.data_scale_route_override
-            exploration_intent_id = if ($Result.exploration_advice -and $Result.exploration_advice.intent_id) { [string]$Result.exploration_advice.intent_id } else { "none" }
-            exploration_intent_confidence = if ($Result.exploration_advice -and $Result.exploration_advice.intent_confidence -ne $null) { [double]$Result.exploration_advice.intent_confidence } else { 0.0 }
-            exploration_intent_ambiguous = if ($Result.exploration_advice) { [bool]$Result.exploration_advice.intent_ambiguous } else { $false }
-            exploration_dominant_domain = if ($Result.exploration_advice -and $Result.exploration_advice.dominant_domain) { [string]$Result.exploration_advice.dominant_domain } else { "none" }
-            exploration_multi_domain = if ($Result.exploration_advice) { [bool]$Result.exploration_advice.multi_domain } else { $false }
-            exploration_confirm_recommended = if ($Result.exploration_advice) { [bool]$Result.exploration_advice.confirm_recommended } else { $false }
-            exploration_confirm_required = if ($Result.exploration_advice) { [bool]$Result.exploration_advice.confirm_required } else { $false }
             retrieval_profile_id = if ($Result.retrieval_advice -and $Result.retrieval_advice.profile_id) { [string]$Result.retrieval_advice.profile_id } else { "none" }
             retrieval_profile_confidence = if ($Result.retrieval_advice -and $Result.retrieval_advice.profile_confidence -ne $null) { [double]$Result.retrieval_advice.profile_confidence } else { 0.0 }
             retrieval_profile_ambiguous = if ($Result.retrieval_advice) { [bool]$Result.retrieval_advice.profile_ambiguous } else { $false }

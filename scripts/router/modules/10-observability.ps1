@@ -127,14 +127,17 @@ function Write-ObservabilityRouteEvent {
             python_clean_code_confirm_required = [bool]($Result.python_clean_code_advice -and $Result.python_clean_code_advice.confirm_required)
             system_design_confirm_required = [bool]($Result.system_design_advice -and $Result.system_design_advice.confirm_required)
             cuda_kernel_confirm_required = [bool]($Result.cuda_kernel_advice -and $Result.cuda_kernel_advice.confirm_required)
-            exploration_confirm_required = [bool]($Result.exploration_advice -and $Result.exploration_advice.confirm_required)
-            exploration_confirm_recommended = [bool]($Result.exploration_advice -and $Result.exploration_advice.confirm_recommended)
-            exploration_intent_id = if ($Result.exploration_advice -and $Result.exploration_advice.intent_id) { [string]$Result.exploration_advice.intent_id } else { "none" }
-            exploration_multi_domain = [bool]($Result.exploration_advice -and $Result.exploration_advice.multi_domain)
             retrieval_confirm_required = [bool]($Result.retrieval_advice -and $Result.retrieval_advice.confirm_required)
             retrieval_profile_id = if ($Result.retrieval_advice -and $Result.retrieval_advice.profile_id) { [string]$Result.retrieval_advice.profile_id } else { "none" }
             retrieval_needs_requery = [bool]($Result.retrieval_advice -and $Result.retrieval_advice.coverage_gate -and $Result.retrieval_advice.coverage_gate.needs_requery)
             heartbeat_confirm_required = [bool]($Result.heartbeat_advice -and $Result.heartbeat_advice.confirm_required)
+            dialectic_team_explicit_requested = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.explicit_requested)
+            dialectic_team_mode_allowed = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.team_mode_allowed)
+            dialectic_team_should_apply = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.should_apply_team_mode)
+            dialectic_team_confirm_required = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.confirm_required)
+            dialectic_team_route_override = [bool]$Result.dialectic_team_route_override
+            daily_dialectic_scope_applicable = [bool]($Result.daily_dialectic_advice -and $Result.daily_dialectic_advice.scope_applicable)
+            daily_dialectic_confirm_required = [bool]($Result.daily_dialectic_advice -and $Result.daily_dialectic_advice.confirm_required)
             any_confirm_required = (Test-OverlayConfirmRequired -Result $Result)
         }
         heartbeat = [pscustomobject]@{

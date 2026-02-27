@@ -1,8 +1,8 @@
-{
+﻿{
     "version": 1,
     "updated": "2026-02-26",
     "enabled": true,
-    "mode": "shadow",
+    "mode": "soft",
     "preserve_routing_assignment": true,
     "routing_integration": "prepack_capability_discovery",
     "scope": {
@@ -77,3 +77,4 @@
         "on_error": "continue_core_routing"
     }
 }
+

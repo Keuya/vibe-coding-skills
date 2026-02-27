@@ -9,7 +9,7 @@ Thin adapter for `/vibe` dialectic routing. Keep this skill lightweight and defe
 
 ## Use Cases
 
-- User asks for "辩证/辯證", "dialectic", "多视角/多視角", "对比方案/對比方案", or "权衡/權衡".
+- User explicitly asks for the think-tank flow: "使用辩证智囊团", "启用辩证智囊团", "`$vibe dialectic`", or "dialectic-design".
 - Multiple viable design approaches need structured comparison.
 
 ## Execution Contract

@@ -44,7 +44,7 @@ Gather objective signals before classification:
      "前后端", "并行", "多智能体",
      multiple independent modules → parallelizable = true
    - Dialectic signals: "辩证", "dialectic", "多视角", "think-tank",
-     "对比方案", "权衡" → needs_dialectic = true
+     "对比方案", "权衡" → dialectic_candidate = true（仅候选信号，不自动触发辩证智囊团）
 
 2. If task mentions code changes, quick Glob/Grep:
    - Count estimated affected files
@@ -113,7 +113,8 @@ When `config/system-design-overlay.json` is enabled, router emits `system_design
 When `config/cuda-kernel-overlay.json` is enabled, router emits `cuda_kernel_advice` to expose LeetCUDA-inspired CUDA kernel optimization coverage guidance in a post-route, advice-first way.
 When `config/deep-discovery-policy.json` is enabled, router runs a prepack Deep Discovery chain (`trigger`/`interview`/`contract`/`filter`), emits `deep_discovery_advice` + `intent_contract`, and may apply capability-based candidate filtering only in mode-gated paths (default shadow remains non-mutating).
 When `config/observability-policy.json` is enabled, router writes privacy-safe route telemetry events (`outputs/telemetry/*.jsonl`) for deterministic observability and offline adaptive suggestions; route assignment remains unchanged.
-When `config/ai-rerank-policy.json` is enabled, router emits `ai_rerank_advice` (and optional `ai_rerank_route_override`) to run a constrained Top-K rerank in ambiguity windows; default shadow mode is non-mutating.
+When `config/dialectic-team-policy.json` is enabled, dialectic think-tank activation is gated by explicit request only (`explicit_only`) and blocks implicit team activation.
+When `config/daily-dialectic-guard.json` is enabled, router emits `daily_dialectic_advice` as always-on thesis/antithesis/synthesis guardrails in post-route advisory mode.
 
 Specialized agents available at ANY grade (exempt from agent boundary rule):
 - build-error-resolver: build-specific errors (compat alias: local `error-resolver`)
@@ -220,7 +221,6 @@ Detect availability AFTER routing selects a tool, BEFORE invoking:
   - `config/pack-manifest.json`
   - `config/router-thresholds.json`
   - `config/skill-alias-map.json`
-  - `config/ai-rerank-policy.json`
 - See references/fallback-chains.md for complete fallback paths
 
 ## Protocols (on-demand loading)
@@ -255,7 +255,6 @@ Detect availability AFTER routing selects a tool, BEFORE invoking:
 | docs/cuda-kernel-overlay-integration.md | CUDA kernel overlay integration (LeetCUDA inspired kernel optimization advisory) |
 | docs/observability-consistency-governance.md | Observability + consistency governance (lean telemetry + manual rollback confirmation) |
 | docs/blackbox-probe-and-enhancement-playbook.md | Blackbox probing + semantic enhancement + threshold tuning unified engineering playbook |
-| docs/router-modularization-governance.md | Router modularization governance (legacy-vs-modular contract gate + zero-regression rollout discipline) |
 | docs/skills-consolidation-roadmap.md | Pack consolidation phases and gates |
 | changelog.md | Version history |
 | index.md | Navigation index |

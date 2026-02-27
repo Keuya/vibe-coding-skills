@@ -268,6 +268,8 @@ function Get-RouteRuntimeStatePromptDigest {
     if (-not $Result) { return $null }
 
     $overlayPropertyMap = [ordered]@{
+        dialectic_team = "dialectic_team_advice"
+        daily_dialectic = "daily_dialectic_advice"
         openspec = "openspec_advice"
         gsd = "gsd_overlay_advice"
         prompt = "prompt_overlay_advice"
@@ -280,7 +282,6 @@ function Get-RouteRuntimeStatePromptDigest {
         python_clean_code = "python_clean_code_advice"
         system_design = "system_design_advice"
         cuda_kernel = "cuda_kernel_advice"
-        exploration = "exploration_advice"
         retrieval = "retrieval_advice"
     }
 
@@ -331,6 +332,14 @@ function Get-RouteRuntimeStatePromptDigest {
             confirm_required = [bool]($deepDiscovery -and $deepDiscovery.confirm_required)
             contract_completeness = if ($intentContract -and $intentContract.completeness -ne $null) { [double]$intentContract.completeness } else { 0.0 }
             route_filter_applied = [bool]$Result.deep_discovery_route_filter_applied
+        }
+        dialectic = [pscustomobject]@{
+            team_explicit_requested = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.explicit_requested)
+            team_mode_allowed = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.team_mode_allowed)
+            team_mode_applied = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.should_apply_team_mode)
+            team_confirm_required = [bool]($Result.dialectic_team_advice -and $Result.dialectic_team_advice.confirm_required)
+            daily_guard_scope = [bool]($Result.daily_dialectic_advice -and $Result.daily_dialectic_advice.scope_applicable)
+            daily_guard_confirm_required = [bool]($Result.daily_dialectic_advice -and $Result.daily_dialectic_advice.confirm_required)
         }
         heartbeat = [pscustomobject]@{
             enabled = [bool]($Result.heartbeat_advice -and $Result.heartbeat_advice.enabled)

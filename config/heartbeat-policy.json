@@ -2,7 +2,7 @@
     "version":  1,
     "updated":  "2026-02-27",
     "enabled":  true,
-    "mode":  "shadow",
+    "mode": "soft",
     "preserve_routing_assignment":  true,
     "routing_integration":  "router_lifecycle_guard",
     "scope":  {
@@ -60,6 +60,8 @@
                               "on_error":  "continue_without_heartbeat"
                           }
 }
+
+
 
 
 
