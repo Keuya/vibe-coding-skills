@@ -33,6 +33,16 @@ function Ensure-Property {
     }
 }
 
+function Write-Utf8NoBomText {
+    param(
+        [string]$Path,
+        [string]$Content
+    )
+
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $encoding)
+}
+
 function Invoke-Route {
     param(
         [string]$Prompt,
@@ -136,6 +146,7 @@ $results = @()
 
 Write-Host "=== VCO OpenSpec Governance Gate ==="
 
+$policyBytesBackup = [System.IO.File]::ReadAllBytes($policyPath)
 $policyRawBackup = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8
 try {
     $policyObj = $policyRawBackup | ConvertFrom-Json
@@ -156,7 +167,7 @@ try {
     $policyObj.exemptions.requested_skill_bypass = $true
     $policyObj.exemptions.requested_skill_whitelist = @("sc:design", "brainstorming", "writing-plans")
 
-    Set-Content -LiteralPath $policyPath -Encoding UTF8 -Value ($policyObj | ConvertTo-Json -Depth 30)
+    Write-Utf8NoBomText -Path $policyPath -Content ($policyObj | ConvertTo-Json -Depth 30)
 
     foreach ($case in $cases) {
         $route = Invoke-Route -Prompt $case.Prompt -Grade $case.Grade -TaskType $case.TaskType -RequestedSkill $case.RequestedSkill
@@ -204,7 +215,7 @@ try {
     $results += Assert-True -Condition ($strictObj.enforced -eq $true) -Message "[strict missing] governance blocks execution"
     $results += Assert-True -Condition ($strictObj.required_action -eq "rerun_with_WriteArtifacts_to_create_full_spec_change") -Message "[strict missing] required action is rerun_with_WriteArtifacts_to_create_full_spec_change"
 } finally {
-    Set-Content -LiteralPath $policyPath -Encoding UTF8 -Value $policyRawBackup
+    [System.IO.File]::WriteAllBytes($policyPath, $policyBytesBackup)
 }
 
 $passCount = ($results | Where-Object { $_ }).Count
