@@ -24,7 +24,16 @@ function Get-RoutingPromptNormalization {
         $normalized = $original.Substring($match.Length)
     }
 
-    $normalized = $normalized.TrimStart()
+    # Decontaminate control tokens anywhere (suffix/inline `$vibe`, `/vibe`, etc.) to avoid routing pollution.
+    # Keep a lightweight signal (`has_control_token`) for downstream diagnostics, but exclude it from scoring text.
+    $controlTokenPattern = '(?<![a-z0-9_])(\$vibe|/vibe)(?![a-z0-9_])'
+    $markdownLinkPattern = '\[\s*(?:\$vibe|/vibe)\s*\]\([^)]+\)'
+    $hasControlToken = [Regex]::IsMatch($original, $controlTokenPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+
+    $normalized = [Regex]::Replace($normalized, $markdownLinkPattern, ' ', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $normalized = [Regex]::Replace($normalized, $controlTokenPattern, ' ', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+
+    $normalized = $normalized.Trim()
     if (-not $normalized) {
         $normalized = $original.TrimStart()
     }
@@ -36,6 +45,7 @@ function Get-RoutingPromptNormalization {
         normalized_lower = $normalized.ToLowerInvariant()
         prefix_detected = $prefixDetected
         prefix_token = if ($prefixToken) { $prefixToken.ToLowerInvariant() } else { $null }
+        has_control_token = [bool]$hasControlToken
         changed = ($originalLower -ne $normalized.ToLowerInvariant())
     }
 }

@@ -10,7 +10,8 @@
     [string]$ProbeLabel,
     [string]$ProbeOutputDir,
     [switch]$ProbeIncludePrompt,
-    [int]$ProbePromptMaxChars = 1600
+    [int]$ProbePromptMaxChars = 1600,
+    [switch]$Unattended
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,8 +38,11 @@ $routerModules = @(
     "41-candidate-selection.ps1",
     "42-ai-rerank-overlay.ps1",
     "43-retrieval-overlay.ps1",
+    "44-exploration-overlay.ps1",
     "44-dialectic-team-gate.ps1",
-    "45-daily-dialectic-guard.ps1"
+    "45-daily-dialectic-guard.ps1",
+    "46-confirm-ui.ps1",
+    "47-closure-overlay.ps1"
 )
 
 foreach ($routerModule in $routerModules) {
@@ -74,11 +78,16 @@ $retrievalPolicyPath = Join-Path $configRoot "retrieval-policy.json"
 $retrievalIntentProfilesPath = Join-Path $configRoot "retrieval-intent-profiles.json"
 $retrievalSourceRegistryPath = Join-Path $configRoot "retrieval-source-registry.json"
 $retrievalRerankWeightsPath = Join-Path $configRoot "retrieval-rerank-weights.json"
+$explorationPolicyPath = Join-Path $configRoot "exploration-policy.json"
+$explorationIntentProfilesPath = Join-Path $configRoot "exploration-intent-profiles.json"
+$explorationDomainMapPath = Join-Path $configRoot "exploration-domain-map.json"
+$closureOverlayPolicyPath = Join-Path $configRoot "closure-overlay.json"
 $probePolicyPath = Join-Path $configRoot "router-probe-policy.json"
 $deepDiscoveryPolicyPath = Join-Path $configRoot "deep-discovery-policy.json"
 $capabilityCatalogPath = Join-Path $configRoot "capability-catalog.json"
 $dialecticTeamPolicyPath = Join-Path $configRoot "dialectic-team-policy.json"
 $dailyDialecticPolicyPath = Join-Path $configRoot "daily-dialectic-guard.json"
+$confirmUiPolicyPath = Join-Path $configRoot "confirm-ui-policy.json"
 
 $packManifest = Get-Content -LiteralPath $packManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $aliasMap = Get-Content -LiteralPath $aliasMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -211,6 +220,42 @@ $retrievalRerankWeights = if (Test-Path -LiteralPath $retrievalRerankWeightsPath
 } else {
     $null
 }
+$explorationPolicy = if (Test-Path -LiteralPath $explorationPolicyPath) {
+    try {
+        Get-Content -LiteralPath $explorationPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        $null
+    }
+} else {
+    $null
+}
+$explorationIntentProfiles = if (Test-Path -LiteralPath $explorationIntentProfilesPath) {
+    try {
+        Get-Content -LiteralPath $explorationIntentProfilesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        $null
+    }
+} else {
+    $null
+}
+$explorationDomainMap = if (Test-Path -LiteralPath $explorationDomainMapPath) {
+    try {
+        Get-Content -LiteralPath $explorationDomainMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        $null
+    }
+} else {
+    $null
+}
+$closureOverlayPolicy = if (Test-Path -LiteralPath $closureOverlayPolicyPath) {
+    try {
+        Get-Content -LiteralPath $closureOverlayPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        $null
+    }
+} else {
+    $null
+}
 $probePolicy = if (Test-Path -LiteralPath $probePolicyPath) {
     try {
         Get-Content -LiteralPath $probePolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -250,6 +295,15 @@ $dialecticTeamPolicy = if (Test-Path -LiteralPath $dialecticTeamPolicyPath) {
 $dailyDialecticPolicy = if (Test-Path -LiteralPath $dailyDialecticPolicyPath) {
     try {
         Get-Content -LiteralPath $dailyDialecticPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        $null
+    }
+} else {
+    $null
+}
+$confirmUiPolicy = if (Test-Path -LiteralPath $confirmUiPolicyPath) {
+    try {
+        Get-Content -LiteralPath $confirmUiPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
     } catch {
         $null
     }
@@ -312,6 +366,8 @@ Add-RouteProbeEvent -Context $probeContext -Stage "router.config" -Note "core ro
         cuda_kernel_mode = if ($cudaKernelOverlayPolicy -and $cudaKernelOverlayPolicy.mode) { [string]$cudaKernelOverlayPolicy.mode } else { "off" }
         ai_rerank_mode = if ($aiRerankPolicy -and $aiRerankPolicy.mode) { [string]$aiRerankPolicy.mode } else { "off" }
         retrieval_mode = if ($retrievalPolicy -and $retrievalPolicy.mode) { [string]$retrievalPolicy.mode } else { "off" }
+        exploration_mode = if ($explorationPolicy -and $explorationPolicy.mode) { [string]$explorationPolicy.mode } else { "off" }
+        closure_mode = if ($closureOverlayPolicy -and $closureOverlayPolicy.mode) { [string]$closureOverlayPolicy.mode } else { "off" }
         observability_mode = if ($observabilityPolicy -and $observabilityPolicy.mode) { [string]$observabilityPolicy.mode } else { "off" }
         heartbeat_mode = if ($heartbeatPolicy -and $heartbeatPolicy.mode) { [string]$heartbeatPolicy.mode } else { "off" }
         deep_discovery_mode = if ($deepDiscoveryPolicy -and $deepDiscoveryPolicy.mode) { [string]$deepDiscoveryPolicy.mode } else { "off" }
@@ -724,6 +780,56 @@ $null = Add-HeartbeatPulse -Context $heartbeatContext -Stage "overlay.daily_dial
     scope_applicable = if ($dailyDialecticAdvice) { [bool]$dailyDialecticAdvice.scope_applicable } else { $false }
 }
 
+$explorationAdvice = Get-ExplorationOverlayAdvice `
+    -Prompt $Prompt `
+    -PromptLower $promptLower `
+    -Grade $Grade `
+    -TaskType $TaskType `
+    -RouteMode $routeMode `
+    -SelectedPackId $(if ($effectiveTop) { [string]$effectiveTop.pack_id } else { $null }) `
+    -SelectedSkill $effectiveSelectedSkill `
+    -PackCandidates $(if ($effectiveTop) { @($effectiveTop.candidates) } else { @() }) `
+    -ExplorationPolicy $explorationPolicy `
+    -ExplorationIntentProfiles $explorationIntentProfiles `
+    -ExplorationDomainMap $explorationDomainMap
+
+Add-RouteProbeEvent -Context $probeContext -Stage "overlay.exploration" -Note "exploration intent overlay evaluated" -Data @{
+    advice = Get-RouteProbeAdviceSummary -Advice $explorationAdvice
+    selected_skill = $effectiveSelectedSkill
+    route_mode_after = $routeMode
+    route_reason_after = $routeReason
+}
+$null = Add-HeartbeatPulse -Context $heartbeatContext -Stage "overlay.exploration" -Phase "overlay" -Note "exploration intent overlay evaluated" -Data @{
+    enabled = if ($explorationAdvice) { [bool]$explorationAdvice.enabled } else { $false }
+    scope_applicable = if ($explorationAdvice) { [bool]$explorationAdvice.scope_applicable } else { $false }
+    intent_id = if ($explorationAdvice -and $explorationAdvice.intent_id) { [string]$explorationAdvice.intent_id } else { "none" }
+    confirm_required = if ($explorationAdvice) { [bool]$explorationAdvice.confirm_required } else { $false }
+}
+
+$closureAdvice = Get-ClosureOverlayAdvice `
+    -Prompt $Prompt `
+    -PromptLower $promptLower `
+    -Grade $Grade `
+    -TaskType $TaskType `
+    -RouteMode $routeMode `
+    -SelectedPackId $(if ($effectiveTop) { [string]$effectiveTop.pack_id } else { $null }) `
+    -SelectedSkill $effectiveSelectedSkill `
+    -PackCandidates $(if ($effectiveTop) { @($effectiveTop.candidates) } else { @() }) `
+    -ClosureOverlayPolicy $closureOverlayPolicy `
+    -ExplorationAdvice $explorationAdvice
+
+Add-RouteProbeEvent -Context $probeContext -Stage "overlay.closure" -Note "closure-first overlay evaluated" -Data @{
+    advice = Get-RouteProbeAdviceSummary -Advice $closureAdvice
+    selected_skill = $effectiveSelectedSkill
+    route_mode_after = $routeMode
+    route_reason_after = $routeReason
+}
+$null = Add-HeartbeatPulse -Context $heartbeatContext -Stage "overlay.closure" -Phase "overlay" -Note "closure-first overlay evaluated" -Data @{
+    enabled = if ($closureAdvice) { [bool]$closureAdvice.enabled } else { $false }
+    scope_applicable = if ($closureAdvice) { [bool]$closureAdvice.scope_applicable } else { $false }
+    enforcement = if ($closureAdvice -and $closureAdvice.enforcement) { [string]$closureAdvice.enforcement } else { "none" }
+}
+
 $qualityDebtAdvice = Get-QualityDebtOverlayAdvice `
     -Prompt $Prompt `
     -PromptLower $promptLower `
@@ -819,6 +925,8 @@ $null = Add-HeartbeatPulse -Context $heartbeatContext -Stage "overlay.retrieval"
 Add-RouteProbeEvent -Context $probeContext -Stage "overlay.bundle" -Note "post-route advisory overlays evaluated" -Data @{
     dialectic_team = Get-RouteProbeAdviceSummary -Advice $dialecticTeamAdvice
     daily_dialectic = Get-RouteProbeAdviceSummary -Advice $dailyDialecticAdvice
+    exploration = Get-RouteProbeAdviceSummary -Advice $explorationAdvice
+    closure = Get-RouteProbeAdviceSummary -Advice $closureAdvice
     quality_debt = Get-RouteProbeAdviceSummary -Advice $qualityDebtAdvice
     framework_interop = Get-RouteProbeAdviceSummary -Advice $frameworkInteropAdvice
     ml_lifecycle = Get-RouteProbeAdviceSummary -Advice $mlLifecycleAdvice
@@ -851,6 +959,22 @@ $null = Add-HeartbeatPulse -Context $heartbeatContext -Stage "router.legacy_fall
     applied = [bool]$legacyFallbackGuardApplied
 }
 
+$confirmUiPolicyResolved = Get-ConfirmUiPolicy -Policy $confirmUiPolicy
+$unattendedDecision = Get-UnattendedModeDecision -Prompt $Prompt -ConfirmUiPolicy $confirmUiPolicyResolved -RepoRoot ([string]$repoRoot) -UnattendedParam ([bool]$Unattended)
+$routeModeBeforeUnattended = [string]$routeMode
+$routeReasonBeforeUnattended = [string]$routeReason
+$unattendedOverrideApplied = $false
+if ($unattendedDecision -and [bool]$unattendedDecision.unattended -and $confirmUiPolicyResolved -and [bool]$confirmUiPolicyResolved.unattended.override_route_mode) {
+    if ($routeMode -eq "confirm_required" -and $effectiveTop) {
+        $overrideTarget = if ($confirmUiPolicyResolved.unattended.override_target_route_mode) { [string]$confirmUiPolicyResolved.unattended.override_target_route_mode } else { "pack_overlay" }
+        if ($overrideTarget) {
+            $routeMode = $overrideTarget
+            $routeReason = "unattended_auto_route_override"
+            $unattendedOverrideApplied = $true
+        }
+    }
+}
+
 $heartbeatFinalizeStatus = Finalize-HeartbeatContext -Context $heartbeatContext -FinalPhase "router.final" -Succeeded $true -Note "route output assembled"
 $heartbeatAdvice = Get-HeartbeatAdvice -Context $heartbeatContext
 $heartbeatStatus = if ($heartbeatFinalizeStatus) { $heartbeatFinalizeStatus } else { Get-HeartbeatStatus -Context $heartbeatContext }
@@ -867,6 +991,10 @@ $result = [pscustomobject]@{
     task_type = $TaskType
     route_mode = $routeMode
     route_reason = $routeReason
+    route_mode_before_unattended_override = if ($unattendedOverrideApplied) { $routeModeBeforeUnattended } else { $null }
+    route_reason_before_unattended_override = if ($unattendedOverrideApplied) { $routeReasonBeforeUnattended } else { $null }
+    unattended_decision = $unattendedDecision
+    unattended_override_applied = [bool]$unattendedOverrideApplied
     confidence = [Math]::Round($confidence, 4)
     top1_top2_gap = [Math]::Round($topGap, 4)
     candidate_signal = [Math]::Round($candidateSignal, 4)
@@ -902,6 +1030,8 @@ $result = [pscustomobject]@{
     system_design_advice = $systemDesignAdvice
     cuda_kernel_advice = $cudaKernelAdvice
     retrieval_advice = $retrievalAdvice
+    exploration_advice = $explorationAdvice
+    closure_advice = $closureAdvice
     dialectic_team_advice = $dialecticTeamAdvice
     dialectic_team_route_override = $dialecticTeamRouteOverride
     daily_dialectic_advice = $dailyDialecticAdvice
@@ -922,6 +1052,18 @@ $result = [pscustomobject]@{
         $null
     }
     ranked = @($ranked | Select-Object -First 3)
+}
+
+$confirmSkillOptions = Build-ConfirmSkillOptions -Result $result -ConfirmUiPolicy $confirmUiPolicyResolved -RepoRoot ([string]$repoRoot)
+if ($confirmSkillOptions) {
+    $confirmText = Build-ConfirmUiText -ConfirmSkillOptions $confirmSkillOptions -UnattendedDecision $unattendedDecision
+    $result | Add-Member -NotePropertyName "confirm_ui" -NotePropertyValue ([pscustomobject]@{
+        enabled = $true
+        pack_id = [string]$confirmSkillOptions.selected_pack
+        selected_skill = [string]$confirmSkillOptions.selected_skill
+        options = @($confirmSkillOptions.options)
+        rendered_text = $confirmText
+    })
 }
 
 $runtimeDigestEnabled = $false

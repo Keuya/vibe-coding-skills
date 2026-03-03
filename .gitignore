@@ -1,0 +1,20 @@
+# Runtime outputs (generated during routing/verification)
+outputs/
+**/outputs/
+**/telemetry/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Local env files
+.env
+.env.*
