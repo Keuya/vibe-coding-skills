@@ -12,7 +12,7 @@
       },
       {
         "id": "everything-claude-code@everything-claude-code",
-        "repo": "https://github.com/punkpeye/everything-claude-code",
+        "repo": "https://github.com/affaan-m/everything-claude-code",
         "install_mode": "manual-codex",
         "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
         "role": "M grade agents: tdd-guide, code-reviewer, security-reviewer, build-error-resolver, planner, architect, systematic-debugging",
@@ -28,7 +28,7 @@
       },
       {
         "id": "hookify@claude-plugins-official",
-        "repo": "https://github.com/anthropics/claude-code-plugins",
+        "repo": "https://github.com/anthropics/claude-plugins-official",
         "install_mode": "manual-codex",
         "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
         "role": "Hook management: auto-plugin-discovery, large-file-write prevention",
@@ -54,7 +54,7 @@
       },
       {
         "id": "serena@claude-plugins-official",
-        "repo": "https://github.com/anthropics/claude-code-plugins",
+        "repo": "https://github.com/anthropics/claude-plugins-official",
         "install_mode": "manual-codex",
         "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
         "role": "Semantic code analysis, symbol navigation, project memory",
@@ -62,7 +62,7 @@
       },
       {
         "id": "context7@claude-plugins-official",
-        "repo": "https://github.com/anthropics/claude-code-plugins",
+        "repo": "https://github.com/anthropics/claude-plugins-official",
         "install_mode": "manual-codex",
         "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
         "role": "Library documentation lookup",
@@ -70,7 +70,7 @@
       },
       {
         "id": "github@claude-plugins-official",
-        "repo": "https://github.com/anthropics/claude-code-plugins",
+        "repo": "https://github.com/anthropics/claude-plugins-official",
         "install_mode": "manual-codex",
         "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
         "role": "GitHub operations (PRs, issues, code search)",
@@ -78,7 +78,7 @@
       },
       {
         "id": "playwright@claude-plugins-official",
-        "repo": "https://github.com/anthropics/claude-code-plugins",
+        "repo": "https://github.com/anthropics/claude-plugins-official",
         "install_mode": "manual-codex",
         "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
         "role": "Browser automation and E2E testing",

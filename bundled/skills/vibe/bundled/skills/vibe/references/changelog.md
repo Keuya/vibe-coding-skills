@@ -13,6 +13,8 @@
   - UI/浏览器流程任务提供 CUA vs Playwright vs API 决策树与 runbook（自动建议 → 你确认 → 注入）。
 - 可靠性修复：
   - 修复 PowerShell 输入冲突与 SSE responses 兼容性问题（提升代理/网关兼容）。
+  - 修复上游插件 repo 指针漂移（ECC → `affaan-m/everything-claude-code`；官方插件 → `anthropics/claude-plugins-official`）。
+  - 新增上游版本审计脚本：`scripts/governance/audit-upstream.ps1`（支持对比本机 `installed_plugins.json`）。
 
 ## v2.3.27 (2026-02-27)
 
