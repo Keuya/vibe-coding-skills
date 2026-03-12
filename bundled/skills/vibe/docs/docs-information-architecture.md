@@ -26,7 +26,7 @@ cleanup-first 的目标不是一次性大搬家，而是在不引入额外漂移
 | `*-design.md` / `architecture.md` | 结构设计、建模与分析 | `deep-discovery-mode-design.md` |
 | `status/*.md` | 当前运行态与近期回执 | `status/current-state.md` |
 | `plans/*.md` | 时间绑定的执行文档 | `plans/2026-03-08-repo-cleanliness-batch2-4-triage.md` |
-| `releases/*.md` | release cut / note / install evidence | `releases/v2.3.30.md` |
+| `releases/*.md` | release cut / note / install evidence | `releases/v2.3.31.md` |
 
 ## Navigation Rules
 

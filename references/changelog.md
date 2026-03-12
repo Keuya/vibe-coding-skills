@@ -1,5 +1,17 @@
 # VCO Changelog
 
+## v2.3.31 (2026-03-13)
+
+- Completed the governed execution closure for:
+  - `docs/plans/2026-03-13-distribution-governance-plan.md`
+  - `docs/plans/2026-03-13-post-upstream-governance-repo-convergence-plan.md`
+  - `docs/plans/2026-03-13-post-upstream-governance-developer-entry-plan.md`
+- Repaired external-corpus fixture parity so `vibe-output-artifact-boundary-gate.ps1` returns green with tracked output mirrors aligned.
+- Repaired third-party disclosure canonicalization so `vibe-third-party-disclosure-parity-gate.ps1` no longer misclassifies repository-local document links as undeclared upstream sources.
+- Re-cut the governed version surface to `v2.3.31`, resynced canonical and bundled assets, and prepared runtime/install/remote alignment around the new release marker.
+- Detailed release notes: `docs/releases/v2.3.31.md`.
+
+
 ## 2026-03-09 — Batch0-9 cleanup closure update
 
 - 完成 `docs/plans/2026-03-08-repo-full-cleanup-master-plan.md` 下 Batch 0-9 的一次执行收口，并新增 tracked 报告：`docs/plans/2026-03-09-batch0-9-closure-report.md`。

@@ -3,13 +3,13 @@
 This repository is licensed under **Apache-2.0**. See [`LICENSE`](./LICENSE).
 
 This file is the human-readable disclosure surface for third-party and upstream
-sources tracked canonically in [`config/upstream-lock.json`](./config/upstream-lock.json).
+sources tracked canonically in [config/upstream-lock.json](./config/upstream-lock.json).
 It does not relicense upstream code, prompts, datasets, or services.
 
 ## Canonical Rules
 
 1. The canonical machine-readable source of truth is
-   [`config/upstream-lock.json`](./config/upstream-lock.json).
+  [config/upstream-lock.json](./config/upstream-lock.json).
 2. This file must disclose every lock entry that has `disclosure_required: true`.
 3. `reference-only` entries are governance, research, or methodology sources and
    must not be treated as redistributable upstream code.
@@ -62,12 +62,12 @@ It does not relicense upstream code, prompts, datasets, or services.
 ## Operational References
 
 - Distribution governance policy:
-  [`docs/distribution-governance.md`](./docs/distribution-governance.md)
+  [docs/distribution-governance.md](./docs/distribution-governance.md)
 - Upstream governance policy:
-  [`docs/upstream-distribution-governance.md`](./docs/upstream-distribution-governance.md)
+  [docs/upstream-distribution-governance.md](./docs/upstream-distribution-governance.md)
 - Provenance policy:
-  [`docs/origin-provenance-policy.md`](./docs/origin-provenance-policy.md)
+  [docs/origin-provenance-policy.md](./docs/origin-provenance-policy.md)
 - Canonical upstream registry:
-  [`config/upstream-lock.json`](./config/upstream-lock.json)
+  [config/upstream-lock.json](./config/upstream-lock.json)
 - Third-party notice:
-  [`third_party/NOTICE.md`](./third_party/NOTICE.md)
+  [third_party/NOTICE.md](./third_party/NOTICE.md)

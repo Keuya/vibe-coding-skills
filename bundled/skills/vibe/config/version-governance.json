@@ -1,8 +1,8 @@
 {
     "schema_version":  2,
     "release":  {
-                    "version":  "2.3.30",
-                    "updated":  "2026-03-07",
+                    "version":  "2.3.31",
+                    "updated":  "2026-03-13",
                     "channel":  "stable",
                     "notes":  "Wave31-39 deep extraction / drift closure: mirror topology governance, upstream corpus governance, docling/connector/role-pack/capability catalog productization, and promotion-release closure."
                 },

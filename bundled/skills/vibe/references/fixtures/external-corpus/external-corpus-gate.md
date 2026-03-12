@@ -1,4 +1,4 @@
-﻿# External Corpus Gate Result
+# External Corpus Gate Result
 
 - Generated: 2026-02-24T19:21:55.4362555Z
 - Gate passed: True
@@ -17,5 +17,3 @@
 - Avg route gap: 0.2559
 
 ## Reasons
-
-

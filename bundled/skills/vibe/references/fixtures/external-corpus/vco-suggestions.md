@@ -1,4 +1,4 @@
-﻿# VCO External Corpus Suggestions
+# VCO External Corpus Suggestions
 
 - Generated: 2026-02-24T19:06:55.1229389Z
 - Source root: C:\Users\羽裳\.codex\.tmp_repo_compare\system-prompts-and-models-of-ai-tools
@@ -22,4 +22,3 @@
 - $(@{pack_id=integration-devops; advisory_trigger_candidates=System.Object[]}.pack_id): agent, model, test, tests, security, testing
 - $(@{pack_id=ai-llm; advisory_trigger_candidates=System.Object[]}.pack_id): model, test, tests, mcp, security, testing
 - $(@{pack_id=research-design; advisory_trigger_candidates=System.Object[]}.pack_id): agent, model, test, tests, mcp, security, testing
-

@@ -10,7 +10,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ### Current Release Surface
 
-- [`v2.3.30.md`](v2.3.30.md): Wave31-39 deep extraction / drift closure release
+- [`v2.3.31.md`](v2.3.31.md): post-upstream governance closure, disclosure parity fix, and runtime alignment
 
 ### Release Runtime / Proof Handoff
 
@@ -21,15 +21,16 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ## Recent Governed Releases
 
-- [`v2.3.30.md`](v2.3.30.md) — 2026-03-07 — Wave31-39 deep extraction / drift closure
-- [`v2.3.29.md`](v2.3.29.md) — 2026-03-07 — Wave19-30 memory / browser / desktop / prompt / release cut closure
-- [`v2.3.28.md`](v2.3.28.md) — 2026-03-05 — TurboMax / vector-first context / CUA / prompt asset boost / academic deliverable routing
+- [`v2.3.31.md`](v2.3.31.md) - 2026-03-13 - post-upstream governance closure / disclosure parity / runtime alignment
+- [`v2.3.30.md`](v2.3.30.md) - 2026-03-07 - Wave31-39 deep extraction / drift closure
+- [`v2.3.29.md`](v2.3.29.md) - 2026-03-07 - Wave19-30 memory / browser / desktop / prompt / release cut closure
+- [`v2.3.28.md`](v2.3.28.md) - 2026-03-05 - TurboMax / vector-first context / CUA / prompt asset boost / academic deliverable routing
 
 Older release notes remain in this directory as historical version records, but they are not part of the active release surface.
 
 ## Historical Packetization
 
-- [`wave15-18-release-packet.md`](wave15-18-release-packet.md) — historical packetization artifact, not the current release-note format
+- [`wave15-18-release-packet.md`](wave15-18-release-packet.md) - historical packetization artifact, not the current release-note format
 
 ## Release Operator Entry
 
@@ -56,8 +57,8 @@ Use the gate-family index for the exact scripts. The extended trains stay groupe
 
 ## Rules
 
-- `docs/releases/README.md` 是 release 面的导航页，不承担逐 gate 逐脚本的完整枚举职责
-- 当前 release surface、proof handoff、历史 packetization 必须分层展示，不再混成单一入口
-- 具体 gate 名称、顺序和 family 归属以 [`../../scripts/verify/gate-family-index.md`](../../scripts/verify/gate-family-index.md) 为准
-- release note 一文一版，文件名保持 `v<version>.md`
-- 历史 release packet 与当前 versioned release note 分层展示，不在当前 release surface 并列暴露
+- `docs/releases/README.md` is the release-surface navigator, not the flat home for every gate script.
+- Keep current release surface, proof handoff, and historical packetization separated instead of flattening them into one list.
+- Exact gate names, ordering, and family ownership are defined by [`../../scripts/verify/gate-family-index.md`](../../scripts/verify/gate-family-index.md).
+- Release notes stay one-file-per-version using the `v<version>.md` pattern.
+- Historical release packets must stay distinct from the current governed release surface.
