@@ -2,6 +2,41 @@
 
 Protocol for coding, implementation, debugging, and testing tasks.
 
+## Governed Runtime Position
+
+This protocol is the execution surface for runtime stage 5 `plan_execute`.
+It does not replace the governed runtime entry or skip the earlier planning stages defined in `protocols/runtime.md`.
+
+The governed runtime path remains:
+
+1. `skeleton_check`
+2. `deep_interview`
+3. `requirement_doc`
+4. `xl_plan`
+5. `plan_execute`
+6. `phase_cleanup`
+
+`do.md` assumes stages 1 through 4 have already produced:
+
+- a frozen requirement document
+- an execution plan
+- an internal execution grade
+
+The job here is to execute, verify, and hand off cleanly to `phase_cleanup`.
+
+## Runtime Mode Behavior
+
+### `interactive_governed`
+
+- may pause for explicit confirmation when execution scope materially changes
+- should surface requirement or plan drift before continuing
+
+### `benchmark_autonomous`
+
+- continues without repeated user confirmation
+- must record assumption-driven decisions and execution receipts
+- must not silently widen scope beyond the frozen requirement contract
+
 ## Scope
 Activated when the task requires writing or modifying code:
 - Feature implementation
@@ -50,6 +85,8 @@ If VCO router output includes:
    - Sequential execution to avoid conflicts
 3. Use runtime-neutral state_store to track progress across tasks
 4. Final review with Superpowers verification-before-completion
+
+If subagents are spawned under the governed runtime, their prompts must end with `$vibe`.
 
 ### XL Grade
 Defer to vibe-team protocol (Codex native team orchestration + optional ruflo collaboration).
@@ -116,6 +153,20 @@ Before marking code task complete:
 2. Code review completed
 3. No security vulnerabilities (for user-facing code)
 4. No console.log left in production code
+5. A handoff bundle exists for runtime stage 6 `phase_cleanup`
+
+## Required Handoff To `phase_cleanup`
+
+Execution is not complete at the last passing test.
+Before leaving this protocol, write or preserve the evidence needed for cleanup:
+
+- verification commands and results
+- changed artifact list
+- temp artifact list
+- node or process cleanup notes when relevant
+- open risks or deferred follow-ups
+
+`phase_cleanup` is mandatory and owns the final closure receipt.
 
 ## Conflict Avoidance
 - Do NOT use ruflo agent_spawn for M/L coding tasks

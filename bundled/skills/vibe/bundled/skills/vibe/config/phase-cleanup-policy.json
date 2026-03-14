@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-15",
+  "enabled": true,
+  "required_after_each_phase": true,
+  "receipt_path": "outputs/runtime/vibe-sessions/{run_id}/cleanup-receipt.json",
+  "cleanup_steps": [
+    "remove_temp_artifacts",
+    "write_phase_cleanup_receipt",
+    "run_node_process_audit",
+    "attempt_node_zombie_cleanup_if_needed",
+    "record_remaining_manual_actions"
+  ],
+  "bridges": {
+    "phase_end_cleanup_script": "scripts/governance/phase-end-cleanup.ps1",
+    "node_audit_script": "scripts/governance/Invoke-NodeProcessAudit.ps1",
+    "node_cleanup_script": "scripts/governance/Invoke-NodeZombieCleanup.ps1",
+    "process_health_policy": "config/process-health-policy.json",
+    "process_ledger_policy": "config/process-ledger-policy.json"
+  }
+}

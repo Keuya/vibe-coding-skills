@@ -38,5 +38,11 @@
     },
     "override_route_mode": true,
     "override_target_route_mode": "pack_overlay"
+  },
+  "governed_runtime_bridge": {
+    "interactive_mode": "interactive_governed",
+    "unattended_mode": "benchmark_autonomous",
+    "replace_interactive_confirm_with_receipt_in_unattended": true,
+    "require_requirement_and_plan_artifacts_before_execute": true
   }
 }

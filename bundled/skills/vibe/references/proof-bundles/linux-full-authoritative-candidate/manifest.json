@@ -3,8 +3,8 @@
   "bundle_id": "codex-linux-full-authoritative-candidate-2026-03-13",
   "frozen_at": "2026-03-13",
   "source_release": {
-    "version": "2.3.42",
-    "updated": "2026-03-14"
+    "version": "2.3.43",
+    "updated": "2026-03-15"
   },
   "lane_id": "codex/linux",
   "current_status": "supported-with-constraints",

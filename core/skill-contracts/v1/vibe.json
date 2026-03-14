@@ -19,6 +19,5 @@
       "name_equals_skill_id": true
     }
   },
-  "notes": "Batch A canonical contract (conservative): validate YAML frontmatter existence + name/description presence + name == skill_id, plus packaging parity with repo-root SKILL.md."
+  "notes": "Governed runtime contract: validate host-syntax-neutral vibe entry, fixed six-stage runtime documentation, and packaging parity with repo-root SKILL.md."
 }
-

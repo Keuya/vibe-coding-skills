@@ -93,6 +93,15 @@
     "fallback_behavior":  {
                               "on_missing_catalog":  "bypass_deep_discovery",
                               "on_error":  "continue_core_routing"
+                          },
+    "governed_runtime_bridge": {
+                                  "state_machine_stage": "deep_interview",
+                                  "require_intent_contract_receipt": true,
+                                  "require_requirement_doc_handoff": true,
+                                  "runtime_modes": [
+                                      "interactive_governed",
+                                      "benchmark_autonomous"
+                                  ]
                           }
 }
 

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-15",
+  "runtime_id": "vibe-governed-runtime",
+  "entry_skill": "vibe",
+  "host_syntax_aliases": [
+    "/vibe",
+    "$vibe",
+    "vibe"
+  ],
+  "authority": {
+    "canonical_router": "scripts/router/resolve-pack-route.ps1",
+    "runtime_protocol": "protocols/runtime.md",
+    "forbid_second_router": true
+  },
+  "invariants": {
+    "single_user_facing_path": true,
+    "fixed_stage_order": true,
+    "freeze_requirement_before_execution": true,
+    "cleanup_required_before_completion": true,
+    "internal_grades_only": true
+  },
+  "stages": [
+    {
+      "id": "skeleton_check",
+      "order": 1,
+      "required": true,
+      "receipt": "outputs/runtime/vibe-sessions/{run_id}/skeleton-receipt.json"
+    },
+    {
+      "id": "deep_interview",
+      "order": 2,
+      "required": true,
+      "receipt": "outputs/runtime/vibe-sessions/{run_id}/intent-contract.json"
+    },
+    {
+      "id": "requirement_doc",
+      "order": 3,
+      "required": true,
+      "receipt": "docs/requirements/{date}-{slug}.md"
+    },
+    {
+      "id": "xl_plan",
+      "order": 4,
+      "required": true,
+      "receipt": "docs/plans/{date}-{slug}-execution-plan.md"
+    },
+    {
+      "id": "plan_execute",
+      "order": 5,
+      "required": true,
+      "receipt": "outputs/runtime/vibe-sessions/{run_id}/phase-execute.json"
+    },
+    {
+      "id": "phase_cleanup",
+      "order": 6,
+      "required": true,
+      "receipt": "outputs/runtime/vibe-sessions/{run_id}/cleanup-receipt.json"
+    }
+  ]
+}

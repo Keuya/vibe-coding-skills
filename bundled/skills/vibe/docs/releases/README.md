@@ -10,7 +10,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ### Current Release Surface
 
-- [`v2.3.42.md`](v2.3.42.md): tracked Linux proof artifacts, manifest tracked-file gate, and clean-clone release-truth closure
+- [`v2.3.43.md`](v2.3.43.md): governed runtime contract landing, six-stage `vibe` entry closure, runtime bridge tests, and release-surface alignment
 
 ### Release Runtime / Proof Handoff
 
@@ -21,6 +21,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ## Recent Governed Releases
 
+- [`v2.3.43.md`](v2.3.43.md) - 2026-03-15 - governed runtime contract / six-stage vibe entry / runtime bridge tests / release-surface alignment
 - [`v2.3.42.md`](v2.3.42.md) - 2026-03-14 - tracked Linux proof artifacts / manifest tracked-file gate / clean-clone release-truth closure
 - [`v2.3.41.md`](v2.3.41.md) - 2026-03-14 - Linux target-root portability hardening / proof-gate execution-context lock / governed manifest alignment
 - [`v2.3.40.md`](v2.3.40.md) - 2026-03-14 - cross-shell receipt normalization / upgrade hint closure / Linux truth sync

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-15",
+  "enabled": true,
+  "root": "docs/requirements",
+  "template_path": "templates/requirements/governed-requirement-template.md",
+  "single_requirement_doc_per_run": true,
+  "required_sections": [
+    "Summary",
+    "Goal",
+    "Deliverable",
+    "Constraints",
+    "Acceptance Criteria",
+    "Non-Goals",
+    "Autonomy Mode",
+    "Assumptions",
+    "Evidence Inputs"
+  ],
+  "filename_contract": "{date}-{slug}.md",
+  "bridges": {
+    "intent_contract_fields": [
+      "goal",
+      "deliverable",
+      "constraints",
+      "acceptance_criteria",
+      "non_goals",
+      "autonomy_mode",
+      "assumptions"
+    ]
+  }
+}

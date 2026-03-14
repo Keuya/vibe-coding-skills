@@ -2,6 +2,49 @@
 
 Pre-routing analysis and post-routing planning/design/research protocol.
 
+## Governed Runtime Position
+
+This protocol is not a standalone user entrypoint.
+It is the planning and analysis surface used inside the governed `vibe` runtime defined by `protocols/runtime.md`.
+
+The user-facing runtime path remains fixed:
+
+1. `skeleton_check`
+2. `deep_interview`
+3. `requirement_doc`
+4. `xl_plan`
+5. `plan_execute`
+6. `phase_cleanup`
+
+`think.md` primarily owns stages 2 through 4:
+
+- `deep_interview`: clarify intent or infer assumptions
+- `requirement_doc`: freeze the requirement contract
+- `xl_plan`: generate the executable plan
+
+`M`, `L`, and `XL` are still used here, but only as internal execution strategy.
+They are not separate user-facing entry branches.
+
+## Runtime Mode Behavior
+
+### `interactive_governed`
+
+Default mode.
+
+- ask high-value questions when ambiguity blocks planning quality
+- require a user-visible requirement freeze before execution
+- allow approval pauses before execution begins
+
+### `benchmark_autonomous`
+
+Closed-loop mode.
+
+- do not keep asking the user once the input is sufficient to proceed
+- infer missing assumptions and record them explicitly
+- still produce requirement and plan artifacts before execution
+
+In both modes, this protocol must leave execution with a frozen requirement artifact and a plan artifact.
+
 ## Closure-First Preflight (2 Probes + 1 Verify)
 
 Even in planning/research, the primary failure mode is **stalling** (dead-air).
@@ -60,6 +103,9 @@ Based on analysis output, determine:
 - Final grade (may differ from initial estimate)
 - Task type (plan/code/review/debug/research)
 - Compound task? -> decompose (see below)
+- Runtime mode fit:
+  - `interactive_governed` if unresolved questions still materially affect solution shape
+  - `benchmark_autonomous` if assumptions can be safely frozen into the requirement document
 
 ### Compound Task Decomposition
 
@@ -99,6 +145,10 @@ Tool: superpowers:brainstorming
 - HARD-GATE: No implementation until design is approved
 - Output: Clarified requirements, user stories, acceptance criteria
 
+Governed runtime requirement:
+- persist an intent contract that can be turned into a file under `docs/requirements/`
+- if running in `benchmark_autonomous`, replace live questioning with explicit inferred assumptions
+
 ### B2: Architecture Design (if needed)
 Tool: sc:design
 - Cognitive personas (architect, security, frontend, backend)
@@ -119,6 +169,13 @@ team.md Dialectic Mode instead.
 Tool: superpowers:writing-plans
 - Generates plan at docs/plans/YYYY-MM-DD-<topic>.md
 - Output: Actionable implementation plan with phases
+
+Minimum governed-runtime contents:
+- internal grade decision
+- wave or batch structure
+- verification commands
+- rollback rules
+- phase cleanup expectations
 
 ### B4: Deep Research (if needed)
 Tool: claude-code-settings:deep-research
@@ -176,3 +233,4 @@ After design is approved:
 1. L grade: Switch to vibe-do with Superpowers subagent-driven-dev
 2. XL grade: Switch to vibe-team protocol (Codex native team + optional ruflo collaboration)
 3. Always carry the plan document forward as context
+4. Execution must hand off into runtime stage 5 `plan_execute`, not bypass directly into ad-hoc coding

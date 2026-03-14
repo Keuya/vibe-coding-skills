@@ -1,5 +1,14 @@
 # VCO Changelog
 
+## v2.3.43 (2026-03-15)
+
+- Landed the governed runtime contract as the canonical `vibe` entry: one user-facing path, six fixed stages, and `interactive_governed` / `benchmark_autonomous` runtime modes with internal grades only.
+- Added governed-runtime packaging/runtime bridge coverage through `tests/runtime_neutral/test_governed_runtime_bridge.py`, including runtime-contract marker coverage and temp artifact-root closure for `invoke-vibe-runtime.ps1`.
+- Extended installed-runtime freshness markers and governed packaging scope so the six-stage runtime surfaces are part of the governed installed-runtime contract rather than repo-only documentation.
+- Aligned outward-facing release surfaces, dist manifests, and proof-bundle source-release markers to `v2.3.43`.
+- Detailed release notes: `docs/releases/v2.3.43.md`.
+
+
 ## v2.3.42 (2026-03-14)
 
 - Converted the Linux full-authoritative candidate proof bundle into a truly distributable governed artifact by tracking the frozen `*.log` evidence files instead of letting clean clones silently lose them to `.gitignore`.

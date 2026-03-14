@@ -8,6 +8,18 @@
     "verification before promotion claims",
     "rollback-ready before widening any pilot"
   ],
+  "governed_runtime_bridge": {
+    "state_machine_binding": [
+      "skeleton_check",
+      "deep_interview",
+      "requirement_doc",
+      "xl_plan",
+      "plan_execute",
+      "phase_cleanup"
+    ],
+    "require_frozen_requirement_before_wave_contract": true,
+    "require_cleanup_receipt_before_board_handoff": true
+  },
   "checkpoints": [
     {
       "id": "xl-intake-probe",
@@ -48,6 +60,14 @@
       "blocking_if_missing": true,
       "artifacts": ["promotion prep", "release packet", "rollback path"],
       "pass_criteria": ["review-ready vs hold clearly separated", "no silent promotion path"]
+    },
+    {
+      "id": "phase-cleanup",
+      "stage_order": 6,
+      "required": true,
+      "blocking_if_missing": true,
+      "artifacts": ["cleanup receipt", "temp cleanup summary", "node audit result"],
+      "pass_criteria": ["phase residue minimized", "managed node state reconciled"]
     }
   ]
 }

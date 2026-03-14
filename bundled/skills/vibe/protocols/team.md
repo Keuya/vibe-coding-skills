@@ -2,6 +2,22 @@
 
 Protocol for XL-grade multi-agent tasks requiring coordination.
 
+## Governed Runtime Position
+
+This protocol is the XL execution topology used inside runtime stage 5 `plan_execute`.
+It is not a separate user entrypoint.
+
+The fixed user-facing runtime path remains:
+
+1. `skeleton_check`
+2. `deep_interview`
+3. `requirement_doc`
+4. `xl_plan`
+5. `plan_execute`
+6. `phase_cleanup`
+
+This protocol only activates after the requirement and plan are already frozen.
+
 ## Scope
 Activated for XL grade tasks that require:
 - Multiple agents working in parallel
@@ -13,6 +29,8 @@ Activated for XL grade tasks that require:
 
 Codex native agent APIs manage lifecycle + task assignment (primary path).
 ruflo remains optional for workflow/memory enhancements.
+
+All spawned subagent prompts must end with `$vibe` so the governed runtime remains the active contract inside delegated work.
 
 ### Role Division
 
@@ -211,6 +229,10 @@ Always confirm with user at these points:
 3. Before final integration of results
 4. Before committing changes
 
+Mode-aware interpretation:
+- `interactive_governed`: the four confirmation points above remain user-visible by default
+- `benchmark_autonomous`: replace interactive pauses with explicit receipts unless a blocking ambiguity, scope breach, or safety boundary is hit
+
 ## GSD-Lite Wave Contract Hook (Optional)
 
 Policy source: `config/gsd-overlay.json`
@@ -385,6 +407,7 @@ Limitations vs XL: no intra-group dialogue (only 1 agent per perspective), no Ph
 - Ralph-loop and active team orchestration are mutually exclusive
 - Only one team active per project at a time
 - Prefer native agent communication via `send_input`
+- Do NOT bypass runtime stage 6; XL execution must still hand off into `phase_cleanup`
 
 ## BrowserOps / DesktopOps Governance Hooks
 

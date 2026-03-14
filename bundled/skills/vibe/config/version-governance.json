@@ -1,10 +1,10 @@
 {
     "schema_version":  2,
     "release":  {
-                    "version":  "2.3.42",
-                    "updated":  "2026-03-14",
+                    "version":  "2.3.43",
+                    "updated":  "2026-03-15",
                     "channel":  "stable",
-                    "notes":  "Tracks Linux proof-bundle evidence inside the governed repo surface, adds a manifest-required-files-tracked gate, and realigns release truth so clean clones reproduce the same promotion verdict."
+                    "notes":  "Lands the governed runtime contract as the canonical vibe entry, extends installed-runtime markers to cover the six-stage runtime surfaces, adds runtime-neutral bridge tests, and aligns the outward-facing release surface to the new governed entry model."
                 },
     "source_of_truth":  {
                             "canonical_root":  ".",
@@ -73,6 +73,7 @@
                                                          "protocols",
                                                          "references",
                                                          "docs",
+                                                         "templates",
                                                          "scripts",
                                                          "mcp"
                                                      ]
@@ -100,9 +101,17 @@
                                                                                "install.ps1",
                                                                                "check.ps1",
                                                                                "scripts/common/vibe-governance-helpers.ps1",
+                                                                               "scripts/runtime/VibeRuntime.Common.ps1",
+                                                                               "scripts/runtime/invoke-vibe-runtime.ps1",
                                                                                "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
                                                                                "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1",
-                                                                               "scripts/router/resolve-pack-route.ps1"
+                                                                               "scripts/verify/vibe-governed-runtime-contract-gate.ps1",
+                                                                               "scripts/router/resolve-pack-route.ps1",
+                                                                               "config/runtime-contract.json",
+                                                                               "config/runtime-modes.json",
+                                                                               "config/requirement-doc-policy.json",
+                                                                               "config/plan-execution-policy.json",
+                                                                               "config/phase-cleanup-policy.json"
                                                                            ],
                                               "require_nested_bundled_root":  false
                                           }

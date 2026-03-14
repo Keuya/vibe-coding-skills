@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-15",
+  "default_mode": "interactive_governed",
+  "allowed_modes": [
+    "interactive_governed",
+    "benchmark_autonomous"
+  ],
+  "mode_contracts": {
+    "interactive_governed": {
+      "ask_questions": true,
+      "requires_requirement_visibility": true,
+      "requires_plan_pause": true,
+      "replace_confirms_with_receipts": false
+    },
+    "benchmark_autonomous": {
+      "ask_questions": false,
+      "infer_and_record_assumptions": true,
+      "requires_requirement_visibility": true,
+      "requires_plan_pause": false,
+      "replace_confirms_with_receipts": true
+    }
+  },
+  "bridges": {
+    "confirm_ui_policy": "config/confirm-ui-policy.json",
+    "deep_discovery_policy": "config/deep-discovery-policy.json",
+    "plan_execution_policy": "config/plan-execution-policy.json"
+  }
+}

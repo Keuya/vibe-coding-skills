@@ -13,6 +13,23 @@ Activated when the user wants to:
 - Decide whether to create new skills, agents, MCPs, or hooks
 - Conduct a collaborative improvement discussion
 
+## Governed Runtime Position
+
+This protocol is a retrospective and learning surface, not the primary user entrypoint.
+It can be invoked after governed execution completes, or used as part of a cleanup and learning pass after runtime stage 6 `phase_cleanup`.
+
+The fixed runtime path remains:
+
+1. `skeleton_check`
+2. `deep_interview`
+3. `requirement_doc`
+4. `xl_plan`
+5. `plan_execute`
+6. `phase_cleanup`
+
+`retro.md` never replaces those stages.
+It consumes their receipts and artifacts to improve future runs.
+
 ## Context Retro Advisor (Agent-Skills Guided)
 
 VCO uses Agent-Skills-for-Context-Engineering as an expert advisor in retro mode.
