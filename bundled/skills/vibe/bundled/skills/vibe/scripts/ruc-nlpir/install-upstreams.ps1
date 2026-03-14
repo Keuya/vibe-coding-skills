@@ -1,5 +1,5 @@
 param(
-  [string]$CodexRoot = (Join-Path $env:USERPROFILE ".codex"),
+  [string]$CodexRoot = '',
   [ValidateSet("minimal", "full")]
   [string]$Profile = "minimal",
   [switch]$AllowHeavy,
@@ -7,6 +7,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+. (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+$CodexRoot = Resolve-VgoTargetRoot -TargetRoot $CodexRoot
 
 function Write-Section {
   param([string]$Title)

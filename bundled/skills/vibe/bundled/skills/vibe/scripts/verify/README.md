@@ -10,13 +10,13 @@ For a single entrypoint that ties route probing, semantic expansion, threshold t
 For the one-shot install/bootstrap path, the primary readiness gate is:
 
 ```powershell
-pwsh -NoProfile -File .\vibe-bootstrap-doctor-gate.ps1 -TargetRoot "$env:USERPROFILE\.codex" -WriteArtifacts
+pwsh -NoProfile -File .\vibe-bootstrap-doctor-gate.ps1 -WriteArtifacts
 ```
 
 Pair it with MCP profile materialization when you need a fresh active MCP file:
 
 ```powershell
-pwsh -NoProfile -File ..\setup\materialize-codex-mcp-profile.ps1 -TargetRoot "$env:USERPROFILE\.codex" -Force
+pwsh -NoProfile -File ..\setup\materialize-codex-mcp-profile.ps1 -Force
 ```
 
 - `gate-family-index.md`：verify family 导航入口；先按治理主题找 gate，再进入具体脚本。
@@ -68,7 +68,7 @@ pwsh -NoProfile -File .\..\governance\phase-end-cleanup.ps1 -WriteArtifacts -Inc
 详见：`gate-family-index.md`
 **Managed Runtime / Process Hygiene**: `vibe-node-zombie-gate.ps1` validates VCO-managed Node ownership, stale-process classification, and report-only cleanup safety boundaries.
 
-**Platform Promotion Proof**: `vibe-platform-support-contract-gate.ps1`, `vibe-platform-doctor-parity-gate.ps1`, `vibe-linux-pwsh-proof-gate.ps1`, and `vibe-platform-promotion-bundle.ps1` form the platform-proof closure chain. They validate evidence wiring and truth-contract alignment; they do not auto-promote a platform lane.
+**Platform Promotion Proof**: `vibe-platform-support-contract-gate.ps1`, `vibe-platform-doctor-parity-gate.ps1`, `vibe-linux-pwsh-proof-gate.ps1`, and `vibe-platform-promotion-bundle.ps1` form the platform-proof closure chain. They validate evidence wiring and truth-contract alignment from the canonical repo root; they do not auto-promote a platform lane and are not installed-runtime self-checks.
 
 ## Fixture Taxonomy
 
@@ -223,7 +223,7 @@ Notes:
 Run installed runtime freshness gate (canonical repo only):
 
 ```powershell
-& ".\vibe-installed-runtime-freshness-gate.ps1" -TargetRoot "$env:USERPROFILE\.codex" -WriteReceipt
+& ".\vibe-installed-runtime-freshness-gate.ps1" -WriteReceipt
 ```
 
 Notes:
@@ -510,7 +510,7 @@ Mirror topology and runtime coherence additions:
 ```powershell
 & ".\vibe-nested-bundled-parity-gate.ps1" -WriteArtifacts
 & ".\vibe-mirror-edit-hygiene-gate.ps1" -WriteArtifacts
-& ".\vibe-release-install-runtime-coherence-gate.ps1" -TargetRoot "$env:USERPROFILE\.codex" -WriteArtifacts
+& ".\vibe-release-install-runtime-coherence-gate.ps1" -WriteArtifacts
 ```
 
 Operational notes:

@@ -8,6 +8,73 @@ Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
 
+function Get-LocalGovernanceExecutionHint {
+    param(
+        [Parameter(Mandatory)] [string]$ScriptPath
+    )
+
+    try {
+        $localRoot = Resolve-VgoRepoRoot -StartPath $ScriptPath
+    } catch {
+        return $null
+    }
+
+    $hint = [ordered]@{
+        local_root = [System.IO.Path]::GetFullPath($localRoot)
+        has_outer_git_root = [bool](Test-Path -LiteralPath (Join-Path $localRoot '.git'))
+        release_version = $null
+        release_updated = $null
+    }
+
+    $governancePath = Join-Path $localRoot 'config\version-governance.json'
+    if (Test-Path -LiteralPath $governancePath) {
+        try {
+            $governance = Get-Content -LiteralPath $governancePath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($null -ne $governance -and $governance.PSObject.Properties.Name -contains 'release' -and $null -ne $governance.release) {
+                if ($governance.release.PSObject.Properties.Name -contains 'version') {
+                    $hint.release_version = [string]$governance.release.version
+                }
+                if ($governance.release.PSObject.Properties.Name -contains 'updated') {
+                    $hint.release_updated = [string]$governance.release.updated
+                }
+            }
+        } catch {
+        }
+    }
+
+    return [pscustomobject]$hint
+}
+
+function Write-ExecutionContextFailureAndExit {
+    param(
+        [Parameter(Mandatory)] [string]$ScriptPath,
+        [Parameter(Mandatory)] [System.Management.Automation.ErrorRecord]$ErrorRecord
+    )
+
+    $hint = Get-LocalGovernanceExecutionHint -ScriptPath $ScriptPath
+    $message = ''
+    if ($null -ne $ErrorRecord -and $null -ne $ErrorRecord.Exception) {
+        $message = $ErrorRecord.Exception.Message
+    }
+
+    Write-Host "[FAIL] linux proof gate execution-context lock" -ForegroundColor Red
+    Write-Host ("[INFO] {0}" -f $message) -ForegroundColor Yellow
+
+    if ($null -ne $hint) {
+        Write-Host ("[INFO] detected local root: {0}" -f $hint.local_root) -ForegroundColor Yellow
+        if (-not $hint.has_outer_git_root) {
+            Write-Host "[INFO] detected root does not contain an outer .git directory." -ForegroundColor Yellow
+        }
+        if (-not [string]::IsNullOrWhiteSpace([string]$hint.release_version)) {
+            Write-Host ("[INFO] detected local release: {0} / {1}" -f $hint.release_version, $hint.release_updated) -ForegroundColor Yellow
+        }
+    }
+
+    Write-Host "[INFO] Linux proof gates are canonical repo-root governance gates. Run them from the git checkout root, not from an installed runtime copy such as ~/.codex/skills/vibe." -ForegroundColor Yellow
+    Write-Host "[INFO] If your installed runtime is older than the repo, refresh it first with install.sh or scripts/bootstrap/one-shot-setup.sh before treating proof failures as live Linux regressions." -ForegroundColor Yellow
+    exit 1
+}
+
 function Add-Assertion {
     param(
         [Parameter(Mandatory)] [AllowEmptyCollection()] [System.Collections.Generic.List[object]]$Assertions,
@@ -110,7 +177,12 @@ function Get-ManifestFrozenRuns {
     return @()
 }
 
-$context = Get-VgoGovernanceContext -ScriptPath $PSCommandPath -EnforceExecutionContext
+$context = $null
+try {
+    $context = Get-VgoGovernanceContext -ScriptPath $PSCommandPath -EnforceExecutionContext
+} catch {
+    Write-ExecutionContextFailureAndExit -ScriptPath $PSCommandPath -ErrorRecord $_
+}
 $repoRoot = [string]$context.repoRoot
 
 $assertions = [System.Collections.Generic.List[object]]::new()

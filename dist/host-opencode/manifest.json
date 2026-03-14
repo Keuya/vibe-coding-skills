@@ -5,8 +5,8 @@
   "host_id": "opencode",
   "stability": "not-yet-proven",
   "source_release": {
-    "version": "2.3.36",
-    "updated": "2026-03-13"
+    "version": "2.3.41",
+    "updated": "2026-03-14"
   },
   "summary": "OpenCode host adapter target. Named for universalization, but no repository-backed closure is promised yet.",
   "runtime_ownership": {

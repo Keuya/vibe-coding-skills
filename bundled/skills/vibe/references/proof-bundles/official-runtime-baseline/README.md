@@ -20,13 +20,13 @@ This proof bundle freezes the minimum official-runtime surfaces that universaliz
 Run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\verify\vibe-official-runtime-baseline-gate.ps1 -WriteArtifacts
+pwsh -ExecutionPolicy Bypass -File .\scripts\verify\vibe-official-runtime-baseline-gate.ps1 -WriteArtifacts
 ```
 
-Optional (if your installed runtime is not the default `~/.codex`):
+Optional (if your installed runtime is not the default platform-resolved Codex root):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\verify\vibe-official-runtime-baseline-gate.ps1 -TargetRoot "D:\\path\\to\\.codex" -WriteArtifacts
+pwsh -ExecutionPolicy Bypass -File .\scripts\verify\vibe-official-runtime-baseline-gate.ps1 -TargetRoot "<target-root>" -WriteArtifacts
 ```
 
 The gate only checks the documented baseline contract and its proof bundle.

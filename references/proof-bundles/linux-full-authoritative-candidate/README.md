@@ -33,4 +33,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-linux-
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-platform-promotion-bundle.ps1 -WriteArtifacts
 ```
 
+Run these gates from the canonical git checkout root. They are governance proof gates, not installed-runtime self-checks.
+
 The gates are expected to pass in pre-promotion mode, which means the proof artifacts must remain complete while replay/docs/release truth stays synchronized to `supported-with-constraints`.

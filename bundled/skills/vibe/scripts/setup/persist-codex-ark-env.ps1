@@ -1,11 +1,15 @@
 param(
-  [string]$CodexRoot = (Join-Path $env:USERPROFILE ".codex"),
+  [string]$CodexRoot = '',
   [string]$BaseUrl = "",
   [string]$ApiKey = "",
   [switch]$AllowEmptyApiKey
 )
 
 $ErrorActionPreference = "Stop"
+
+. (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+$CodexRoot = Resolve-VgoTargetRoot -TargetRoot $CodexRoot
 
 function Get-NonEmptyOrNull {
   param([string]$Value)
@@ -66,4 +70,3 @@ $settings | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $settingsPath -E
 Write-Host "Updated Codex settings.json env:" -ForegroundColor Green
 if ($resolvedBaseUrl) { Write-Host "- ARK_BASE_URL set" }
 Write-Host "- ARK_API_KEY set"
-

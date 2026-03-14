@@ -1,11 +1,15 @@
 param(
-  [string]$CodexRoot = (Join-Path $env:USERPROFILE ".codex"),
+  [string]$CodexRoot = '',
   [string]$BaseUrl = "",
   [string]$ApiKey = "",
   [switch]$AllowEmptyApiKey
 )
 
 $ErrorActionPreference = "Stop"
+
+. (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+$CodexRoot = Resolve-VgoTargetRoot -TargetRoot $CodexRoot
 
 function Get-NonEmptyOrNull {
   param([string]$Value)

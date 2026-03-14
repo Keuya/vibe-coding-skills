@@ -1,5 +1,5 @@
 param(
-    [string]$TargetRoot = (Join-Path $env:USERPROFILE '.codex'),
+    [string]$TargetRoot = '',
     [switch]$WriteArtifacts,
     [string]$OutputDirectory
 )
@@ -8,6 +8,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+$TargetRoot = Resolve-VgoTargetRoot -TargetRoot $TargetRoot
 
 function Test-PlaceholderValue {
     param([AllowNull()][string]$Value)

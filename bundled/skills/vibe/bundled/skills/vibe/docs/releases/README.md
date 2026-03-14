@@ -10,7 +10,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ### Current Release Surface
 
-- [`v2.3.40.md`](v2.3.40.md): cross-shell install-check closure, upgrade hint hardening, and conservative Linux truth sync
+- [`v2.3.41.md`](v2.3.41.md): Linux target-root portability hardening, proof-gate execution-context lock, and governed manifest truth alignment
 
 ### Release Runtime / Proof Handoff
 
@@ -21,6 +21,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ## Recent Governed Releases
 
+- [`v2.3.41.md`](v2.3.41.md) - 2026-03-14 - Linux target-root portability hardening / proof-gate execution-context lock / governed manifest alignment
 - [`v2.3.40.md`](v2.3.40.md) - 2026-03-14 - cross-shell receipt normalization / upgrade hint closure / Linux truth sync
 - [`v2.3.39.md`](v2.3.39.md) - 2026-03-14 - Linux regression closure / router contract hardening / freshness recursion fix
 - [`v2.3.38.md`](v2.3.38.md) - 2026-03-14 - config path de-leak / tokenized runtime roots / smoke installed-runtime refresh
@@ -42,8 +43,10 @@ Older release notes remain in this directory as historical version records, but 
 Canonical release cut command:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\governance\release-cut.ps1 -RunGates
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\governance\release-cut.ps1 -RunGates
 ```
+
+On Windows, `powershell.exe` remains an acceptable fallback if `pwsh` is unavailable, but the governed cross-platform release command is `pwsh`.
 
 ## Stop-Ship Families
 

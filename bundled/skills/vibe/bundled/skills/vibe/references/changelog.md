@@ -1,5 +1,14 @@
 # VCO Changelog
 
+## v2.3.41 (2026-03-14)
+
+- Replaced `USERPROFILE`-only default target-root assumptions across additional official PowerShell entrypoints with the shared platform-aware resolver so Linux + `pwsh` no longer trips on null home-path defaults.
+- Added canonical execution-context locking to the Linux proof gate so stale installed-runtime copies fail with an explicit governance hint instead of being misread as repo-root Linux regressions.
+- Aligned official-runtime baseline and dist manifests to the governed `2.3.41` release truth while keeping Linux public support status conservative at `supported-with-constraints`.
+- Updated high-frequency operator docs to use cross-platform `pwsh` / `<target-root>` guidance instead of Windows-first `USERPROFILE` examples.
+- Detailed release notes: `docs/releases/v2.3.41.md`.
+
+
 ## v2.3.40 (2026-03-14)
 
 - Closed the cross-shell runtime-freshness validation gap so a receipt written by Windows PowerShell install flow can be validated correctly by `check.sh` under bash / WSL.

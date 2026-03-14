@@ -1,5 +1,5 @@
 param(
-  [string]$CodexRoot = (Join-Path $env:USERPROFILE ".codex"),
+  [string]$CodexRoot = '',
   [ValidateSet("OpenAI", "Ark", "All")]
   [string]$Target = "All",
   [ValidateSet("User", "Process")]
@@ -8,6 +8,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+. (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+$CodexRoot = Resolve-VgoTargetRoot -TargetRoot $CodexRoot
 
 function Get-NonEmptyOrNull {
   param([string]$Value)

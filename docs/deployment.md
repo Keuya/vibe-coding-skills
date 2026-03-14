@@ -53,7 +53,7 @@ This is intentionally not a fake “everything is auto-provisioned” path. The 
 pwsh -File .\check.ps1 -Profile full
 pwsh -File .\check.ps1 -Profile full -Deep
 pwsh -File .\scripts\verify\vibe-offline-skills-gate.ps1
-pwsh -File .\scripts\verify\vibe-bootstrap-doctor-gate.ps1 -TargetRoot "$env:USERPROFILE\.codex" -WriteArtifacts
+pwsh -File .\scripts\verify\vibe-bootstrap-doctor-gate.ps1 -WriteArtifacts
 # Windows PowerShell fallback:
 powershell -ExecutionPolicy Bypass -File .\check.ps1 -Profile full -Deep
 ```
@@ -81,12 +81,13 @@ Installer behavior notes:
 If you need to materialize the active MCP profile without re-running the full bootstrap, use:
 
 ```powershell
-pwsh -File .\scripts\setup\materialize-codex-mcp-profile.ps1 -TargetRoot "$env:USERPROFILE\.codex" -Force
+pwsh -File .\scripts\setup\materialize-codex-mcp-profile.ps1 -Force
 ```
 
 On Linux / macOS, the one-shot shell bootstrap materializes the active profile automatically. If you want the authoritative standalone materialization script outside the bootstrap flow, install `pwsh` and run the same command there.
 
 This writes the selected profile into `~/.codex\mcp\servers.active.json`. It does not silently mutate global host registration or provision plugin-backed MCP surfaces.
+If you need a non-default root, add `-TargetRoot "<target-root>"`. The PowerShell scripts now resolve the default current-user Codex root through the shared platform-aware resolver instead of assuming `USERPROFILE` exists.
 
 ## Safe Update Flow
 
@@ -111,7 +112,7 @@ Pulling the repo does **not** upgrade `${TARGET_ROOT}/skills/vibe` by itself.
 After the repo tree is updated, re-materialize the governed runtime for the same target root before trusting any freshness output:
 
 - Windows:
-  - `pwsh -File .\install.ps1 -TargetRoot "$env:USERPROFILE\.codex"`
+  - `pwsh -File .\install.ps1`
   - or `pwsh -File .\scripts\bootstrap\one-shot-setup.ps1`
 - Linux / macOS:
   - `bash ./install.sh --target-root "$HOME/.codex"`

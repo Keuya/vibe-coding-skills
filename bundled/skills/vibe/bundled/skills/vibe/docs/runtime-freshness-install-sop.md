@@ -12,11 +12,13 @@ This SOP is the operator-facing playbook for the VCO install path after Wave33.
 
 ## Canonical Operator Flow
 
+If `-TargetRoot` is omitted, the PowerShell entrypoints resolve the current-user Codex root through the shared platform-aware resolver. In practice this behaves like `%USERPROFILE%\.codex` on Windows and `$HOME/.codex` on Linux/macOS with `pwsh`.
+
 ### PowerShell
 
 ```powershell
-powershell -NoProfile -File .\install.ps1 -Profile full -TargetRoot "$env:USERPROFILE\.codex"
-powershell -NoProfile -File .\check.ps1 -Profile full -TargetRoot "$env:USERPROFILE\.codex"
+pwsh -NoProfile -File .\install.ps1 -Profile full -TargetRoot "<target-root>"
+pwsh -NoProfile -File .\check.ps1 -Profile full -TargetRoot "<target-root>"
 ```
 
 ### Bash
@@ -31,19 +33,19 @@ bash ./check.sh --profile full --target-root "$HOME/.codex"
 Run the authoritative runtime freshness gate directly:
 
 ```powershell
-powershell -NoProfile -File .\scripts\verify\vibe-installed-runtime-freshness-gate.ps1 -TargetRoot "$env:USERPROFILE\.codex" -WriteReceipt
+pwsh -NoProfile -File .\scripts\verify\vibe-installed-runtime-freshness-gate.ps1 -TargetRoot "<target-root>" -WriteReceipt
 ```
 
 Run the frontmatter / BOM gate against the installed runtime immediately after install/check:
 
 ```powershell
-powershell -NoProfile -File .\scripts\verify\vibe-bom-frontmatter-gate.ps1 -TargetRoot "$env:USERPROFILE\.codex" -WriteArtifacts
+pwsh -NoProfile -File .\scripts\verify\vibe-bom-frontmatter-gate.ps1 -TargetRoot "<target-root>" -WriteArtifacts
 ```
 
 Run the release / install / runtime coherence gate:
 
 ```powershell
-powershell -NoProfile -File .\scripts\verify\vibe-release-install-runtime-coherence-gate.ps1 -TargetRoot "$env:USERPROFILE\.codex" -WriteArtifacts
+pwsh -NoProfile -File .\scripts\verify\vibe-release-install-runtime-coherence-gate.ps1 -TargetRoot "<target-root>" -WriteArtifacts
 ```
 
 ## Receipt Contract

@@ -1,5 +1,5 @@
 param(
-    [string]$TargetRoot = (Join-Path $env:USERPROFILE '.codex'),
+    [string]$TargetRoot = '',
     [switch]$WriteArtifacts
 )
 
@@ -95,6 +95,8 @@ function Write-Artifacts {
 }
 
 . (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+$TargetRoot = Resolve-VgoTargetRoot -TargetRoot $TargetRoot
 
 $context = Get-VgoGovernanceContext -ScriptPath $PSCommandPath -EnforceExecutionContext
 $governance = $context.governance

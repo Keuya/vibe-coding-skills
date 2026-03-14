@@ -355,7 +355,7 @@ foreach ($entry in $allEntries) {
 $installed = $null
 if ($CompareInstalled) {
     if ([string]::IsNullOrWhiteSpace($InstalledPluginsPath)) {
-        $InstalledPluginsPath = Join-Path $env:USERPROFILE '.codex\plugins\plugins.json'
+        $InstalledPluginsPath = Join-Path (Resolve-VgoTargetRoot) 'plugins\plugins.json'
     }
     if (Test-Path -LiteralPath $InstalledPluginsPath) {
         $installed = Read-JsonFile -Path $InstalledPluginsPath

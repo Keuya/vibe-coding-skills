@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This ledger tracks the frozen Linux + `pwsh` fresh-machine evidence that now backs the promoted `codex/linux` lane.
+This ledger tracks the frozen Linux + `pwsh` fresh-machine evidence that now backs the pre-promotion proof bundle for `codex/linux`.
 
-It remains explicit about the boundary between the promoted `Linux + pwsh` lane and the still-degraded `Linux without pwsh` lane.
+It remains explicit about the boundary between the proof-complete `Linux + pwsh` candidate lane and the still-degraded `Linux without pwsh` lane.
 
 ## Required Runs
 
