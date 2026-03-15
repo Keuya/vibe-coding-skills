@@ -10,7 +10,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ### Current Release Surface
 
-- [`v2.3.46.md`](v2.3.46.md): Linux benchmark/governed-runtime Python host neutrality (`python` / `python3` / `py -3`) and restored proof-chain closure
+- [`v2.3.47.md`](v2.3.47.md): no-silent-fallback governance, explicit degraded-truth hazard surfacing, and release-truth consistency closure
 
 ### Release Runtime / Proof Handoff
 
@@ -18,9 +18,11 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 - [`../../scripts/verify/gate-family-index.md`](../../scripts/verify/gate-family-index.md): gate family navigation and typical run order
 - [`../../scripts/verify/README.md`](../../scripts/verify/README.md): verify surface entrypoint
 - [`../status/non-regression-proof-bundle.md`](../status/non-regression-proof-bundle.md): minimum closure proof contract
+- `scripts/verify/vibe-release-truth-consistency-gate.ps1`: fallback and degraded-truth consistency proof for release and promotion surfaces
 
 ## Recent Governed Releases
 
+- [`v2.3.47.md`](v2.3.47.md) - 2026-03-15 - no-silent-fallback governance / degraded-truth hazard surfacing / release-truth consistency closure
 - [`v2.3.46.md`](v2.3.46.md) - 2026-03-15 - Linux benchmark/governed-runtime Python host neutrality / proof-chain closure
 - [`v2.3.45.md`](v2.3.45.md) - 2026-03-15 - benchmark_autonomous bridge durability / relative runtime summary paths / restored Python bridge proof
 - [`v2.3.44.md`](v2.3.44.md) - 2026-03-15 - real bounded benchmark_autonomous executor / execution manifests / benchmark proof gate
@@ -59,6 +61,7 @@ Exact script names live in the gate-family index. At the README level, releases 
 
 - topology and integrity: version consistency, version packaging, config parity, nested bundled parity, mirror edit hygiene, BOM/frontmatter integrity
 - runtime and install coherence: installed runtime freshness, release/install/runtime coherence
+- fallback truth honesty: no silent fallback contract, self-introduced fallback guard, release-truth consistency
 - cleanliness and readiness: repo cleanliness, wave board readiness, capability dedup, adaptive routing readiness, upstream value ops
 
 ## Extended Release Trains
@@ -73,5 +76,6 @@ Use the gate-family index for the exact scripts. The extended trains stay groupe
 - `docs/releases/README.md` is the release-surface navigator, not the flat home for every gate script.
 - Keep current release surface, proof handoff, and historical packetization separated instead of flattening them into one list.
 - Exact gate names, ordering, and family ownership are defined by [`../../scripts/verify/gate-family-index.md`](../../scripts/verify/gate-family-index.md).
+- Degraded closure is never equivalent to authoritative success. If a release depends on fallback or degraded behavior, the release surface must say so explicitly and include fallback-truth consistency proof.
 - Release notes stay one-file-per-version using the `v<version>.md` pattern.
 - Historical release packets must stay distinct from the current governed release surface.

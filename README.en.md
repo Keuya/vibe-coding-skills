@@ -85,7 +85,7 @@ If you want the full statement of what this ecosystem is trying to build, what i
 
 ## Current Recommended Release
 
-- Current outward-facing recommended version: [`v2.3.46`](./docs/releases/v2.3.46.md)
+- Current outward-facing recommended version: [`v2.3.47`](./docs/releases/v2.3.47.md)
 - Ordinary-user one-click release copy: [`docs/install/one-click-install-release-copy.en.md`](./docs/install/one-click-install-release-copy.en.md)
 - Operator-grade install path: [`docs/install/recommended-full-path.en.md`](./docs/install/recommended-full-path.en.md)
 
@@ -107,7 +107,7 @@ If you want the simplest public-facing onboarding path for ordinary users, commu
 
 - [`docs/install/one-click-install-release-copy.en.md`](./docs/install/one-click-install-release-copy.en.md)
 
-This is the current public install copy for `v2.3.46`.
+This is the current public install copy for `v2.3.47`.
 
 #### Start with the standard recommended install
 

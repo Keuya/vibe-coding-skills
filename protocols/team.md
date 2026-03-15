@@ -214,13 +214,13 @@ Borrowing from Agent Squad's orchestration patterns (bounded history, explicit e
 
 2. **Retry**
    - Respect `retry_budget`. A retry must change *something* (prompt constraint, narrower scope, more context, or a different role).
-   - If retry budget is exhausted: either degrade scope or respawn a replacement agent with a simplified task.
+   - If retry budget is exhausted: either degrade scope or respawn a replacement agent with a simplified task, but only with an explicit hazard alert and a non-authoritative status.
 
 3. **Contradiction**
    - When two agents disagree, Lead runs V2/V6: demand concrete evidence (file path, log line, command output) before choosing.
 
 4. **Degraded Mode**
-   - If multiple agents fail or outputs are low-quality, fall back to Option B (native only) and reduce parallelism (fewer agents, tighter roles).
+   - If multiple agents fail or outputs are low-quality, do not silently fall back to Option B (native only). Any degraded path must emit a standalone hazard alert, reduce parallelism deliberately, and mark the result non-authoritative until the primary path is restored.
 
 ## Staged Confirmation
 Always confirm with user at these points:
@@ -260,7 +260,7 @@ Execution semantics:
 4. This contract does not alter grade/task assignment.
 
 Failure semantics:
-- If wave contract generation fails or is incomplete, fall back to standard Option A/B orchestration and record an advisory warning.
+- If wave contract generation fails or is incomplete, do not silently fall back to standard Option A/B orchestration. If a degraded path is used, emit a standalone hazard alert and record that the resulting execution is non-authoritative.
 - Do not block the entire XL flow unless strict policy explicitly requires a regenerated contract.
 
 ## Quality Injection: Enhanced Tier (XL Default)

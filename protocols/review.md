@@ -48,6 +48,8 @@ Before approving code:
 6. No security vulnerabilities
 7. No console.log / debug statements in production code
 8. Immutable patterns used (no mutation)
+9. No new fallback or degraded-path logic unless the active requirement explicitly approves it
+10. Any fallback path is labeled as a hazard, not presented as equivalent success
 
 ## Output Format
 Review findings categorized by severity:
@@ -55,6 +57,9 @@ Review findings categorized by severity:
 - HIGH: Should fix before merge (bugs, logic errors)
 - MEDIUM: Fix when possible (code smells, minor style issues)
 - LOW: Optional improvement (naming suggestions, minor refactors)
+
+Fallback-specific review rule:
+- Treat silent fallback, silent degradation, or self-introduced fallback logic as HIGH at minimum and CRITICAL when it can hide capability loss from users.
 
 ## Conflict Avoidance
 - M review: Everything-CC code-reviewer ONLY

@@ -34,6 +34,7 @@ powershell -NoProfile -File scripts/verify/vibe-mirror-edit-hygiene-gate.ps1
 powershell -NoProfile -File scripts/verify/vibe-output-artifact-boundary-gate.ps1
 powershell -NoProfile -File scripts/verify/vibe-installed-runtime-freshness-gate.ps1
 powershell -NoProfile -File scripts/verify/vibe-release-install-runtime-coherence-gate.ps1
+powershell -NoProfile -File scripts/verify/vibe-release-truth-consistency-gate.ps1
 powershell -NoProfile -File scripts/verify/vibe-repo-cleanliness-gate.ps1
 ```
 
@@ -59,7 +60,9 @@ powershell -NoProfile -File scripts/governance/phase-end-cleanup.ps1 -WriteArtif
    - validates installed runtime parity / receipt
 7. `vibe-release-install-runtime-coherence-gate.ps1`
    - validates install/check/release coherence
-8. `vibe-repo-cleanliness-gate.ps1`
+8. `vibe-release-truth-consistency-gate.ps1`
+   - validates fallback and degraded-truth consistency across release/promotion surfaces
+9. `vibe-repo-cleanliness-gate.ps1`
    - validates current cleanliness contract
 
 ## Batch-to-Proof Mapping
@@ -70,6 +73,7 @@ powershell -NoProfile -File scripts/governance/phase-end-cleanup.ps1 -WriteArtif
 | routing / router config | routing smoke + router contract |
 | mirror topology / sync / packaging | version packaging + mirror hygiene |
 | install / check / runtime | installed runtime freshness + release/install/runtime coherence |
+| fallback / degraded truth / release wording | release truth consistency gate |
 | outputs / fixtures | output artifact boundary |
 | cleanliness policy / plane split | repo cleanliness gate |
 | destructive prune | all commands above |
@@ -89,6 +93,7 @@ Artifact anchors:
 - `outputs/verify/vibe-output-artifact-boundary-gate.json`
 - `outputs/verify/vibe-installed-runtime-freshness-gate.json`
 - `outputs/verify/vibe-release-install-runtime-coherence-gate.json`
+- `outputs/verify/vibe-release-truth-consistency-gate.json`
 - `outputs/verify/vibe-repo-cleanliness-gate.json`
 
 Latest known green snapshot for this closure track was recorded on `2026-03-12`. That snapshot is historical evidence, not a standing promise that the current worktree is still green.

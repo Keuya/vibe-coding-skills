@@ -1,5 +1,13 @@
 # VCO Changelog
 
+## v2.3.47 (2026-03-15)
+
+- Added canonical no-silent-fallback governance plus implementation guardrails so degraded paths must stay explicit, warned, and non-authoritative.
+- Added fallback-truth release gates covering silent fallback, self-introduced fallback, and release-truth consistency across runtime, code, and release surfaces.
+- Synced routed-stability fixture mirrors back to tracked output truth before release cut, then revalidated output artifact boundary closure.
+- Detailed release notes: `docs/releases/v2.3.47.md`.
+
+
 ## v2.3.46 (2026-03-15)
 
 - Fixed the Linux `benchmark_autonomous` / governed-runtime execution chain so benchmark units no longer hardcode `python` on hosts that only provide `python3`.

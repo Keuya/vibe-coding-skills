@@ -317,7 +317,17 @@ def build_confirm_ui(repo: RepoContext, route_result: dict[str, Any], target_roo
             }
         )
 
-    rendered = [f"Route confirmation required for pack `{selected['pack_id']}`."]
+    rendered: list[str] = []
+    if route_result.get("hazard_alert_required") and route_result.get("hazard_alert"):
+        hazard = route_result["hazard_alert"]
+        rendered.append(str(hazard.get("title") or "FALLBACK HAZARD ALERT"))
+        rendered.append(str(hazard.get("message") or "This result came from a fallback or degraded path and is not equivalent to standard success."))
+        if hazard.get("reason"):
+            rendered.append(f"Trigger reason: `{hazard['reason']}`.")
+        if hazard.get("recovery_action"):
+            rendered.append(str(hazard["recovery_action"]))
+        rendered.append("")
+    rendered.append(f"Route confirmation required for pack `{selected['pack_id']}`.")
     for option in options:
         score = option["score"]
         score_text = f" (score={round(float(score), 4)})" if score is not None else ""
@@ -333,6 +343,57 @@ def build_confirm_ui(repo: RepoContext, route_result: dict[str, Any], target_roo
         "selected_skill": selected["skill"],
         "options": options,
         "rendered_text": "\n".join(rendered),
+        "hazard_alert_required": bool(route_result.get("hazard_alert_required")),
+        "truth_level": route_result.get("truth_level"),
+        "degradation_state": route_result.get("degradation_state"),
+        "hazard_alert": route_result.get("hazard_alert"),
+    }
+
+
+def build_fallback_truth(route_result: dict[str, Any], fallback_policy: dict[str, Any] | None) -> dict[str, Any]:
+    policy = fallback_policy or {}
+    truth_contract = policy.get("truth_contract", {}) if isinstance(policy, dict) else {}
+    fallback_active = bool(
+        route_result.get("route_mode") == "legacy_fallback"
+        or route_result.get("route_reason") == "legacy_fallback_guard"
+        or route_result.get("legacy_fallback_guard_applied")
+    )
+    degradation_state = (
+        truth_contract.get("fallback_guarded_state", "fallback_guarded")
+        if route_result.get("legacy_fallback_guard_applied")
+        else truth_contract.get("fallback_degradation_state", "fallback_active")
+        if fallback_active
+        else "standard"
+    )
+    truth_level = (
+        truth_contract.get("fallback_truth_level", "non_authoritative")
+        if fallback_active
+        else truth_contract.get("standard_truth_level", "authoritative")
+    )
+    hazard_alert_required = bool(policy.get("require_hazard_alert", True) and fallback_active)
+    hazard_alert = None
+    if hazard_alert_required:
+        hazard_alert = {
+            "title": policy.get("hazard_alert_title", "FALLBACK HAZARD ALERT"),
+            "severity": policy.get("hazard_alert_severity", "critical"),
+            "reason": route_result.get("legacy_fallback_original_reason") or route_result.get("route_reason"),
+            "message": policy.get(
+                "hazard_summary",
+                "This result came from a fallback or degraded path and is not equivalent to standard success.",
+            ),
+            "recovery_action": policy.get(
+                "hazard_recovery_action",
+                "Repair the primary path or restore missing dependencies before claiming authoritative success.",
+            ),
+            "manual_review_required": bool(truth_contract.get("manual_review_required", True)),
+        }
+    return {
+        "fallback_active": fallback_active,
+        "hazard_alert_required": hazard_alert_required,
+        "truth_level": truth_level,
+        "degradation_state": degradation_state,
+        "non_authoritative": truth_level != "authoritative",
+        "hazard_alert": hazard_alert,
     }
 
 
@@ -358,6 +419,7 @@ def route_prompt(
     alias_map = load_json(repo.config_root / "skill-alias-map.json")
     thresholds_cfg = load_json(repo.config_root / "router-thresholds.json")
     skill_keyword_index = load_json(repo.config_root / "skill-keyword-index.json")
+    fallback_policy = load_json(repo.config_root / "fallback-governance.json")
     routing_rules = load_json(repo.config_root / "skill-routing-rules.json")
 
     requested_canonical = resolve_requested_canonical(requested_skill, alias_map)
@@ -369,6 +431,7 @@ def route_prompt(
     auto_route_threshold = float(threshold_values.get("auto_route", 0.7))
     confirm_required_threshold = float(threshold_values.get("confirm_required", 0.45))
     fallback_threshold = float(threshold_values.get("fallback_to_legacy_below", 0.45))
+    enforce_confirm_on_legacy_fallback = bool(thresholds_cfg.get("safety", {}).get("enforce_confirm_on_legacy_fallback", False))
 
     pack_results: list[dict[str, Any]] = []
     for pack in pack_manifest.get("packs") or []:
@@ -458,6 +521,15 @@ def route_prompt(
         route_mode = "pack_overlay"
         route_reason = "auto_route"
 
+    legacy_fallback_guard_applied = False
+    legacy_fallback_original_reason = None
+    if route_mode == "legacy_fallback" and enforce_confirm_on_legacy_fallback:
+        legacy_fallback_original_reason = route_reason
+        route_mode = "confirm_required"
+        route_reason = "legacy_fallback_guard"
+        confidence = max(confidence, confirm_required_threshold)
+        legacy_fallback_guard_applied = True
+
     result = {
         "prompt": prompt,
         "grade": grade,
@@ -467,7 +539,8 @@ def route_prompt(
         "confidence": round(confidence, 4),
         "top1_top2_gap": round(top_gap, 4),
         "candidate_signal": round(candidate_signal, 4),
-        "legacy_fallback_guard_applied": False,
+        "legacy_fallback_guard_applied": legacy_fallback_guard_applied,
+        "legacy_fallback_original_reason": legacy_fallback_original_reason,
         "alias": {
             "requested_input": requested_skill,
             "requested_canonical": requested_canonical,
@@ -479,6 +552,7 @@ def route_prompt(
             "min_top1_top2_gap": min_top_gap,
             "min_candidate_signal_for_confirm_override": min_candidate_signal_confirm,
             "min_candidate_signal_for_auto_route": min_candidate_signal_auto,
+            "enforce_confirm_on_legacy_fallback": enforce_confirm_on_legacy_fallback,
         },
         "selected": (
             {
@@ -500,6 +574,7 @@ def route_prompt(
             "host": "runtime_neutral",
         },
     }
+    result.update(build_fallback_truth(result, fallback_policy))
 
     confirm_ui = build_confirm_ui(repo, result, target_root)
     if confirm_ui:

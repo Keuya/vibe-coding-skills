@@ -18,7 +18,12 @@
     "fixed_stage_order": true,
     "freeze_requirement_before_execution": true,
     "cleanup_required_before_completion": true,
-    "internal_grades_only": true
+    "internal_grades_only": true,
+    "no_silent_fallback": true,
+    "no_silent_degradation": true,
+    "fallback_hazard_alert_required": true,
+    "fallback_success_is_non_authoritative": true,
+    "no_self_introduced_fallback_without_requirement_approval": true
   },
   "stages": [
     {

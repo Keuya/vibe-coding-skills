@@ -202,7 +202,7 @@ Hook steps:
      - `ARCHITECTURE.md`
      - `CONVENTIONS.md`
      - `CONCERNS.md`
-   - If snapshot is missing or stale, mark advisory warning and continue.
+   - If snapshot is missing or stale, do not silently continue. Mark the run as degraded, emit a hazard alert, and keep the result non-authoritative until the snapshot is repaired.
 2. **Assumption preflight**
    - Produce a concise assumptions list before writing the final plan.
    - Persist assumptions to the active planning artifact (or `assumptions.md` when configured).
@@ -213,7 +213,7 @@ Hook steps:
 4. **Handoff**
    - Carry assumptions + brownfield context into B3 output.
 
-On hook failure, follow `references/fallback-chains.md` GSD-Lite fallback and continue standard B1-B4 flow.
+On hook failure, do not silently downgrade. Follow `references/fallback-chains.md` only as an explicit degraded path, emit a standalone hazard alert, and record that the resulting planning flow is non-authoritative until the primary path is restored.
 
 ## Research Mode
 When task is purely research (no implementation):

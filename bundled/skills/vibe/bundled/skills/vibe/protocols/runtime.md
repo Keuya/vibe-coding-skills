@@ -23,6 +23,8 @@ These are syntax variants for the same governed runtime, not separate entrypoint
 3. `M`, `L`, `XL` remain internal execution grades only.
 4. Requirement freezing happens before plan execution.
 5. Cleanup is mandatory before a phase is considered complete.
+6. Silent fallback and silent degradation are forbidden.
+7. Fallback success is non-authoritative unless a requirement explicitly approves otherwise.
 
 ## Official Runtime Modes
 
@@ -145,6 +147,8 @@ Delegation must not bypass the fixed stage order.
 - `confirm_required` stays on the existing white-box confirm surface
 - unattended routing is interpreted as a governed runtime mode choice, not as a second runtime
 - provider-backed intelligence remains advice-only
+- fallback or degraded paths must emit an explicit hazard alert rather than a silent warning
+- fallback or degraded paths must downgrade runtime truth to `non_authoritative`
 
 ## Artifact Contract
 
@@ -166,3 +170,5 @@ The governed runtime is considered healthy only when:
 - execution traces back to the plan
 - cleanup is recorded
 - no success claim is made without verification evidence
+- no fallback or degraded path is presented as equivalent success
+- any fallback or degraded path emits a standalone hazard alert

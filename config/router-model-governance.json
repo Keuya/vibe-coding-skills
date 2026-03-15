@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-13",
+  "updated_at": "2026-03-15",
   "policy": "router-model-neutrality",
   "control_plane_owner": "canonical-pack-router",
   "provider_layer": {
@@ -26,7 +26,9 @@
     "degrade_honesty": {
       "fallback_provider_mode": "heuristic-only",
       "offline_frozen_state": "offline-frozen",
-      "silent_provider_absence_forbidden": true
+      "silent_provider_absence_forbidden": true,
+      "fallback_hazard_alert_required": true,
+      "fallback_truth_level": "non_authoritative"
     }
   },
   "allowed_provider_roles": [
@@ -54,7 +56,9 @@
     "no_second_router": true,
     "no_provider_lockin_claims": true,
     "must_label_degraded_state_explicitly": true,
-    "must_support_truthful_no-provider_mode": true
+    "must_support_truthful_no-provider_mode": true,
+    "must_emit_hazard_alert_for_fallback": true,
+    "must_not_treat_fallback_as_authoritative_success": true
   },
   "current_observed_bindings": [
     "scripts/router/modules/01-openai-responses.ps1",

@@ -1,16 +1,16 @@
 ﻿# VCO Routing Stability Gate
 
 - Mode: `default`
-- Generated: `2026-02-25T04:58:51`
+- Generated: `2026-03-15T12:56:05`
 - Gate Passed: `True`
 - Stricter Rules Ready: `True`
 
 ## Metrics
 
 - route_stability: `1` (threshold `0.75`)
-- top1_top2_gap: `0.3572` (threshold `0.068`)
-- fallback_rate: `0.15` (threshold `0.85`)
-- misroute_rate: `0.075` (threshold `0.3`)
+- top1_top2_gap: `0.3416` (threshold `0.051`)
+- fallback_rate: `0` (threshold `0.85`)
+- misroute_rate: `0.1` (threshold `0.3`)
 
 ## Group Stability
 

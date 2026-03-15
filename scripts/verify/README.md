@@ -70,6 +70,8 @@ pwsh -NoProfile -File .\..\governance\phase-end-cleanup.ps1 -WriteArtifacts -Inc
 
 **Platform Promotion Proof**: `vibe-platform-support-contract-gate.ps1`, `vibe-platform-doctor-parity-gate.ps1`, `vibe-linux-pwsh-proof-gate.ps1`, and `vibe-platform-promotion-bundle.ps1` form the platform-proof closure chain. They validate evidence wiring and truth-contract alignment from the canonical repo root; they do not auto-promote a platform lane and are not installed-runtime self-checks.
 
+**Fallback Governance / Truth Honesty**: `vibe-no-silent-fallback-contract-gate.ps1`, `vibe-no-self-introduced-fallback-gate.ps1`, and `vibe-release-truth-consistency-gate.ps1` prove that degraded paths stay explicit, requirement-backed, and non-authoritative.
+
 ## Fixture Taxonomy
 
 - **Wave28 canonical pilot fixtures**: `fixtures/pilot-memory.json`, `fixtures/pilot-prompt.json`, `fixtures/pilot-browserops.json`, `fixtures/pilot-desktopops.json`. These are the only pilot inputs consumed by `vibe-pilot-scenarios.ps1` and referenced by `config/promotion-board.json`.

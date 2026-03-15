@@ -47,6 +47,8 @@ $requiredFiles = @(
     'protocols/retro.md',
     'config/runtime-contract.json',
     'config/runtime-modes.json',
+    'config/fallback-governance.json',
+    'config/implementation-guardrails.json',
     'config/benchmark-execution-policy.json',
     'config/requirement-doc-policy.json',
     'config/plan-execution-policy.json',
@@ -62,7 +64,10 @@ $requiredFiles = @(
     'scripts/runtime/Write-XlPlan.ps1',
     'scripts/runtime/Invoke-PlanExecute.ps1',
     'scripts/runtime/Invoke-PhaseCleanup.ps1',
-    'scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1'
+    'scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1',
+    'scripts/verify/vibe-no-silent-fallback-contract-gate.ps1',
+    'scripts/verify/vibe-no-self-introduced-fallback-gate.ps1',
+    'scripts/verify/vibe-release-truth-consistency-gate.ps1'
 )
 
 foreach ($relativePath in $requiredFiles) {
@@ -73,6 +78,9 @@ foreach ($relativePath in $requiredFiles) {
 $runtimeContract = Get-Content -LiteralPath (Join-Path $repoRoot 'config\runtime-contract.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 Add-Assertion -Results ([ref]$results) -Condition ($runtimeContract.entry_skill -eq 'vibe') -Message 'runtime contract entry skill is vibe'
 Add-Assertion -Results ([ref]$results) -Condition (@($runtimeContract.stages).Count -eq 6) -Message 'runtime contract defines six fixed stages'
+Add-Assertion -Results ([ref]$results) -Condition ([bool]$runtimeContract.invariants.no_silent_fallback) -Message 'runtime contract forbids silent fallback'
+Add-Assertion -Results ([ref]$results) -Condition ([bool]$runtimeContract.invariants.fallback_hazard_alert_required) -Message 'runtime contract requires fallback hazard alerts'
+Add-Assertion -Results ([ref]$results) -Condition ([bool]$runtimeContract.invariants.no_self_introduced_fallback_without_requirement_approval) -Message 'runtime contract forbids self-introduced fallback without requirement approval'
 
 $skillText = Get-Content -LiteralPath (Join-Path $repoRoot 'SKILL.md') -Raw -Encoding UTF8
 Add-Assertion -Results ([ref]$results) -Condition (

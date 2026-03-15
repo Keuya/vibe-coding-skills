@@ -396,11 +396,23 @@ function Build-ConfirmSkillOptions {
 function Build-ConfirmUiText {
     param(
         [object]$ConfirmSkillOptions,
-        [object]$UnattendedDecision
+        [object]$UnattendedDecision,
+        [object]$Result
     )
 
     if (-not $ConfirmSkillOptions -or -not $ConfirmSkillOptions.options) { return $null }
     $lines = @()
+    if ($Result -and [bool]$Result.hazard_alert_required -and $Result.hazard_alert) {
+        $lines += [string]$Result.hazard_alert.title
+        $lines += [string]$Result.hazard_alert.message
+        if ($Result.hazard_alert.reason) {
+            $lines += ("触发原因：`{0}`。" -f [string]$Result.hazard_alert.reason)
+        }
+        if ($Result.hazard_alert.recovery_action) {
+            $lines += [string]$Result.hazard_alert.recovery_action
+        }
+        $lines += ''
+    }
     $lines += ("路由需要确认：当前命中候选包 `{0}`。可选技能如下：" -f [string]$ConfirmSkillOptions.selected_pack)
 
     foreach ($opt in @($ConfirmSkillOptions.options)) {

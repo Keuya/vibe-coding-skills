@@ -448,6 +448,7 @@
         "vibe-ops-cockpit-gate",
         "vibe-rollback-drill-gate",
         "vibe-release-train-v2-gate",
+        "vibe-release-truth-consistency-gate",
         "vibe-wave64-82-closure-gate"
       ],
       "pilot_fixture": "n/a",

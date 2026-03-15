@@ -112,6 +112,7 @@ function Get-ReleaseGateScripts {
         'scripts/verify/vibe-ops-cockpit-gate.ps1',
         'scripts/verify/vibe-rollback-drill-gate.ps1',
         'scripts/verify/vibe-release-train-v2-gate.ps1',
+        'scripts/verify/vibe-release-truth-consistency-gate.ps1',
         'scripts/verify/vibe-wave64-82-closure-gate.ps1',
         'scripts/verify/vibe-gate-reliability-gate.ps1',
         'scripts/verify/vibe-memory-quality-eval-gate.ps1',

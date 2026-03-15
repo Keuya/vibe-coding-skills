@@ -3,7 +3,7 @@
   "baseline_id": "official-runtime-2026-03-13",
   "frozen_at": "2026-03-13",
   "source_release": {
-    "version": "2.3.46",
+    "version": "2.3.47",
     "updated": "2026-03-15"
   },
   "tier": "Tier-1 Official Runtime",

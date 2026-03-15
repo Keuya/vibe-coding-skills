@@ -67,6 +67,12 @@ $checks += Assert-True (Test-ContainsAll -Actual @($board.allowed_stages) -Expec
 $checks += Assert-True (Test-ContainsAll -Actual @($board.stage_requirements.PSObject.Properties.Name) -Expected @('shadow', 'soft', 'strict', 'promote')) 'stage requirements exist for all rollout stages'
 $checks += Assert-True ((@($board.planes).Count) -ge $requiredItems.Count) 'promotion board tracks Wave19-39 execution planes and governance tracks'
 
+$releasePlane = @($board.planes | Where-Object { [string]$_.plane_id -eq 'operator-release-train' }) | Select-Object -First 1
+$checks += Assert-True ($null -ne $releasePlane) 'operator-release-train plane exists'
+if ($releasePlane) {
+  $checks += Assert-True (@($releasePlane.required_gates) -contains 'vibe-release-truth-consistency-gate') 'operator-release-train requires release-truth consistency gate'
+}
+
 $actualPlanes = @($board.planes | ForEach-Object { [string]$_.plane_id })
 $checks += Assert-True (Test-ContainsAll -Actual $actualPlanes -Expected $requiredItems) 'promotion board covers all required execution planes and Wave31-39 governance tracks'
 

@@ -85,7 +85,7 @@ VibeSkills 的目标不是把这些组件堆在一起。
 
 ## 当前推荐版本
 
-- 当前对外推荐版本：[`v2.3.46`](./docs/releases/v2.3.46.md)
+- 当前对外推荐版本：[`v2.3.47`](./docs/releases/v2.3.47.md)
 - 面向普通用户的一键安装发布文案：[`docs/install/one-click-install-release-copy.md`](./docs/install/one-click-install-release-copy.md)
 - 面向操作者的标准推荐安装路径：[`docs/install/recommended-full-path.md`](./docs/install/recommended-full-path.md)
 

@@ -1114,6 +1114,74 @@ if ($unattendedDecision -and [bool]$unattendedDecision.unattended -and $confirmU
     }
 }
 
+$fallbackGovernance = $null
+$fallbackGovernancePath = Join-Path $repoRoot 'config\fallback-governance.json'
+if (Test-Path -LiteralPath $fallbackGovernancePath) {
+    try {
+        $fallbackGovernance = Get-Content -LiteralPath $fallbackGovernancePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        $fallbackGovernance = $null
+    }
+}
+
+$fallbackActive = [bool](
+    $legacyFallbackGuardApplied -or
+    $routeModeBeforeUnattended -eq 'legacy_fallback' -or
+    $routeMode -eq 'legacy_fallback' -or
+    $routeReason -eq 'legacy_fallback_guard'
+)
+$degradationState = if ($legacyFallbackGuardApplied) {
+    if ($fallbackGovernance -and $fallbackGovernance.truth_contract -and $fallbackGovernance.truth_contract.fallback_guarded_state) {
+        [string]$fallbackGovernance.truth_contract.fallback_guarded_state
+    } else {
+        'fallback_guarded'
+    }
+} elseif ($fallbackActive) {
+    if ($fallbackGovernance -and $fallbackGovernance.truth_contract -and $fallbackGovernance.truth_contract.fallback_degradation_state) {
+        [string]$fallbackGovernance.truth_contract.fallback_degradation_state
+    } else {
+        'fallback_active'
+    }
+} else {
+    'standard'
+}
+$truthLevel = if ($fallbackActive) {
+    if ($fallbackGovernance -and $fallbackGovernance.truth_contract -and $fallbackGovernance.truth_contract.fallback_truth_level) {
+        [string]$fallbackGovernance.truth_contract.fallback_truth_level
+    } else {
+        'non_authoritative'
+    }
+} else {
+    if ($fallbackGovernance -and $fallbackGovernance.truth_contract -and $fallbackGovernance.truth_contract.standard_truth_level) {
+        [string]$fallbackGovernance.truth_contract.standard_truth_level
+    } else {
+        'authoritative'
+    }
+}
+$hazardAlertRequired = [bool]$fallbackActive
+if ($fallbackGovernance -and $fallbackGovernance.require_hazard_alert -ne $null) {
+    $hazardAlertRequired = ([bool]$fallbackGovernance.require_hazard_alert) -and $fallbackActive
+}
+$hazardReason = if ($legacyFallbackOriginalReason) {
+    [string]$legacyFallbackOriginalReason
+} elseif ($routeReasonBeforeUnattended) {
+    [string]$routeReasonBeforeUnattended
+} else {
+    [string]$routeReason
+}
+$hazardAlert = if ($hazardAlertRequired) {
+    [pscustomobject]@{
+        title = if ($fallbackGovernance -and $fallbackGovernance.hazard_alert_title) { [string]$fallbackGovernance.hazard_alert_title } else { 'FALLBACK HAZARD ALERT' }
+        severity = if ($fallbackGovernance -and $fallbackGovernance.hazard_alert_severity) { [string]$fallbackGovernance.hazard_alert_severity } else { 'critical' }
+        reason = $hazardReason
+        message = if ($fallbackGovernance -and $fallbackGovernance.hazard_summary) { [string]$fallbackGovernance.hazard_summary } else { '当前结果来自回退或退化路径，不等价于标准成功。继续使用可能在不自知的情况下承受功能退化、验证强度下降或可靠性下降。' }
+        recovery_action = if ($fallbackGovernance -and $fallbackGovernance.hazard_recovery_action) { [string]$fallbackGovernance.hazard_recovery_action } else { '如需 authoritative 结果，请先修复主路径能力或补齐依赖后重新执行。' }
+        manual_review_required = if ($fallbackGovernance -and $fallbackGovernance.truth_contract -and $fallbackGovernance.truth_contract.manual_review_required -ne $null) { [bool]$fallbackGovernance.truth_contract.manual_review_required } else { $true }
+    }
+} else {
+    $null
+}
+
 $heartbeatFinalizeStatus = Finalize-HeartbeatContext -Context $heartbeatContext -FinalPhase "router.final" -Succeeded $true -Note "route output assembled"
 $heartbeatAdvice = Get-HeartbeatAdvice -Context $heartbeatContext
 $heartbeatStatus = if ($heartbeatFinalizeStatus) { $heartbeatFinalizeStatus } else { Get-HeartbeatStatus -Context $heartbeatContext }
@@ -1139,6 +1207,12 @@ $result = [pscustomobject]@{
     candidate_signal = [Math]::Round($candidateSignal, 4)
     legacy_fallback_guard_applied = [bool]$legacyFallbackGuardApplied
     legacy_fallback_original_reason = $legacyFallbackOriginalReason
+    fallback_active = [bool]$fallbackActive
+    hazard_alert_required = [bool]$hazardAlertRequired
+    truth_level = $truthLevel
+    degradation_state = $degradationState
+    non_authoritative = [bool]($truthLevel -ne 'authoritative')
+    hazard_alert = $hazardAlert
     thresholds = [pscustomobject]@{
         auto_route = [double]$th.auto_route
         confirm_required = [double]$th.confirm_required
@@ -1199,13 +1273,17 @@ $result = [pscustomobject]@{
 
 $confirmSkillOptions = Build-ConfirmSkillOptions -Result $result -ConfirmUiPolicy $confirmUiPolicyResolved -RepoRoot ([string]$repoRoot)
 if ($confirmSkillOptions) {
-    $confirmText = Build-ConfirmUiText -ConfirmSkillOptions $confirmSkillOptions -UnattendedDecision $unattendedDecision
+    $confirmText = Build-ConfirmUiText -ConfirmSkillOptions $confirmSkillOptions -UnattendedDecision $unattendedDecision -Result $result
     $result | Add-Member -NotePropertyName "confirm_ui" -NotePropertyValue ([pscustomobject]@{
         enabled = $true
         pack_id = [string]$confirmSkillOptions.selected_pack
         selected_skill = [string]$confirmSkillOptions.selected_skill
         options = @($confirmSkillOptions.options)
         rendered_text = $confirmText
+        hazard_alert_required = [bool]$result.hazard_alert_required
+        truth_level = [string]$result.truth_level
+        degradation_state = [string]$result.degradation_state
+        hazard_alert = $result.hazard_alert
     })
 }
 

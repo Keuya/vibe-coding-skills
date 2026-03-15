@@ -58,10 +58,11 @@ param(
     $context = Get-VgoGovernanceContext -ScriptPath $PSCommandPath -EnforceExecutionContext
     $repoRoot = $context.repoRoot
     $assertions = [System.Collections.Generic.List[object]]::new()
-    $requiredPaths = @(
+$requiredPaths = @(
     'docs/promotion-board-v2-governance.md',
     'config/promotion-board.json',
-    'references/plane-scorecards.md'
+    'references/plane-scorecards.md',
+    'docs/status/router-platform-truth-matrix-2026-03-15.md'
 )
     foreach ($relPath in $requiredPaths) {
         $fullPath = Join-Path $repoRoot $relPath
@@ -83,6 +84,10 @@ param(
     'memory-runtime-v2',
     'connector-scorecard',
     'prompt-intelligence-productization'
+ ) },
+    [pscustomobject]@{ path = 'docs/status/router-platform-truth-matrix-2026-03-15.md'; keywords = @(
+    'release-truth consistency proof',
+    'Docs or status are updated ahead of proof'
 ) }
 )
     foreach ($check in $keywordChecks) {

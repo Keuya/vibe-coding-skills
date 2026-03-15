@@ -172,4 +172,6 @@ Before leaving this protocol, write or preserve the evidence needed for cleanup:
 - Do NOT use ruflo agent_spawn for M/L coding tasks
 - Do NOT use SuperClaude sc:implement (use VCO flow)
 - Everything-CC hooks always run -- do not disable
-- For L grade, use Superpowers subagent system, NOT Everything-CC agents. Fallback provision: when Superpowers is unavailable, strictly follow fallback-chains.md defined degradation path
+- For L grade, use Superpowers subagent system, NOT Everything-CC agents.
+- If the preferred orchestration stack is unavailable, do not silently downgrade. Follow `fallback-chains.md` only as an explicit degraded path, emit a standalone hazard alert, and record that the resulting execution is non-authoritative.
+- Do not self-introduce new fallback logic during implementation unless the active requirement document explicitly approves fallback-related changes.

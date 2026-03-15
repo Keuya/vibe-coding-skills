@@ -1,7 +1,7 @@
 {
     "schema_version":  2,
     "release":  {
-                    "version":  "2.3.46",
+                    "version":  "2.3.47",
                     "updated":  "2026-03-15",
                     "channel":  "stable",
                     "notes":  "Hardens Linux benchmark_autonomous and governed runtime closure by resolving Python hosts through a platform-neutral strategy (`python`, `python3`, or `py -3`) while preserving the real bounded XL executor and proof contract."
