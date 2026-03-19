@@ -18,6 +18,7 @@
 | `pilot-desktopops.json` | DesktopOps pilot fixture |
 | `pilot-memory.json` | memory pilot fixture |
 | `pilot-prompt.json` | prompt pilot fixture |
+| `document-cleanup-safety/` | protected document cleanup fixture families |
 
 ## Rule
 

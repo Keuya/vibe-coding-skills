@@ -152,6 +152,27 @@ Delegation must not bypass the fixed stage order.
 - fallback or degraded paths must emit an explicit hazard alert rather than a silent warning
 - fallback or degraded paths must downgrade runtime truth to `non_authoritative`
 
+## Authority Boundary Contract
+
+The ecosystem may carry multiple helpful layers, but runtime authority must stay single-owner.
+
+Layer ownership is:
+
+- canonical router: route selection authority
+- VCO governed runtime: stage order, requirement freeze, plan traceability, execution receipts, cleanup receipts
+- host bridge: hidden governance context attachment and host-hook wiring only
+- superpowers and similar process layers: workflow discipline only
+
+Explicitly forbidden:
+
+- a second visible runtime entry ritual
+- a second route authority
+- a second requirement truth surface
+- a second plan truth surface
+
+Process-discipline layers may require that a workflow be followed.
+They may not replace, shadow, or duplicate governed runtime truth.
+
 ## Artifact Contract
 
 Expected runtime artifacts:

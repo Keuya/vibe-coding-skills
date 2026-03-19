@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "updated_at": "2026-03-17",
+  "version": 2,
+  "updated_at": "2026-03-19",
   "enabled": true,
   "required_after_each_phase": true,
   "receipt_path": "outputs/runtime/vibe-sessions/{run_id}/cleanup-receipt.json",
@@ -9,17 +9,46 @@
   ],
   "cleanup_mode_taxonomy": [
     "receipt_only",
+    "preview_only",
+    "quarantine_only",
     "bounded_cleanup_executed",
     "destructive_cleanup_applied",
     "cleanup_degraded"
   ],
   "cleanup_steps": [
+    "snapshot_protected_document_assets",
+    "preview_or_quarantine_protected_tmp_documents",
     "remove_temp_artifacts",
     "write_phase_cleanup_receipt",
     "run_node_process_audit",
     "attempt_node_zombie_cleanup_if_needed",
     "record_remaining_manual_actions"
   ],
+  "protected_document_policy": {
+    "enabled": true,
+    "extensions": [
+      ".docx",
+      ".xlsx",
+      ".pptx",
+      ".pdf"
+    ],
+    "preview_required_before_destructive": true,
+    "destructive_cleanup_requires_unique_absolute_paths": true,
+    "default_action_mode": "quarantine_only",
+    "snapshot_roots": [
+      "docs",
+      "outputs",
+      ".tmp"
+    ],
+    "quarantine_root": "outputs/runtime/process-health/quarantine/protected-documents",
+    "post_cleanup_checks": [
+      "protected_assets_outside_tmp_still_exist",
+      "quarantined_assets_exist"
+    ],
+    "allowed_destructive_roots": [
+      ".tmp"
+    ]
+  },
   "bridges": {
     "phase_end_cleanup_script": "scripts/governance/phase-end-cleanup.ps1",
     "node_audit_script": "scripts/governance/Invoke-NodeProcessAudit.ps1",

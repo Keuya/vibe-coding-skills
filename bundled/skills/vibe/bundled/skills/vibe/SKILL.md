@@ -167,6 +167,24 @@ Rules:
 - unattended behavior is mapped into governed runtime mode, not into a separate control plane
 - provider-backed intelligence may advise but must not replace route authority
 
+## Compatibility With Process Layers
+
+Other workflow layers may shape discipline, but they must not become a parallel runtime.
+
+Required ownership split:
+
+- canonical router: route authority
+- `vibe`: governed runtime authority
+- host bridge: hidden hook wiring and artifact persistence
+- superpowers or other process helpers: discipline and workflow advice only
+
+Forbidden outcomes:
+
+- second visible startup/runtime prompt surface
+- second requirement freeze surface
+- second execution-plan surface
+- second route authority
+
 ## Protocol Map
 
 Read these protocols on demand:

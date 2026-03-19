@@ -241,6 +241,8 @@ When task is purely research (no implementation):
 - Do NOT invoke both brainstorming systems simultaneously
 - think-harder/think-ultra = problem analysis, brainstorming = requirements discovery
 - Analysis (Phase A) completes BEFORE implementation begins, not in parallel with execution
+- superpowers planning/process skills remain discipline-only and must not create a second requirement or plan truth once VCO artifacts are frozen
+- any planning aid that is not the governed runtime must feed the canonical `docs/requirements/` and `docs/plans/` surfaces rather than invent parallel artifacts
 
 ## Transition to Implementation
 After design is approved:
@@ -248,3 +250,4 @@ After design is approved:
 2. XL grade: Switch to vibe-team protocol (Codex native team + optional ruflo collaboration)
 3. Always carry the plan document forward as context
 4. Execution must hand off into runtime stage 5 `plan_execute`, not bypass directly into ad-hoc coding
+5. Process-discipline helpers may influence how work is executed, but VCO remains the only governed runtime skeleton and artifact authority
