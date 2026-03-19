@@ -169,14 +169,17 @@ VibeSkills 主要适合这几类人：
 - 在 Claude Code 里，使用 `/vibe`
 - 在 Codex 里，使用 `$vibe`
 
-如果你想先快速理解这套系统，再决定走哪条路径：
-
-- [`docs/quick-start.md`](./docs/quick-start.md)
-- [`docs/manifesto.md`](./docs/manifesto.md)
 
 如果你已经准备开始安装，再进入一步式安装入口：
 
 - [`docs/install/one-click-install-release-copy.md`](./docs/install/one-click-install-release-copy.md)
+
+
+
+如果你想先快速理解这套系统，再决定走哪条路径：
+
+- [`docs/quick-start.md`](./docs/quick-start.md)
+- [`docs/manifesto.md`](./docs/manifesto.md)
 
 如果你已经是重度用户，想进一步看更完整的安装与路径说明：
 
