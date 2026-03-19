@@ -2,29 +2,14 @@
 
 # VibeSkills
 
-```text
-             VibeSkills
-          cute octopus core
-
-        skills   plugins   workflows
-            \       |       /
-             \      |      /
-              \     |     /
-               [ governed ]
-              /   runtime  \
-             /      |       \
-      routing   verification   traceability
-```
-
 > Not another skills repository. An AI agent system that integrates calling, governance, verification, and traceability into one working surface.
 
 `VibeSkills` is the public-facing name. `VCO` is the governed runtime behind it.
 
-Once you are surrounded by strong but scattered skills, plugins, workflows, and agent projects, the problem is usually no longer “missing capability.”
-The problem is fragmentation, overlap, conflict, and models that move faster than your ability to keep them under control.
+Right now, people feel the same pressure everywhere: too many AI tools, too many workflows, too many fast-moving resources, and no clear answer for how to choose, combine, learn, and keep up without falling behind.
 
-`VibeSkills` is not trying to add one more tool to that pile.
-It is trying to do something harder and more useful: pull powerful but scattered capabilities into one system so AI is more likely to call the right thing, follow the right process, and leave behind work that people can still inspect later.
+`VibeSkills` is built for that reality.
+It pulls together a frontier-grade toolset and manages those strong tools and resources through a complete, stable, and strict governance model, so what you face is not a pile of conflicting fragments, but a system that is easier to call, steadier to run, and much easier to maintain over time.
 
 ## Capability Snapshot
 

@@ -2,28 +2,14 @@
 
 # VibeSkills
 
-```text
-             VibeSkills
-          cute octopus core
-
-        skills   plugins   workflows
-            \       |       /
-             \      |      /
-              \     |     /
-               [ governed ]
-              /   runtime  \
-             /      |       \
-      routing   verification   traceability
-```
-
 > 不是另一个 skills 仓库。它是一个把调用、治理、验证与留痕整合在一起的 AI agent system。
 
 `VibeSkills` 是你看到的公开名字，`VCO` 是它背后的 governed runtime。
 
-当越来越多优秀的 skills、插件、工作流和 agent 项目同时出现时，问题往往不再是“没有能力”，而是“能力太多、入口太散、彼此冲突，而且一旦开跑就容易失控”。
+现在每个人都能感受到同一种压力：AI 工具越来越多，工作流越来越多，优秀资源层出不穷，但真正困难的从来不是“有没有工具”，而是怎么选择、怎么融合、怎么学习、怎么持续积累，以及怎么在这个变化过快的时代里不被抛下。
 
-`VibeSkills` 想解决的不是“再加一个工具”。
-它想解决的是另一件更现实的事：把强但分散的能力收进同一个系统里，让 AI 更容易调用对的能力，更稳定地按对的流程做事，更少把人拖进黑盒。
+`VibeSkills` 就是为这种现实而生的。
+它整合的是最前沿的工具集合，同时用一套完整、稳定、严苛的治理制度去管理这些优秀工具和资源，让你面对的不是一堆彼此冲突的能力碎片，而是一套更容易调用、更稳定执行、也更适合长期维护的系统。
 
 ## Capability Snapshot
 
