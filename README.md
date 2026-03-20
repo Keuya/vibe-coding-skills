@@ -230,7 +230,7 @@ graph LR
 * 🛠 [推荐的完整安装路径](./docs/install/recommended-full-path.md)
 * 🧊 [冷启动与其他环境安装路径](./docs/cold-start-install-paths.md)
 
-> 提醒：AI 智能治理层相关配置不要直接复用仓库示例值。启用该层时，必须由用户自行提供并确认 `url`、`apikey`、`model`；如果由 AI 协助安装或生成配置，提示词里也应先明确提醒用户填写这三项，再继续写入配置。
+
 
 ---
 
