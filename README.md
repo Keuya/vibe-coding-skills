@@ -53,7 +53,7 @@
 
 | 🧩 技能模块 | 🌍 生态融合 | ⚖️ 治理规则 |
 | :---: | :---: | :---: |
-| <h2 align="center">340+</h2><div align="center">可直接调用的 Skills，覆盖从需求规划到生命科学的完整链路</div> | <h2 align="center">19+</h2><div align="center">吸收与借鉴高价值上游开源项目与最佳实践来源</div> | <h2 align="center">129 条</h2><div align="center">基于配置的策略与契约，确保执行稳定、可溯源、防发散</div> |
+| <h2 align="center">340+</h2><div align="center">可直接调用的 Skills，覆盖从需求规划到执行的完整链路</div> | <h2 align="center">19+</h2><div align="center">吸收与借鉴高价值上游开源项目与最佳实践来源</div> | <h2 align="center">129 条</h2><div align="center">基于配置的策略与契约，确保执行稳定、可溯源、防发散</div> |
 ---
 
 ## ✨ 为什么它与众不同？
