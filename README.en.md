@@ -319,26 +319,7 @@ I want you to execute this task according to the plan and start an L-grade workf
 That should be understood as a strong routing hint rather than a way to bypass governance and hard-force a grade.
 In other words, users can explicitly signal a preferred grade, but the final decision still belongs to the `vibe` runtime after considering task content and governance boundaries.
 
-### 📣 Users can explicitly invoke `vibe`
 
-If you want a task to clearly enter the VibeSkills governed workflow, explicitly invoke it in your message:
-
-- Codex: append `$vibe` to the request
-- Claude Code: append `/vibe` to the request
-
-For example:
-
-```text
-I want you to clarify the requirements first, then make a plan and implement it $vibe
-```
-
-```text
-I want you to clarify the requirements first, then make a plan and implement it /vibe
-```
-
-The point of an explicit invocation is to tell the host that this task should enter the unified `vibe` governed runtime.
-If you want follow-up turns such as execution, revision, or plan continuation to keep the same public governance semantics, the recommended practice is to explicitly invoke it again in those turns.
-After that, the runtime decides the grade by default; if the user explicitly signals an `L` or `XL` workflow preference in the task, the router can take that as an execution hint.
 
 ### 📚 Navigation and guides
 
