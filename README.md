@@ -334,12 +334,24 @@ graph LR
 - 📖 [了解系统架构与理念](./docs/quick-start.md)
 - 📜 [VibeSkills 宣言](./docs/manifesto.md)
 
+**本次更新**
+* ✨ 对外安装入口已收束为两个公开版本：
+  `全量版本 + 可自定义添加治理`
+  `仅核心框架 + 可自定义添加治理`
+* ⚡️ 安装方式改为“提示词优先”。
+  用户优先把安装提示词发给 AI，由 AI 先确认宿主，再确认版本，然后映射到真实 profile 执行安装。
+* 🧭 旧的 `workflow` lane 仍然保留，但现在主要作为兼容 / 过渡实现细节，不再作为普通用户首页主版本。
+* 🧩 自定义 workflow / skill 不再建议游离接入，而是统一走受治理接入路径，纳入 canonical router 的治理范围。
+* 🔄 如果你后续要覆盖更新版本：放在 `skills/custom/` 与 `config/custom-workflows.json` 的自定义治理通常可保留；但直接改官方 runtime / 官方 skill / 官方 mcp/rules 的内容，更新时可能被覆盖。
+
 **安装与配置指南**
-
-- 当前公开支持面：**仅支持 Claude Code 和 Codex**
-- ⚡️ [提示词安装（默认推荐）](./docs/install/one-click-install-release-copy.md)
-
-- 📁 [手动复制安装（离线 / 无管理员权限）](./docs/install/manual-copy-install.md)
+* 当前公开支持面：**仅支持 Claude Code 和 Codex**
+* 当前对外公开版本：**全量版本 + 可自定义添加治理**、**仅核心框架 + 可自定义添加治理**
+* ⚡️ [提示词安装（默认推荐）](./docs/install/one-click-install-release-copy.md)
+  这里已经整理成更容易扫读的安装入口：先看版本差异，再复制对应提示词，再继续看自定义接入。现在也包含“版本更新提示词”。
+* 🧩 [自定义工作流接入](./docs/install/custom-workflow-onboarding.md)
+  用于后续把你自己的 workflow / skill 接入 canonical router 的治理范围，而不是形成第二套路由。
+* 📁 [手动复制安装（离线 / 无管理员权限）](./docs/install/manual-copy-install.md)
 
 **高级参考**
 
