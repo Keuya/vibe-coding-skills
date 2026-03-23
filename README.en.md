@@ -68,7 +68,7 @@ Traditional Skills repositories answer: _"What tools do I have here?"_ VibeSkill
 | AI Quirks & Illusions: Deleting primary files by mistake when clearing backups; a bad habit of writing silent fallback mechanisms, then confidently claiming early success while the primary functionality is actually quite poor.           | Built-in Guardrails: Includes strict rules, such as prohibiting bulk file deletion via commands (forcing one-by-one deletion to prevent accidents). Silent automated fallbacks are banned; any necessary fallback must trigger an explicit warning to the user 👆.                                                          |
 | High Cognitive Load: Users must rely on their own experience to regulate AI workflows, requiring steep learning curves and constant vigilance.                                                                                               | Guided Framework: The system actively guides the user through clarifying requirements, confirming execution plans, locking in workflow documents, and running concurrent multi-agents (allocating tasks and auto-invoking skills based on the plan), down to automated testing and iteration until the task is complete 👆. |
 
-## **With so many skills available, will the sheer number of options lead to a token explosion? Under the governance framework, this will certainly result in excessive token consumption, but not to the point of a token explosion. This is because routing doesn't provide the model with so many options; instead, it's triggered based on the user's task. The core logic is: user command - AI-assisted governance discovers keywords representing user intent - keywords trigger skill routing, and so on.**
+**With so many skills available, will the sheer number of options lead to a token explosion? Under the governance framework, this will certainly result in excessive token consumption（30k initial context）, but not to the point of a token explosion. This is because routing doesn't provide the model with so many options; instead, it's triggered based on the user's task. The core logic is: user command - AI-assisted governance discovers keywords representing user intent - keywords trigger skill routing, and so on.**
 
 ## ✦ Panoramic Capability Map: Your all-in-one workspace
 
@@ -348,13 +348,15 @@ If you like the project, please consider giving it a star! I'll be continuously 
 
 ## Thanks to everyone on LinuxDo for their support! Welcome to join https://linux.do/ for all kinds of technical exchanges, cutting-edge AI information, and AI experience sharing!
 
+---
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=foryourhealth111-pixel%2FVibe-Skills&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=foryourhealth111-pixel/Vibe-Skills&type=date&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=foryourhealth111-pixel/Vibe-Skills&type=date&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=foryourhealth111-pixel/Vibe-Skills&type=date&legend=bottom-right" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=foryourhealth111-pixel/Vibe-Skills&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=foryourhealth111-pixel/Vibe-Skills&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=foryourhealth111-pixel/Vibe-Skills&type=date&legend=top-left" />
  </picture>
 </a>
 
