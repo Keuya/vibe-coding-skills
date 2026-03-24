@@ -335,6 +335,11 @@ VibeSkills follows a governed workflow of `Clarify ➔ Plan ➔ Execute ➔ Veri
 - 📈 **"Competitor research"** → Define scope → Gather info → Structured comparison → Deliver research report and analysis framework
 - 🔬 **"Literature review"** → Define focus → Search & organize → Citation management → Deliver review framework and research entry points
 
+**Minor Feature Introduction**
+
+- Vibe has a built-in CRON function. Simply explicitly request that CRON be enabled (e.g., "I want to continuously advance task XXX based on cron, to complete: XXXX $vibe").
+
+  
 ---
 
 ## 📦 Gather the strengths of many projects: integration and full matrix
