@@ -48,7 +48,8 @@
 
 > [!IMPORTANT]
 > **🎯 Our core vision:**
-> Reduce the cognitive anxiety and high learning cost that come with every new technology wave. Here, whether or not you have a deep programming background, you can directly call on today's most advanced AI capabilities with an extremely low barrier to entry. **Let everyone enjoy the productivity leap that AI can bring.**
+> Vibe Skills will evolve with the times, ensuring usability and efficiency while lowering the learning curve for the general public regarding cutting-edge Vibecoding technology, reducing cognitive anxiety and high learning costs associated with new technologies.
+> Here, regardless of your programming background, you can directly access a collection of today's most advanced AI technologies with a very low barrier to entry. **Enabling everyone to enjoy the productivity leap brought by AI.**
 
 ### 📊 Why is it so powerful?
 
