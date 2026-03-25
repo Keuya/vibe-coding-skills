@@ -455,7 +455,7 @@ We know that building in isolation can't keep pace with the rapidly evolving AI 
 ---
 
 ### 📚 Navigation & Guides
-
+<div align="center">
 <div align="center">
 <table>
 <tr>
@@ -484,20 +484,7 @@ We know that building in isolation can't keep pace with the rapidly evolving AI 
 
 <br/>
 
-> [!NOTE]
-> **What's new in this release**
->
-> - ✨ Public install entry points consolidated into two versions: `Full version + customizable governance` / `Core framework only + customizable governance`
-> - ⚡️ Installation is now **prompt-first**: send the install prompt to AI, AI confirms host and version, then maps to the real profile for installation
-> - 🧭 The old `workflow` lane is retained for compatibility/transition, no longer featured as the main user-facing version
-> - 🧩 Custom workflows/skills should no longer be grafted in freely — use the governed onboarding path under canonical router control
-> - 🔄 Upgrade note: customizations in `skills/custom/` and `config/custom-workflows.json` are generally preserved; directly modifying official runtime/skill/mcp/rules files may be overwritten on updates
 
-<br/>
-
----
-
-<div align="center">
 
 ---
 
@@ -511,9 +498,6 @@ Give it a try! If you have questions, ideas, or suggestions, feel free to open a
 
 Whether it's fixing bugs, improving performance, adding features, or improving documentation — every PR is deeply appreciated.
 
-```
-Fork → Modify → Pull Request → Merge ✅
-```
 
 <br/>
 
