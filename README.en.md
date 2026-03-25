@@ -81,6 +81,7 @@
 - [Why is it powerful?](#-why-is-it-powerful)
 - [What makes it different?](#-what-makes-it-different)
 - [Intelligent Routing](#-intelligent-routing-how-340-skills-collaborate-without-conflict)
+- [Memory System](#-memory-system-ai-that-truly-remembers)
 - [Full Capability Map](#-full-capability-map-your-all-in-one-workbench)
 - [Who is it for?](#-who-is-it-for)
 - [Standing on the Shoulders of Giants](#-standing-on-the-shoulders-of-giants)
@@ -272,6 +273,93 @@ The governance framework adds ~30k initial context overhead, but does not cause 
 
 ---
 
+## 🧠 Memory System: AI That Truly Remembers
+
+> **The fatal flaw of most AI tools isn't that they're not smart enough — it's that they forget too easily.**
+> Every new conversation requires re-explaining your project context. Bugs the AI already fixed get hit again. Carefully configured working styles reset on restart.
+
+VibeSkills addresses this with a **four-tier memory architecture** — from transient session state to long-horizon knowledge graphs — ensuring knowledge persists, decisions stay traceable, and context carries forward indefinitely.
+
+<br/>
+
+### Four-Tier Memory Architecture
+
+<div align="center">
+
+| Tier | Component | Scope | Core Purpose |
+|:---:|:---:|:---:|:---|
+| **L1 Session** | `state_store` | Current session | Execution progress, intermediate results, temp state — always-on "workbench" |
+| **L2 Project** | `Serena` | Current project | Architecture decisions, technical conventions, project rules — written only after explicit user confirmation |
+| **L3 Short-term Semantic** | `ruflo` | Intra-session retrieval | Vector cache for fast context retrieval within long-running tasks |
+| **L4 Long-term Graph** | `Cognee` | Cross-session | Entity linking, relationship graphs, long-horizon knowledge accumulation — AI's "long-term memory" |
+
+</div>
+
+<br/>
+
+> [!TIP]
+> **Optional external extensions**: `mem0` can serve as a personal preference backend (output style, recurring constraints) via opt-in soft rollout; `Letta` provides memory block mapping and token-pressure policy vocabulary — but neither can replace the four canonical tiers above.
+
+<br/>
+
+### Dedicated Memory Skills
+
+Beyond the architecture, VibeSkills ships three ready-to-use high-level memory skills:
+
+<div align="center">
+
+| Skill | Role | Trigger |
+|:---:|:---|:---|
+| `knowledge-steward` | **Knowledge Keeper**: One sentence saves insights, bug fixes, and effective prompts permanently to Obsidian + GitHub — no more intellectual value lost to context windows | "save this prompt" / "log this bug" / "save this insight" |
+| `digital-brain` | **Second Brain**: Structured personal knowledge base managing identity, content pipeline, network, and project retrospectives — a full "second brain" implementation | Invoke directly; ideal for building a personal knowledge OS |
+| `deepagent-memory-fold` | **Context Fold**: Compresses large context into structured working/tool/evidence memory at long-task boundaries, enabling seamless handoff to a new agent or session | Triggers at context limit or manually on demand |
+
+</div>
+
+<br/>
+
+### Memory Governance: Stable, Safe, Non-Diverging
+
+VibeSkills memory layers follow strict governance rules so the memory system itself never becomes a new source of risk:
+
+<div align="center">
+
+| Governance Rule | Description |
+|:---|:---|
+| **Single source of truth** | Each memory need has exactly one responsible component — no dual-track competition |
+| **Explicit write policy** | `Serena` (project decision layer) only writes after explicit user confirmation — never auto-infers |
+| **Episodic memory disabled** | `episodic-memory` is permanently disabled in VCO governance mode to prevent implicit contamination |
+| **Bounded mem0 intake** | Only personal preferences (style, constraints) may be written — route assignments and project truths are forbidden |
+| **Kill switch** | Every external memory backend has an independent switch for instant downgrade to `shadow` (classify-only, no writes) mode |
+
+</div>
+
+<br/>
+
+```
+📝 Knowledge Accumulation Path
+────────────────────────────────────────────────────────
+Insights / decisions from conversation
+       │
+       ▼
+  knowledge-steward ──→ Obsidian notes + GitHub backup
+       │
+       ▼
+  Serena (project tier) ──→ Architecture decisions / conventions
+       │
+       ▼
+  Cognee (graph tier) ──→ Cross-project entity links / long-term knowledge
+────────────────────────────────────────────────────────
+New sessions auto-load project memory — no need to re-explain context
+```
+
+<br/>
+
+> _With the memory layer, every AI collaboration doesn't start from zero — it builds on the shoulders of every session before it._
+
+
+---
+
 ## ✦ Full Capability Map: Your All-in-One Workbench
 
 Unrolled across a "real workflow", VibeSkills has laid out a complete **end-to-end capability chain**:
@@ -455,7 +543,7 @@ We know that building in isolation can't keep pace with the rapidly evolving AI 
 ---
 
 ### 📚 Navigation & Guides
-<div align="center">
+
 <div align="center">
 <table>
 <tr>
@@ -484,7 +572,20 @@ We know that building in isolation can't keep pace with the rapidly evolving AI 
 
 <br/>
 
+> [!NOTE]
+> **What's new in this release**
+>
+> - ✨ Public install entry points consolidated into two versions: `Full version + customizable governance` / `Core framework only + customizable governance`
+> - ⚡️ Installation is now **prompt-first**: send the install prompt to AI, AI confirms host and version, then maps to the real profile for installation
+> - 🧭 The old `workflow` lane is retained for compatibility/transition, no longer featured as the main user-facing version
+> - 🧩 Custom workflows/skills should no longer be grafted in freely — use the governed onboarding path under canonical router control
+> - 🔄 Upgrade note: customizations in `skills/custom/` and `config/custom-workflows.json` are generally preserved; directly modifying official runtime/skill/mcp/rules files may be overwritten on updates
 
+<br/>
+
+---
+
+<div align="center">
 
 ---
 
@@ -498,6 +599,9 @@ Give it a try! If you have questions, ideas, or suggestions, feel free to open a
 
 Whether it's fixing bugs, improving performance, adding features, or improving documentation — every PR is deeply appreciated.
 
+```
+Fork → Modify → Pull Request → Merge ✅
+```
 
 <br/>
 
