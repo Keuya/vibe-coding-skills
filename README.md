@@ -100,6 +100,8 @@
 > 传统的 Skills 仓库在回答：_"我这里有什么工具？"_
 > **VibeSkills 正面迎击的是重度 AI 用户的核心痛点：_"我该怎么管理调用大量 Skills，并且高效稳定地完成工作？"_**
 
+<sub>适用于 **Claude Code** · **Codex** · **Windsurf** · **OpenCode** · **Cursor** 及所有支持 Skills 协议的 AI 环境，原生兼容 **MCP**。</sub>
+
 <br/>
 
 <div align="center">
