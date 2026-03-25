@@ -49,8 +49,8 @@
 
 特别是：
 
-- 从 `full` 降到 `framework-only`
-- 从 `workflow` 降到 `framework-only`
+- 从 `full` 降到框架版（`minimal`）
+- 从 `workflow` 降到框架版（`minimal`）
 
 这类变更最容易造成：
 

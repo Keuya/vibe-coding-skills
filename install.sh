@@ -28,9 +28,10 @@ resolve_host_id() {
   case "${host_id}" in
     codex) printf '%s' 'codex' ;;
     claude|claude-code) printf '%s' 'claude-code' ;;
+    cursor) printf '%s' 'cursor' ;;
     windsurf) printf '%s' 'windsurf' ;;
     *)
-      echo "[FAIL] Unsupported VCO host id: ${host_id}. Supported values: codex, claude-code, windsurf" >&2
+      echo "[FAIL] Unsupported VCO host id: ${host_id}. Supported values: codex, claude-code, cursor, windsurf" >&2
       exit 1
       ;;
   esac
@@ -41,6 +42,7 @@ resolve_default_target_root() {
   case "${host_id}" in
     codex) printf '%s' "${CODEX_HOME:-${HOME}/.codex}" ;;
     claude-code) printf '%s' "${CLAUDE_HOME:-${HOME}/.claude}" ;;
+    cursor) printf '%s' "${CURSOR_HOME:-${HOME}/.cursor}" ;;
     windsurf) printf '%s' "${WINDSURF_HOME:-${HOME}/.codeium/windsurf}" ;;
     *)
       echo "[FAIL] Unsupported VCO host id for target-root resolution: ${host_id}" >&2
@@ -49,30 +51,99 @@ resolve_default_target_root() {
   esac
 }
 
+safe_parent_dir() {
+  local path="${1:-}"
+  [[ -n "${path}" ]] || return 0
+  local parent=""
+  parent="$(cd "${path}/.." 2>/dev/null && pwd || true)"
+  if [[ -z "${parent}" || "${parent}" == "${path}" || "${parent}" == "/" ]]; then
+    return 0
+  fi
+  printf '%s' "${parent}"
+}
+
+canonical_repo_available() {
+  local current="${1:-}"
+  [[ -n "${current}" ]] || return 1
+  current="$(cd "${current}" 2>/dev/null && pwd || true)"
+  [[ -n "${current}" ]] || return 1
+
+  while [[ -n "${current}" ]]; do
+    if [[ -e "${current}/.git" && -f "${current}/config/version-governance.json" ]]; then
+      return 0
+    fi
+    local parent
+    parent="$(dirname "${current}")"
+    if [[ "${parent}" == "${current}" ]]; then
+      break
+    fi
+    current="${parent}"
+  done
+
+  return 1
+}
+
 assert_target_root_matches_host_intent() {
   local target_root="$1"
   local host_id="$2"
-  local leaf normalized_target is_codex_root is_claude_root is_windsurf_root
+  local leaf normalized_target is_codex_root is_claude_root is_cursor_root is_windsurf_root
   leaf="$(basename "${target_root}")"
   leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
   normalized_target="$(printf '%s' "${target_root}" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')"
   normalized_target="${normalized_target%/}"
   is_codex_root="false"
   is_claude_root="false"
+  is_cursor_root="false"
   is_windsurf_root="false"
   [[ "${leaf}" == ".codex" ]] && is_codex_root="true"
   [[ "${leaf}" == ".claude" ]] && is_claude_root="true"
+  [[ "${leaf}" == ".cursor" ]] && is_cursor_root="true"
   [[ "${normalized_target}" == */.codeium/windsurf ]] && is_windsurf_root="true"
   if [[ "${host_id}" == "codex" && ( "${is_claude_root}" == "true" || "${is_windsurf_root}" == "true" ) ]]; then
     echo "[FAIL] Target root '${target_root}' looks like a non-Codex host root, but host='codex'." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "codex" && "${is_cursor_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Cursor home, but host='codex'." >&2
+    echo "[FAIL] Pass --host cursor for preview guidance or use a Codex target root." >&2
     exit 1
   fi
   if [[ "${host_id}" == "claude-code" && ( "${is_codex_root}" == "true" || "${is_windsurf_root}" == "true" ) ]]; then
     echo "[FAIL] Target root '${target_root}' looks like a non-Claude host root, but host='claude-code'." >&2
     exit 1
   fi
+  if [[ "${host_id}" == "claude-code" && "${is_codex_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Codex home, but host='claude-code'." >&2
+    echo "[FAIL] Use --host codex for the official closure lane or choose a Claude Code target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "claude-code" && "${is_cursor_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Cursor home, but host='claude-code'." >&2
+    echo "[FAIL] Pass --host cursor for Cursor preview guidance or choose a Claude Code target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "cursor" && "${is_codex_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Codex home, but host='cursor'." >&2
+    echo "[FAIL] Use --host codex for the official closure lane or choose a Cursor target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "cursor" && "${is_claude_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Claude Code home, but host='cursor'." >&2
+    echo "[FAIL] Pass --host claude-code for Claude preview guidance or choose a Cursor target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "cursor" && "${is_windsurf_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Windsurf home, but host='cursor'." >&2
+    echo "[FAIL] Pass --host windsurf for preview runtime-core or choose a Cursor target root." >&2
+    exit 1
+  fi
   if [[ "${host_id}" == "windsurf" && ( "${is_codex_root}" == "true" || "${is_claude_root}" == "true" ) ]]; then
     echo "[FAIL] Target root '${target_root}' looks like a non-Windsurf host root, but host='windsurf'." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "windsurf" && "${is_cursor_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Cursor home, but host='windsurf'." >&2
+    echo "[FAIL] Pass --host cursor for preview guidance or choose a Windsurf target root." >&2
     exit 1
   fi
 }
@@ -84,10 +155,14 @@ fi
 assert_target_root_matches_host_intent "${TARGET_ROOT}" "${HOST_ID}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CANONICAL_SKILLS_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-WORKSPACE_SKILLS_ROOT="${WORKSPACE_ROOT}/skills"
-WORKSPACE_SUPERPOWERS_ROOT="${WORKSPACE_ROOT}/superpowers/skills"
+CANONICAL_SKILLS_ROOT="$(safe_parent_dir "${SCRIPT_DIR}")"
+WORKSPACE_ROOT="$(safe_parent_dir "${CANONICAL_SKILLS_ROOT}")"
+WORKSPACE_SKILLS_ROOT=""
+WORKSPACE_SUPERPOWERS_ROOT=""
+if [[ -n "${WORKSPACE_ROOT}" ]]; then
+  WORKSPACE_SKILLS_ROOT="${WORKSPACE_ROOT}/skills"
+  WORKSPACE_SUPERPOWERS_ROOT="${WORKSPACE_ROOT}/superpowers/skills"
+fi
 SP_SRC_ROOT="${SCRIPT_DIR}/bundled/superpowers-skills"
 ADAPTER_RESOLVER="${SCRIPT_DIR}/scripts/common/resolve_vgo_adapter.py"
 ADAPTER_INSTALLER="${SCRIPT_DIR}/scripts/install/install_vgo_adapter.py"
@@ -225,7 +300,7 @@ run_runtime_freshness_gate() {
     return 0
   fi
 
-  if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
     echo "[WARN] Runtime freshness gate requires the canonical repo root; skipping because no outer .git root was found."
     return 0
   fi

@@ -1,119 +1,63 @@
 # Manual Copy Install (Offline / No-Admin)
 
-If you do not want to run the install scripts and only want to place the files manually, remember one thing:
+If you do not want to run the install scripts, this path solves only one thing: copying the repo files into the target host root.
 
-**copy the VibeSkills runtime directories into your target host root.**
-
-This path currently supports three public hosts:
+The current public host surface includes:
 
 - `codex`
 - `claude-code`
+- `cursor`
 - `windsurf`
 
-If your target is not one of those three, the current version should not be described as supported installation.
+## Core Files To Copy
 
-## What To Copy
-
-Copy these items into the target host root:
+Copy these into the target root:
 
 - `skills/`
 - `commands/`
 - `config/upstream-lock.json`
-- `config/skills-lock.json` if it exists in the repo
-- the `skills/vibe/` runtime mirror
+- `skills/vibe/`
 
-A simple way to think about them:
+## Default Host Roots
 
-- `skills/`: the capabilities themselves
-- `commands/`: command entrypoints
-- `config/*.json`: lock files and release-alignment metadata
-- `skills/vibe/`: the VCO runtime mirror
+- `codex` -> `~/.codex`
+- `claude-code` -> `~/.claude`
+- `cursor` -> `~/.cursor`
+- `windsurf` -> `~/.codeium/windsurf`
 
-## Where To Copy Them
+If the target is `windsurf`, also note:
 
-Copy them into your target host root.
+- mirror `commands/` into `global_workflows/` if you want parity with the scripted result
+- copy `mcp/servers.template.json` to `mcp_config.json` when it is missing
 
-The target directory should end up containing paths like:
+## What You Still Need To Do Yourself
 
-- `<TARGET_ROOT>/skills/`
-- `<TARGET_ROOT>/commands/`
-- `<TARGET_ROOT>/config/upstream-lock.json`
-- `<TARGET_ROOT>/config/skills-lock.json` if present
+### Codex
 
-If the target host is `windsurf`, also note:
+- maintain `~/.codex/settings.json`
+- configure `OPENAI_*` if needed
+- add `VCO_AI_PROVIDER_*` if you also want the governance-AI online layer
 
-- the default target root should be `~/.codeium/windsurf`
-- to match the scripted result, mirror `commands/` into `<TARGET_ROOT>/global_workflows/`
-- to match the scripted result, copy `mcp/servers.template.json` to `<TARGET_ROOT>/mcp_config.json` when it is absent
+### Claude Code
 
-## What You Still Need To Configure Yourself
+- maintain `~/.claude/settings.json`
+- add `VCO_AI_PROVIDER_*` if needed
 
-Manual copy only places the repo files. It does not finish host-local configuration.
+### Cursor
 
-### If you install into Codex
+- maintain `~/.cursor/settings.json`
+- add local provider / MCP configuration as needed
 
-You still need to configure locally:
+### Windsurf
 
-- `~/.codex/settings.json`
-- if you only want Codex base online provider access, commonly `OPENAI_API_KEY` and `OPENAI_BASE_URL` under `env`
-- if you also want the governance AI online layer, additionally configure:
-  - `VCO_AI_PROVIDER_URL`
-  - `VCO_AI_PROVIDER_API_KEY`
-  - `VCO_AI_PROVIDER_MODEL`
+- confirm `mcp_config.json` and `global_workflows/` under `~/.codeium/windsurf`
+- finish account, provider, plugin, and workspace-native setup inside the host itself
 
-### If you install into Claude Code
-
-You still need to configure locally:
-
-- `~/.claude/settings.json`
-- commonly:
-  - `VCO_AI_PROVIDER_URL`
-  - `VCO_AI_PROVIDER_API_KEY`
-  - `VCO_AI_PROVIDER_MODEL`
-- and, only if the host connection needs them:
-  - `ANTHROPIC_BASE_URL`
-  - `ANTHROPIC_AUTH_TOKEN`
-
-### If you install into Windsurf
-
-You still need to confirm locally:
-
-- the target root is `~/.codeium/windsurf`
-- `mcp_config.json` exists, or is copied from `mcp/servers.template.json`
-- `global_workflows/` is materialized from `commands/` when needed
-- account, provider, plugin, and workspace-native host capabilities are still completed inside Windsurf itself
-
-## What This Path Does Not Do Automatically
-
-Manual copy does not automatically complete:
+## What This Path Does Not Complete Automatically
 
 - hook installation
-- MCP registration
 - provider credential wiring
-- edits to Claude Code's real `settings.json`
-- Windsurf login / account / provider / plugin closure
+- host login or account takeover
+- automatic rewriting of the real Claude / Cursor / Windsurf settings surfaces
 
-The important current boundary is:
-
-- `codex`, `claude-code`, and `windsurf` currently do **not** install hooks
-- hook installation is temporarily frozen because of compatibility issues
-
-## Final Boundary
-
-If the governance AI `url` / `apikey` / `model` are not configured locally yet, the environment must not be described as governance-AI-online-ready.
-
-For `codex`, that also means `OPENAI_*` being configured must not be presented as if the governance AI online layer were configured too.
-
-Those values should be filled by the user in local host settings or local environment variables, not pasted into chat.
-
-## When Not To Use This Path
-
-Do not use manual copy if you want:
-
-- AI to choose the correct supported host for you
-- the scripts to run install + check automatically
-- less host-local configuration work
-
-Use this instead:
-
-- [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md)
+Across the current public surface, none of the four hosts should be described as “hooks installed automatically.”

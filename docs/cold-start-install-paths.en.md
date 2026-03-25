@@ -1,147 +1,101 @@
 # Cold-Start Install Paths
 
-This document answers the only cold-start questions that matter right now: which hosts are supported, and which path you should use.
+This document answers the only cold-start questions that matter right now: which hosts are supported, and what the shortest truth-first install path looks like for each.
 
 ## One-Line Conclusion
 
-The current public surface supports three hosts:
+The current public surface supports four hosts:
 
 - `codex`
 - `claude-code`
+- `cursor`
 - `windsurf`
 
 Within that scope:
 
-- `codex`: recommended path
-- `claude-code`: preview guidance path
-- `windsurf`: preview runtime-core path
+- `codex`: governed path
+- `claude-code`: preview guidance
+- `cursor`: preview guidance
+- `windsurf`: preview runtime-core
 
-If you want another agent, the current version should be treated as unsupported rather than silently routed into a hidden lane.
+Other hosts should not currently be described as supported installation targets.
 
-## Path 1: Codex
-
-Windows:
-
-```powershell
-pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId codex
-pwsh -File .\check.ps1 -HostId codex -Profile full -Deep
-```
-
-Linux / macOS:
+## Codex
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host codex
+bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
 bash ./check.sh --host codex --profile full --deep
 ```
 
 What you get:
 
-- governed payload
-- optional provider seeding
-- MCP active profile materialization
+- governed runtime payload
+- local settings / MCP guidance
 - deep health check
 
 What you do not get:
 
-- hook installation yet; that install surface is still paused while the author works through compatibility issues, so this should not be framed as your install failing
+- automatic hooks
+- automatic governance-AI online readiness
 
-## Correct Follow-Up For Codex
-
-- open `~/.codex/settings.json`
-- if you only want the base online provider, start with `OPENAI_API_KEY` and `OPENAI_BASE_URL` under `env`
-- if you also want the governance AI online layer, you can optionally add these enhancement settings:
-  - `VCO_AI_PROVIDER_URL`
-  - `VCO_AI_PROVIDER_API_KEY`
-  - `VCO_AI_PROVIDER_MODEL`
-- `OPENAI_*` is not the same as `VCO_AI_PROVIDER_*`
-- do not paste secrets into chat
-- any missing official MCP registration or governance-AI online configuration should be described as optional enhancement work, not as an install failure
-
-## Path 2: Claude Code
-
-Windows:
-
-```powershell
-pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId claude-code
-pwsh -File .\check.ps1 -HostId claude-code -Profile full -Deep
-```
-
-Linux / macOS:
+## Claude Code
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code
+bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
 bash ./check.sh --host claude-code --profile full --deep
 ```
 
 What you get:
 
-- runtime payload
-- preview guidance health check
+- preview-guidance payload
+- preview health check
 
 What you do not get:
 
-- automatic overwrite of the real `settings.json`
-- hook installation yet; that install surface is still paused while the author works through compatibility issues, so this should not be framed as your install failing
-- automatic plugin provisioning
-- automatic host MCP registration
-- automatic provider secret wiring
+- full closure
+- overwrite of the real `~/.claude/settings.json`
+- automatic hooks
 
-## Correct Follow-Up For Claude Code
-
-- open `~/.claude/settings.json`
-- add only the fields you need under `env`
-- common fields are `VCO_AI_PROVIDER_URL`, `VCO_AI_PROVIDER_API_KEY`, and `VCO_AI_PROVIDER_MODEL`
-- add `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` only when needed for the host connection
-- the current version no longer generates `settings.vibe.preview.json`
-- do not paste secrets into chat
-- any missing MCP, provider, or governance-AI online configuration should be described as optional enhancement work by default
-
-## Path 3: Windsurf
-
-Windows:
-
-```powershell
-pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId windsurf
-pwsh -File .\check.ps1 -HostId windsurf -Profile full -Deep
-```
-
-Linux / macOS:
+## Cursor
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host windsurf
+bash ./scripts/bootstrap/one-shot-setup.sh --host cursor --profile full
+bash ./check.sh --host cursor --profile full --deep
+```
+
+What you get:
+
+- preview-guidance payload
+- preview health check
+
+What you do not get:
+
+- full closure
+- overwrite of the real `~/.cursor/settings.json`
+- Cursor host-native provider / MCP / hook closure
+
+## Windsurf
+
+```bash
+bash ./scripts/bootstrap/one-shot-setup.sh --host windsurf --profile full
 bash ./check.sh --host windsurf --profile full --deep
 ```
 
 What you get:
 
 - shared runtime payload
-- a preview runtime-core install under `~/.codeium/windsurf`
-- `mcp_config.json` materialized if it is absent
-- `global_workflows/` materialized when the install payload includes `commands/`
+- a runtime-core preview install under `~/.codeium/windsurf`
+- optional `mcp_config.json` materialization
+- optional `global_workflows/` materialization
 
 What you do not get:
 
 - full closure
-- automatic overwrite of host-native settings
-- automatic provider credential wiring
-- automatic plugin provisioning
-- automatic login or account takeover
-- automatic workspace projection
+- host login / account / provider / plugin closure
 
-## Correct Follow-Up For Windsurf
+## Boundaries That Must Hold During Cold Start
 
-- open `~/.codeium/windsurf`
-- confirm that `mcp_config.json` and `global_workflows/` exist when expected
-- finish any host-native account, provider, or plugin setup inside Windsurf itself
-- do not paste secrets into chat
-- describe this path only as `preview runtime-core`, not as full closure or host-native online readiness
-
-## Most Important Cold-Start Boundary
-
-- `HostId` / `--host` decides host semantics, not the folder name alone
-- there is no public install entry beyond `codex`, `claude-code`, and `windsurf` in the current version
-- the hook install surface is still paused while the author works through compatibility issues; that is a current boundary, not an install error
-- if the governance AI `url` / `apikey` / `model` are not configured locally yet, the environment must not be described as governance-AI-online-ready
-- for `codex`, `OPENAI_*` being configured only proves the base online provider is ready, not the governance AI online layer
-- any missing official MCP registration, `VCO_AI_PROVIDER_*`, or similar local provider settings should be framed as optional enhancements rather than warning-style install defects
-- for `windsurf`, the repo currently owns only shared runtime payload plus preview runtime-core materialization, not login, account, provider, or plugin closure
+- `HostId` / `--host` decides host semantics
+- hooks remain frozen across the current public surface; that is not an install failure
+- if local provider fields are not configured, the environment must not be described as online-ready
+- do not ask users to paste secrets into chat

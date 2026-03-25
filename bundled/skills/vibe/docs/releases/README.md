@@ -10,7 +10,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ### Current Release Surface
 
-- [`v2.3.47.md`](v2.3.47.md): no-silent-fallback governance, explicit degraded-truth hazard surfacing, and release-truth consistency closure
+- [`v2.3.48.md`](v2.3.48.md): benchmark mode compatibility downgrade to `interactive_governed`, governed proof alignment, and adaptive-routing release-gate robustness
 
 ### Release Runtime / Proof Handoff
 
@@ -22,6 +22,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ## Recent Governed Releases
 
+- [`v2.3.48.md`](v2.3.48.md) - 2026-03-23 - benchmark mode compatibility downgrade / governed proof alignment / adaptive-routing gate robustness
 - [`v2.3.47.md`](v2.3.47.md) - 2026-03-15 - no-silent-fallback governance / degraded-truth hazard surfacing / release-truth consistency closure
 - [`v2.3.46.md`](v2.3.46.md) - 2026-03-15 - Linux benchmark/governed-runtime Python host neutrality / proof-chain closure
 - [`v2.3.45.md`](v2.3.45.md) - 2026-03-15 - benchmark_autonomous bridge durability / relative runtime summary paths / restored Python bridge proof
@@ -69,7 +70,9 @@ Exact script names live in the gate-family index. At the README level, releases 
 Use the gate-family index for the exact scripts. The extended trains stay grouped here by governed concern:
 
 - Wave64-82 extensions: memory runtime, browser / desktop / document / connector scorecards, cross-plane replay, ops cockpit, rollback drill, release-train closure
+- Exact gates include `vibe-wave64-82-closure-gate.ps1` and `vibe-release-train-v2-gate.ps1`.
 - Wave83-100 extensions: gate reliability, eval quality, candidate / role / subagent / discovery governance, capability lifecycle, sandbox simulation, release evidence bundle, bounded rollout, upstream re-audit closure
+- Wave83-100 Extended Gates: `vibe-release-evidence-bundle-gate.ps1`, `vibe-manual-apply-policy-gate.ps1`, `vibe-rollout-proposal-boundedness-gate.ps1`, `vibe-upstream-reaudit-matrix-gate.ps1`, `vibe-wave83-100-closure-gate.ps1`
 
 ## Rules
 

@@ -50,6 +50,27 @@ resolve_default_target_root() {
   esac
 }
 
+canonical_repo_available() {
+  local current="${1:-}"
+  [[ -n "${current}" ]] || return 1
+  current="$(cd "${current}" 2>/dev/null && pwd || true)"
+  [[ -n "${current}" ]] || return 1
+
+  while [[ -n "${current}" ]]; do
+    if [[ -e "${current}/.git" && -f "${current}/config/version-governance.json" ]]; then
+      return 0
+    fi
+    local parent
+    parent="$(dirname "${current}")"
+    if [[ "${parent}" == "${current}" ]]; then
+      break
+    fi
+    current="${parent}"
+  done
+
+  return 1
+}
+
 assert_target_root_matches_host_intent() {
   local target_root="$1"
   local host_id="$2"
@@ -337,7 +358,7 @@ validate_runtime_receipt() {
       warn_note "vibe runtime freshness receipt unavailable because the gate was skipped by request."
       return
     fi
-    if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+    if ! canonical_repo_available "${SCRIPT_DIR}"; then
       warn_note "vibe runtime freshness receipt unavailable because check.sh is not running from the canonical repo root."
       return
     fi
@@ -427,7 +448,7 @@ run_runtime_freshness_gate() {
     return
   fi
 
-  if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
     warn_note 'runtime freshness gate skipped: run canonical repo check.sh to execute freshness verification.'
     return
   fi
@@ -471,7 +492,7 @@ run_runtime_freshness_gate() {
 }
 
 run_runtime_coherence_gate() {
-  if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
     warn_note 'runtime coherence gate skipped: run canonical repo check.sh to execute coherence verification.'
     return
   fi

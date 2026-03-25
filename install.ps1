@@ -1,7 +1,7 @@
 param(
   [ValidateSet("minimal", "full")]
   [string]$Profile = "full",
-  [ValidateSet("codex", "claude-code", "windsurf")]
+  [ValidateSet("codex", "claude-code", "cursor", "windsurf")]
   [string]$HostId = "codex",
   [string]$TargetRoot = '',
   [switch]$InstallExternal,
@@ -20,7 +20,7 @@ $Adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 
 function Test-CanonicalRepoExecution {
   param([string]$RepoRoot)
-  return (Test-Path -LiteralPath (Join-Path $RepoRoot '.git'))
+  return (Test-VgoCanonicalRepoExecution -StartPath $RepoRoot)
 }
 function Get-PreferredPythonCommand {
   foreach ($candidate in @('python', 'python3')) {

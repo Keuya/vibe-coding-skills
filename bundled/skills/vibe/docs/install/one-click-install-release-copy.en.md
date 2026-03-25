@@ -91,6 +91,24 @@ These may still remain host-side or user-side tasks:
 - local `url` / `apikey` / `model` configuration
 - manual updates to Claude Code's real `settings.json`
 
+## How old-version users should upgrade
+
+If you already installed an older version, you usually do not need to uninstall first.
+For most users, the simplest path is to rerun this prompt-based install flow.
+
+In practice, that means asking AI to run one more install pass with this prompt.
+If that install completes normally, you usually do not need any extra manual commands.
+
+Only use the more detailed upgrade commands when:
+
+- AI cannot run the install for you
+- you need to debug a failed upgrade manually
+- you explicitly want to upgrade to a specific release or tag
+
+Then see:
+
+- [`recommended-full-path.en.md`](./recommended-full-path.en.md)
+
 ## Second Main Install Path
 
 If you do not want AI to run installation, or the environment is offline or has no admin rights, use:

@@ -31,9 +31,10 @@ resolve_host_id() {
   case "${host_id}" in
     codex) printf '%s' 'codex' ;;
     claude|claude-code) printf '%s' 'claude-code' ;;
+    cursor) printf '%s' 'cursor' ;;
     windsurf) printf '%s' 'windsurf' ;;
     *)
-      echo "[FAIL] Unsupported VCO host id: ${host_id}. Supported values: codex, claude-code, windsurf" >&2
+      echo "[FAIL] Unsupported VCO host id: ${host_id}. Supported values: codex, claude-code, cursor, windsurf" >&2
       exit 1
       ;;
   esac
@@ -44,6 +45,7 @@ resolve_default_target_root() {
   case "${host_id}" in
     codex) printf '%s' "${CODEX_HOME:-${HOME}/.codex}" ;;
     claude-code) printf '%s' "${CLAUDE_HOME:-${HOME}/.claude}" ;;
+    cursor) printf '%s' "${CURSOR_HOME:-${HOME}/.cursor}" ;;
     windsurf) printf '%s' "${WINDSURF_HOME:-${HOME}/.codeium/windsurf}" ;;
     *)
       echo "[FAIL] Unsupported VCO host id for target-root resolution: ${host_id}" >&2
@@ -52,30 +54,88 @@ resolve_default_target_root() {
   esac
 }
 
+canonical_repo_available() {
+  local current="${1:-}"
+  [[ -n "${current}" ]] || return 1
+  current="$(cd "${current}" 2>/dev/null && pwd || true)"
+  [[ -n "${current}" ]] || return 1
+
+  while [[ -n "${current}" ]]; do
+    if [[ -e "${current}/.git" && -f "${current}/config/version-governance.json" ]]; then
+      return 0
+    fi
+    local parent
+    parent="$(dirname "${current}")"
+    if [[ "${parent}" == "${current}" ]]; then
+      break
+    fi
+    current="${parent}"
+  done
+
+  return 1
+}
+
 assert_target_root_matches_host_intent() {
   local target_root="$1"
   local host_id="$2"
-  local leaf normalized_target is_codex_root is_claude_root is_windsurf_root
+  local leaf normalized_target is_codex_root is_claude_root is_cursor_root is_windsurf_root
   leaf="$(basename "${target_root}")"
   leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
   normalized_target="$(printf '%s' "${target_root}" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')"
   normalized_target="${normalized_target%/}"
   is_codex_root="false"
   is_claude_root="false"
+  is_cursor_root="false"
   is_windsurf_root="false"
   [[ "${leaf}" == ".codex" ]] && is_codex_root="true"
   [[ "${leaf}" == ".claude" ]] && is_claude_root="true"
+  [[ "${leaf}" == ".cursor" ]] && is_cursor_root="true"
   [[ "${normalized_target}" == */.codeium/windsurf ]] && is_windsurf_root="true"
   if [[ "${host_id}" == "codex" && ( "${is_claude_root}" == "true" || "${is_windsurf_root}" == "true" ) ]]; then
     echo "[FAIL] Target root '${target_root}' looks like a non-Codex host root, but host='codex'." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "codex" && "${is_cursor_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Cursor home, but host='codex'." >&2
+    echo "[FAIL] Pass --host cursor for preview guidance or use a Codex target root." >&2
     exit 1
   fi
   if [[ "${host_id}" == "claude-code" && ( "${is_codex_root}" == "true" || "${is_windsurf_root}" == "true" ) ]]; then
     echo "[FAIL] Target root '${target_root}' looks like a non-Claude host root, but host='claude-code'." >&2
     exit 1
   fi
+  if [[ "${host_id}" == "claude-code" && "${is_codex_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Codex home, but host='claude-code'." >&2
+    echo "[FAIL] Use --host codex for the official closure lane or choose a Claude Code target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "claude-code" && "${is_cursor_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Cursor home, but host='claude-code'." >&2
+    echo "[FAIL] Pass --host cursor for Cursor preview guidance or choose a Claude Code target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "cursor" && "${is_codex_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Codex home, but host='cursor'." >&2
+    echo "[FAIL] Use --host codex for the official closure lane or choose a Cursor target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "cursor" && "${is_claude_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Claude Code home, but host='cursor'." >&2
+    echo "[FAIL] Pass --host claude-code for Claude preview guidance or choose a Cursor target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "cursor" && "${is_windsurf_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Windsurf home, but host='cursor'." >&2
+    echo "[FAIL] Pass --host windsurf for preview runtime-core or choose a Cursor target root." >&2
+    exit 1
+  fi
   if [[ "${host_id}" == "windsurf" && ( "${is_codex_root}" == "true" || "${is_claude_root}" == "true" ) ]]; then
     echo "[FAIL] Target root '${target_root}' looks like a non-Windsurf host root, but host='windsurf'." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "windsurf" && "${is_cursor_root}" == "true" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Cursor home, but host='windsurf'." >&2
+    echo "[FAIL] Pass --host cursor for preview guidance or choose a Windsurf target root." >&2
     exit 1
   fi
 }
@@ -349,7 +409,7 @@ validate_runtime_receipt() {
       warn_note "vibe runtime freshness receipt unavailable because the gate was skipped by request."
       return
     fi
-    if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+    if ! canonical_repo_available "${SCRIPT_DIR}"; then
       warn_note "vibe runtime freshness receipt unavailable because check.sh is not running from the canonical repo root."
       return
     fi
@@ -439,7 +499,7 @@ run_runtime_freshness_gate() {
     return
   fi
 
-  if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
     warn_note 'runtime freshness gate skipped: run canonical repo check.sh to execute freshness verification.'
     return
   fi
@@ -483,7 +543,7 @@ run_runtime_freshness_gate() {
 }
 
 run_runtime_coherence_gate() {
-  if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
     warn_note 'runtime coherence gate skipped: run canonical repo check.sh to execute coherence verification.'
     return
   fi
@@ -551,7 +611,7 @@ if [[ "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
   check_path "settings.json" "${TARGET_ROOT}/settings.json"
 fi
 if [[ "${ADAPTER_CHECK_MODE}" == "preview-guidance" ]]; then
-  info_note "claude preview hook/settings scaffold remains intentionally unavailable while the author works through compatibility issues; this is a current product boundary, not an install failure"
+  info_note "${HOST_ID} preview hook/settings scaffold remains intentionally unavailable while the author works through compatibility issues; this is a current product boundary, not an install failure"
 fi
 if [[ "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
   check_path "plugins manifest" "${TARGET_ROOT}/config/plugins-manifest.codex.json"

@@ -377,10 +377,14 @@ function New-OpsDashboardArtifacts {
     $planeRows = if ($null -ne $board) { @($board.planes) } else { @() }
     $gapRows = Get-OpsCockpitGapMatrixRows -RepoRoot $RepoRoot
     $panelDefinitions = if ($null -ne $contract) { @($contract.panels) } else { @() }
+    $verifyArtifactCount = @($verifyJson).Count
+    $trackedPlaneCount = @($planeRows).Count
+    $boardMode = if ($null -ne $board) { [string]$board.board_policy.mode } else { $null }
+    $observabilityMode = if ($null -ne $observability) { [string]$observability.mode } else { $null }
 
     $actionablePanels = @()
     foreach ($panelDef in $panelDefinitions) {
-        $actionablePanels += [pscustomobject](New-OpsCockpitPanelArtifact -PanelId ([string]$panelDef.panel_id) -PlaneRows $planeRows -GapRows $gapRows -BoardMode $(if ($null -ne $board) { [string]$board.board_policy.mode } else { $null }) -ReleaseEntry $releaseEntry -GitHead $gitHead -VerifyArtifactCount $verifyJson.Count -ObservabilityMode $(if ($null -ne $observability) { [string]$observability.mode } else { $null }))
+        $actionablePanels += [pscustomobject](New-OpsCockpitPanelArtifact -PanelId ([string]$panelDef.panel_id) -PlaneRows $planeRows -GapRows $gapRows -BoardMode $boardMode -ReleaseEntry $releaseEntry -GitHead $gitHead -VerifyArtifactCount $verifyArtifactCount -ObservabilityMode $observabilityMode)
     }
 
     $artifact = [ordered]@{
@@ -391,10 +395,10 @@ function New-OpsDashboardArtifacts {
         gap_matrix = 'references/ops-cockpit-gap-matrix.md'
         actionable_panels = @($actionablePanels)
         summary = [ordered]@{
-            panel_count = $actionablePanels.Count
-            tracked_planes = $planeRows.Count
+            panel_count = @($actionablePanels).Count
+            tracked_planes = $trackedPlaneCount
             release_ledger_present = ($null -ne $releaseEntry)
-            verify_artifact_count = $verifyJson.Count
+            verify_artifact_count = $verifyArtifactCount
         }
         evidence_refs = @(
             'config/ops-cockpit-panel-contract.json',

@@ -1,61 +1,22 @@
 {
   "version": 1,
   "profile": "codex",
-  "core": [
-    {
-      "name": "superpowers",
-      "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
-      "required": true,
-      "decision_class": "admit",
-      "observed_head_sha": "363923f74aa9cd7b470c0aaa73dee629a8bfdc90"
-    },
-    {
-      "name": "everything-claude-code",
-      "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
-      "required": false,
-      "policy_alignment": "deferred-by-default-under-host-plugin-policy"
-    },
-    {
-      "name": "claude-code-settings",
-      "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
-      "required": false,
-      "decision_class": "defer",
-      "observed_head_sha": "d0c0d2759f8aadfba1b3361b5860024e4a7e68d4"
-    },
-    {
-      "name": "hookify",
-      "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
-      "required": true,
-      "policy_alignment": "recommended-first-under-host-plugin-policy"
-    },
-    {
-      "name": "ralph-loop",
-      "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command).",
-      "required": false,
-      "decision_class": "metadata-only",
-      "observed_head_sha": "f1298b8af985a401ed67249365c8f18a8b74ef12"
-    }
-  ],
+  "core": [],
   "optional": [
     {
       "name": "serena",
       "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command)."
+      "install_hint": "Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration."
     },
     {
       "name": "context7",
       "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command)."
+      "install_hint": "Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration."
     },
     {
       "name": "github",
       "install_mode": "manual-codex",
-      "install_hint": "Provision via Codex-native MCP/plugin tooling (no Claude CLI command)."
+      "install_hint": "Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration."
     },
     {
       "name": "prompts-chat",
@@ -70,12 +31,12 @@
     {
       "name": "xan",
       "install_mode": "manual-codex",
-      "install_hint": "Provision xan CLI manually (recommended on Windows: scoop install xan) for large CSV acceleration."
+      "install_hint": "Install xan CLI manually (recommended on Windows: scoop install xan) for large CSV acceleration."
     },
     {
       "name": "fuck-u-code",
       "install_mode": "manual-codex",
-      "install_hint": "Optional quality-debt analyzer for quality-debt-overlay; install manually if you want external analyzer hints beyond built-in risk scoring."
+      "install_hint": "Optional quality-debt analyzer for quality-debt-overlay; install manually only if you want external analyzer hints beyond built-in risk scoring."
     },
     {
       "name": "ivy",
@@ -88,5 +49,5 @@
       "install_hint": "Optional methodology source for cuda-kernel-overlay; no runtime dependency required. Keep GPL-3.0 boundary: do not vendor upstream code."
     }
   ],
-  "notes": "Codex compatibility rewrites are bundled in this repository; plugin metadata is advisory and no Claude CLI plugin command is executed. Required host plugins are aligned to the published host-plugin policy: superpowers and hookify first, with everything-claude-code / claude-code-settings / ralph-loop deferred by default."
+  "notes": "Codex install guidance is limited to officially supportable local settings, MCP registration, and optional CLI tooling. Historical Claude-style plugin and hook surfaces are intentionally excluded from the supported Codex install path."
 }

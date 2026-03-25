@@ -2,15 +2,17 @@
 set -euo pipefail
 
 PROFILE="full"
+HOST_ID="codex"
 INSTALL_EXTERNAL="false"
 STRICT_OFFLINE="false"
 ALLOW_EXTERNAL_SKILL_FALLBACK="false"
 SKIP_RUNTIME_FRESHNESS_GATE="false"
-TARGET_ROOT="${HOME}/.codex"
+TARGET_ROOT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --profile) PROFILE="$2"; shift 2 ;;
+    --host) HOST_ID="$2"; shift 2 ;;
     --target-root) TARGET_ROOT="$2"; shift 2 ;;
     --install-external) INSTALL_EXTERNAL="true"; shift ;;
     --strict-offline) STRICT_OFFLINE="true"; shift ;;
@@ -20,12 +22,108 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+resolve_host_id() {
+  local host_id="${1:-${VCO_HOST_ID:-codex}}"
+  host_id="$(printf '%s' "${host_id}" | tr '[:upper:]' '[:lower:]')"
+  case "${host_id}" in
+    codex) printf '%s' 'codex' ;;
+    claude|claude-code) printf '%s' 'claude-code' ;;
+    *)
+      echo "[FAIL] Unsupported VCO host id: ${host_id}. Supported values: codex, claude-code" >&2
+      exit 1
+      ;;
+  esac
+}
+
+resolve_default_target_root() {
+  local host_id="$1"
+  case "${host_id}" in
+    codex) printf '%s' "${CODEX_HOME:-${HOME}/.codex}" ;;
+    claude-code) printf '%s' "${CLAUDE_HOME:-${HOME}/.claude}" ;;
+    *)
+      echo "[FAIL] Unsupported VCO host id for target-root resolution: ${host_id}" >&2
+      exit 1
+      ;;
+  esac
+}
+
+safe_parent_dir() {
+  local path="${1:-}"
+  [[ -n "${path}" ]] || return 0
+  local parent=""
+  parent="$(cd "${path}/.." 2>/dev/null && pwd || true)"
+  if [[ -z "${parent}" || "${parent}" == "${path}" || "${parent}" == "/" ]]; then
+    return 0
+  fi
+  printf '%s' "${parent}"
+}
+
+canonical_repo_available() {
+  local current="${1:-}"
+  [[ -n "${current}" ]] || return 1
+  current="$(cd "${current}" 2>/dev/null && pwd || true)"
+  [[ -n "${current}" ]] || return 1
+
+  while [[ -n "${current}" ]]; do
+    if [[ -e "${current}/.git" && -f "${current}/config/version-governance.json" ]]; then
+      return 0
+    fi
+    local parent
+    parent="$(dirname "${current}")"
+    if [[ "${parent}" == "${current}" ]]; then
+      break
+    fi
+    current="${parent}"
+  done
+
+  return 1
+}
+
+assert_target_root_matches_host_intent() {
+  local target_root="$1"
+  local host_id="$2"
+  local leaf
+  leaf="$(basename "${target_root}")"
+  leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
+  if [[ "${host_id}" == "codex" && "${leaf}" == ".claude" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Claude Code home, but host='codex'." >&2
+    echo "[FAIL] Pass --host claude-code for preview guidance or use a Codex target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "claude-code" && "${leaf}" == ".codex" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Codex home, but host='claude-code'." >&2
+    echo "[FAIL] Use --host codex for the official closure lane or choose a Claude Code target root." >&2
+    exit 1
+  fi
+}
+
+HOST_ID="$(resolve_host_id "${HOST_ID}")"
+if [[ -z "${TARGET_ROOT}" ]]; then
+  TARGET_ROOT="$(resolve_default_target_root "${HOST_ID}")"
+fi
+assert_target_root_matches_host_intent "${TARGET_ROOT}" "${HOST_ID}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CANONICAL_SKILLS_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-WORKSPACE_SKILLS_ROOT="${WORKSPACE_ROOT}/skills"
-WORKSPACE_SUPERPOWERS_ROOT="${WORKSPACE_ROOT}/superpowers/skills"
+CANONICAL_SKILLS_ROOT="$(safe_parent_dir "${SCRIPT_DIR}")"
+WORKSPACE_ROOT="$(safe_parent_dir "${CANONICAL_SKILLS_ROOT}")"
+WORKSPACE_SKILLS_ROOT=""
+WORKSPACE_SUPERPOWERS_ROOT=""
+if [[ -n "${WORKSPACE_ROOT}" ]]; then
+  WORKSPACE_SKILLS_ROOT="${WORKSPACE_ROOT}/skills"
+  WORKSPACE_SUPERPOWERS_ROOT="${WORKSPACE_ROOT}/superpowers/skills"
+fi
 SP_SRC_ROOT="${SCRIPT_DIR}/bundled/superpowers-skills"
+ADAPTER_RESOLVER="${SCRIPT_DIR}/scripts/common/resolve_vgo_adapter.py"
+ADAPTER_INSTALLER="${SCRIPT_DIR}/scripts/install/install_vgo_adapter.py"
+
+if [[ ! -f "${ADAPTER_RESOLVER}" ]]; then
+  echo "[FAIL] Missing adapter resolver: ${ADAPTER_RESOLVER}" >&2
+  exit 1
+fi
+if [[ ! -f "${ADAPTER_INSTALLER}" ]]; then
+  echo "[FAIL] Missing adapter installer: ${ADAPTER_INSTALLER}" >&2
+  exit 1
+fi
 
 EXTERNAL_FALLBACK_USED=()
 MISSING_REQUIRED=()
@@ -122,6 +220,17 @@ pick_python() {
   return 1
 }
 
+adapter_query() {
+  local property="$1"
+  local python_bin=""
+  python_bin="$(pick_python || true)"
+  if [[ -z "${python_bin}" ]]; then
+    echo "[FAIL] Python is required for adapter-driven installation metadata." >&2
+    exit 1
+  fi
+  "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${SCRIPT_DIR}" --host "${HOST_ID}" --property "${property}"
+}
+
 run_runtime_neutral_freshness_gate() {
   local gate_path="${SCRIPT_DIR}/scripts/verify/runtime_neutral/freshness_gate.py"
   local python_bin=""
@@ -140,7 +249,7 @@ run_runtime_freshness_gate() {
     return 0
   fi
 
-  if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
     echo "[WARN] Runtime freshness gate requires the canonical repo root; skipping because no outer .git root was found."
     return 0
   fi
@@ -277,7 +386,11 @@ ensure_skill_present() {
   fi
 }
 
-echo "=== VCO Codex Installer ==="
+ADAPTER_INSTALL_MODE="$(adapter_query install_mode)"
+
+echo "=== VCO Adapter Installer ==="
+echo "Host   : ${HOST_ID}"
+echo "Mode   : ${ADAPTER_INSTALL_MODE}"
 echo "Profile: ${PROFILE}"
 echo "Target : ${TARGET_ROOT}"
 echo "StrictOffline: ${STRICT_OFFLINE}"
@@ -287,132 +400,77 @@ echo "SkipRuntimeFreshnessGate: ${SKIP_RUNTIME_FRESHNESS_GATE}"
 TARGET_VIBE_REL="$(json_query_scalar 'runtime.installed_runtime.target_relpath' 2>/dev/null || true)"
 [[ -n "${TARGET_VIBE_REL}" ]] || TARGET_VIBE_REL='skills/vibe'
 
-mkdir -p \
-  "${TARGET_ROOT}/skills" \
-  "${TARGET_ROOT}/rules" \
-  "${TARGET_ROOT}/hooks" \
-  "${TARGET_ROOT}/agents/templates" \
-  "${TARGET_ROOT}/mcp/profiles" \
-  "${TARGET_ROOT}/config" \
-  "${TARGET_ROOT}/commands"
-
-copy_dir_content "${SCRIPT_DIR}/bundled/skills" "${TARGET_ROOT}/skills"
-
-# Ensure unified /vibe entry uses the latest router implementation (script + modules) after install.
-VIBE_ROUTER_SRC_DIR="${SCRIPT_DIR}/scripts/router"
-VIBE_ROUTER_DEST_DIR="${TARGET_ROOT}/${TARGET_VIBE_REL}/scripts/router"
-if [[ -d "${VIBE_ROUTER_SRC_DIR}" ]]; then
-  copy_dir_content "${VIBE_ROUTER_SRC_DIR}" "${VIBE_ROUTER_DEST_DIR}"
+PYTHON_BIN_FOR_ADAPTER="$(pick_python || true)"
+if [[ -z "${PYTHON_BIN_FOR_ADAPTER}" ]]; then
+  echo "[FAIL] Python is required for adapter-driven installation." >&2
+  exit 1
 fi
-
-# Enforce canonical vibe mirror files/dirs to avoid main-vs-bundled drift after install.
-sync_vibe_canonical_to_target
-
-required_core=(
-  dialectic local-vco-roles spec-kit-vibe-compat superclaude-framework-compat
-  ralph-loop cancel-ralph tdd-guide think-harder
-)
-required_sp=(brainstorming writing-plans subagent-driven-development systematic-debugging)
-optional_sp=(requesting-code-review receiving-code-review verification-before-completion)
-
-for n in "${required_core[@]}"; do
-  ensure_skill_present "${n}" "true" \
-    "${CANONICAL_SKILLS_ROOT}/${n}" \
-    "${WORKSPACE_SKILLS_ROOT}/${n}" \
-    "${WORKSPACE_SUPERPOWERS_ROOT}/${n}" \
-    "${SP_SRC_ROOT}/${n}"
-done
-
-for n in "${required_sp[@]}"; do
-  ensure_skill_present "${n}" "true" \
-    "${WORKSPACE_SKILLS_ROOT}/${n}" \
-    "${WORKSPACE_SUPERPOWERS_ROOT}/${n}" \
-    "${SP_SRC_ROOT}/${n}" \
-    "${CANONICAL_SKILLS_ROOT}/${n}"
-done
-
-if [[ "${PROFILE}" == "full" ]]; then
-  for n in "${optional_sp[@]}"; do
-    ensure_skill_present "${n}" "false" \
-      "${WORKSPACE_SKILLS_ROOT}/${n}" \
-      "${WORKSPACE_SUPERPOWERS_ROOT}/${n}" \
-      "${SP_SRC_ROOT}/${n}" \
-      "${CANONICAL_SKILLS_ROOT}/${n}"
-  done
-fi
-
-copy_dir_content "${SCRIPT_DIR}/rules" "${TARGET_ROOT}/rules"
-copy_dir_content "${SCRIPT_DIR}/hooks" "${TARGET_ROOT}/hooks"
-copy_dir_content "${SCRIPT_DIR}/agents/templates" "${TARGET_ROOT}/agents/templates"
-copy_dir_content "${SCRIPT_DIR}/mcp" "${TARGET_ROOT}/mcp"
-cp "${SCRIPT_DIR}/config/plugins-manifest.codex.json" "${TARGET_ROOT}/config/plugins-manifest.codex.json"
-cp "${SCRIPT_DIR}/config/upstream-lock.json" "${TARGET_ROOT}/config/upstream-lock.json"
-if [[ -f "${SCRIPT_DIR}/config/skills-lock.json" ]]; then
-  cp "${SCRIPT_DIR}/config/skills-lock.json" "${TARGET_ROOT}/config/skills-lock.json"
-fi
-
-if [[ ! -f "${TARGET_ROOT}/settings.json" ]]; then
-  cp "${SCRIPT_DIR}/config/settings.template.codex.json" "${TARGET_ROOT}/settings.json"
+ADAPTER_INSTALL_JSON="$("${PYTHON_BIN_FOR_ADAPTER}" "${ADAPTER_INSTALLER}" \
+  --repo-root "${SCRIPT_DIR}" \
+  --target-root "${TARGET_ROOT}" \
+  --host "${HOST_ID}" \
+  --profile "${PROFILE}" \
+  $([[ "${ALLOW_EXTERNAL_SKILL_FALLBACK}" == "true" ]] && printf '%s' '--allow-external-skill-fallback'))"
+if [[ -n "${ADAPTER_INSTALL_JSON}" ]]; then
+  mapfile -t EXTERNAL_FALLBACK_USED < <(printf '%s\n' "${ADAPTER_INSTALL_JSON}" | "${PYTHON_BIN_FOR_ADAPTER}" -c 'import json,sys; data=json.load(sys.stdin); [print(x) for x in data.get("external_fallback_used", [])]')
 fi
 
 if [[ "${INSTALL_EXTERNAL}" == "true" ]]; then
-  if command -v npm >/dev/null 2>&1; then
-    npm install -g claude-flow || true
-    npm install -g @th0rgal/ralph-wiggum || true
-  fi
-
-  if ! command -v xan >/dev/null 2>&1; then
-    if command -v brew >/dev/null 2>&1; then
-      brew install xan || true
-    elif command -v pixi >/dev/null 2>&1; then
-      pixi global install xan || true
-    elif command -v conda >/dev/null 2>&1; then
-      conda install -y conda-forge::xan || true
-    else
-      echo "[WARN] xan CLI not detected. Install manually (brew/pixi/conda/cargo) to enable large CSV acceleration."
+  if [[ "${ADAPTER_INSTALL_MODE}" != "governed" ]]; then
+    echo "[WARN] InstallExternal is currently only applied to the governed Codex lane. Skipping external install for host '${HOST_ID}'."
+  else
+    if command -v npm >/dev/null 2>&1; then
+      npm install -g claude-flow || true
+      npm install -g @th0rgal/ralph-wiggum || true
     fi
-  fi
 
-  PYTHON_BIN=""
-  if command -v python3 >/dev/null 2>&1; then
-    PYTHON_BIN="python3"
-  elif command -v python >/dev/null 2>&1; then
-    PYTHON_BIN="python"
-  fi
+    if ! command -v xan >/dev/null 2>&1; then
+      if command -v brew >/dev/null 2>&1; then
+        brew install xan || true
+      elif command -v pixi >/dev/null 2>&1; then
+        pixi global install xan || true
+      elif command -v conda >/dev/null 2>&1; then
+        conda install -y conda-forge::xan || true
+      else
+        echo "[WARN] xan CLI not detected. Install manually (brew/pixi/conda/cargo) to enable large CSV acceleration."
+      fi
+    fi
 
-  if [[ -n "${PYTHON_BIN}" ]]; then
-    if ! command -v scrapling >/dev/null 2>&1; then
-      if "${PYTHON_BIN}" -m pip install 'scrapling[ai]' >/dev/null 2>&1; then
-        if command -v scrapling >/dev/null 2>&1; then
-          echo "[INFO] Installed scrapling[ai]"
+    PYTHON_BIN=""
+    if command -v python3 >/dev/null 2>&1; then
+      PYTHON_BIN="python3"
+    elif command -v python >/dev/null 2>&1; then
+      PYTHON_BIN="python"
+    fi
+
+    if [[ -n "${PYTHON_BIN}" ]]; then
+      if ! command -v scrapling >/dev/null 2>&1; then
+        if "${PYTHON_BIN}" -m pip install 'scrapling[ai]' >/dev/null 2>&1; then
+          if command -v scrapling >/dev/null 2>&1; then
+            echo "[INFO] Installed scrapling[ai]"
+          else
+            echo "[WARN] scrapling[ai] package install completed, but the scrapling CLI is still not callable from PATH. Export your Python scripts directory before relying on the default scrapling MCP surface."
+          fi
         else
-          echo "[WARN] scrapling[ai] package install completed, but the scrapling CLI is still not callable from PATH. Export your Python scripts directory before relying on the default scrapling MCP surface."
+          echo "[WARN] Failed to install scrapling[ai]. Install manually (${PYTHON_BIN} -m pip install 'scrapling[ai]') to enable the default scrapling MCP surface."
         fi
       else
-        echo "[WARN] Failed to install scrapling[ai]. Install manually (${PYTHON_BIN} -m pip install 'scrapling[ai]') to enable the default scrapling MCP surface."
+        echo "[INFO] scrapling already installed"
+      fi
+
+      if "${PYTHON_BIN}" -c "import ivy; print(ivy.__version__)" >/dev/null 2>&1; then
+        echo "[INFO] ivy Python package already installed"
+      else
+        echo "[WARN] ivy Python package not detected. Install manually (pip install ivy) to enable framework-interop analyzer hints."
       fi
     else
-      echo "[INFO] scrapling already installed"
+      echo "[WARN] python not detected. Install Python + scrapling[ai] (python -m pip install 'scrapling[ai]') and ivy (pip install ivy) if you want the default scraping surface and framework-interop analyzer hints."
     fi
 
-    if "${PYTHON_BIN}" -c "import ivy; print(ivy.__version__)" >/dev/null 2>&1; then
-      echo "[INFO] ivy Python package already installed"
-    else
-      echo "[WARN] ivy Python package not detected. Install manually (pip install ivy) to enable framework-interop analyzer hints."
+    if ! command -v fuck-u-code >/dev/null 2>&1; then
+      echo "[WARN] fuck-u-code CLI not detected. Install manually if you want external quality-debt analyzer hints (quality-debt-overlay still works without it)."
     fi
-  else
-    echo "[WARN] python not detected. Install Python + scrapling[ai] (python -m pip install 'scrapling[ai]') and ivy (pip install ivy) if you want the default scraping surface and framework-interop analyzer hints."
   fi
-
-  if ! command -v fuck-u-code >/dev/null 2>&1; then
-    echo "[WARN] fuck-u-code CLI not detected. Install manually if you want external quality-debt analyzer hints (quality-debt-overlay still works without it)."
-  fi
-fi
-
-if [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
-  uniq_missing="$(printf "%s\n" "${MISSING_REQUIRED[@]}" | sort -u | tr '\n' ',' | sed 's/,$//')"
-  echo "[FAIL] Missing required vendored skills: ${uniq_missing}"
-  exit 1
 fi
 
 if [[ "${STRICT_OFFLINE}" == "true" ]]; then

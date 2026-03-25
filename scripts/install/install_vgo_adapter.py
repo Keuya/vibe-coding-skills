@@ -55,8 +55,110 @@ def copy_file(src: Path, dst: Path):
     shutil.copy2(src, dst)
 
 
+def parent_dir(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    resolved = path.resolve()
+    parent = resolved.parent
+    if parent == resolved or parent == Path(parent.anchor):
+        return None
+    return parent
+
+
+def skill_source_roots(repo_root: Path) -> list[Path]:
+    canonical_skills_root = parent_dir(repo_root)
+    workspace_root = parent_dir(canonical_skills_root)
+    candidates = [
+        canonical_skills_root,
+        workspace_root / "skills" if workspace_root is not None else None,
+        workspace_root / "superpowers" / "skills" if workspace_root is not None else None,
+        repo_root / "bundled" / "superpowers-skills",
+    ]
+    roots: list[Path] = []
+    for candidate in candidates:
+        if candidate is None or not candidate.exists():
+            continue
+        if candidate not in roots:
+            roots.append(candidate)
+    return roots
+
+
+def embedded_registry():
+    return {
+        "schema_version": 1,
+        "default_adapter_id": "codex",
+        "aliases": {"claude": "claude-code"},
+        "adapters": [
+            {
+                "id": "codex",
+                "status": "supported-with-constraints",
+                "install_mode": "governed",
+                "check_mode": "governed",
+                "bootstrap_mode": "governed",
+                "default_target_root": {"env": "CODEX_HOME", "rel": ".codex", "kind": "host-home"},
+                "host_profile": "adapters/codex/host-profile.json",
+                "settings_map": "adapters/codex/settings-map.json",
+                "closure": "adapters/codex/closure.json",
+                "manifest": "dist/host-codex/manifest.json",
+            },
+            {
+                "id": "claude-code",
+                "status": "preview",
+                "install_mode": "preview-guidance",
+                "check_mode": "preview-guidance",
+                "bootstrap_mode": "preview-guidance",
+                "default_target_root": {"env": "CLAUDE_HOME", "rel": ".claude", "kind": "host-home"},
+                "host_profile": "adapters/claude-code/host-profile.json",
+                "settings_map": "adapters/claude-code/settings-map.json",
+                "closure": "adapters/claude-code/closure.json",
+                "manifest": "dist/host-claude-code/manifest.json",
+            },
+            {
+                "id": "cursor",
+                "status": "preview",
+                "install_mode": "preview-guidance",
+                "check_mode": "preview-guidance",
+                "bootstrap_mode": "preview-guidance",
+                "default_target_root": {"env": "CURSOR_HOME", "rel": ".cursor", "kind": "host-home"},
+                "host_profile": "adapters/cursor/host-profile.json",
+                "settings_map": "adapters/cursor/settings-map.json",
+                "closure": "adapters/cursor/closure.json",
+                "manifest": "dist/host-cursor/manifest.json",
+            },
+            {
+                "id": "windsurf",
+                "status": "preview",
+                "install_mode": "runtime-core",
+                "check_mode": "runtime-core",
+                "bootstrap_mode": "runtime-core",
+                "default_target_root": {"env": "WINDSURF_HOME", "rel": ".codeium/windsurf", "kind": "host-home"},
+                "host_profile": "adapters/windsurf/host-profile.json",
+                "settings_map": "adapters/windsurf/settings-map.json",
+                "closure": "adapters/windsurf/closure.json",
+                "manifest": "dist/host-windsurf/manifest.json",
+            },
+        ],
+    }
+
+
+def resolve_registry(repo_root: Path):
+    current = repo_root.resolve()
+    while True:
+        registry_path = current / "adapters" / "index.json"
+        if registry_path.exists():
+            return load_json(registry_path)
+        if current.parent == current:
+            break
+        current = current.parent
+
+    if (repo_root / "config" / "version-governance.json").exists():
+        return embedded_registry()
+
+    raise SystemExit(f"VGO adapter registry not found under repo root or ancestors: {repo_root}")
+
+
 def resolve_adapter(repo_root: Path, host_id: str):
-    registry = load_json(repo_root / "adapters" / "index.json")
+    registry = resolve_registry(repo_root)
     normalized = (host_id or registry.get("default_adapter_id") or "codex").strip().lower()
     normalized = registry.get("aliases", {}).get(normalized, normalized)
     for entry in registry.get("adapters", []):
@@ -114,11 +216,7 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
     target_rel = packaging.get("canonical_vibe_mirror", {}).get("target_relpath", "skills/vibe")
     sync_vibe_canonical(repo_root, target_root, target_rel)
 
-    canonical_skills_root = repo_root.parent
-    workspace_root = canonical_skills_root.parent
-    workspace_skills_root = workspace_root / "skills"
-    workspace_superpowers_root = workspace_root / "superpowers" / "skills"
-    bundled_superpowers_root = repo_root / "bundled" / "superpowers-skills"
+    roots = skill_source_roots(repo_root)
 
     external_used = set()
     missing = set()
@@ -130,10 +228,7 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             True,
             allow_fallback,
             [
-                canonical_skills_root / name,
-                workspace_skills_root / name,
-                workspace_superpowers_root / name,
-                bundled_superpowers_root / name,
+                root / name for root in roots
             ],
             external_used,
             missing,
@@ -145,10 +240,7 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             True,
             allow_fallback,
             [
-                workspace_skills_root / name,
-                workspace_superpowers_root / name,
-                bundled_superpowers_root / name,
-                canonical_skills_root / name,
+                root / name for root in roots[1:] + roots[:1]
             ],
             external_used,
             missing,
@@ -161,10 +253,7 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
                 False,
                 allow_fallback,
                 [
-                    workspace_skills_root / name,
-                    workspace_superpowers_root / name,
-                    bundled_superpowers_root / name,
-                    canonical_skills_root / name,
+                    root / name for root in roots[1:] + roots[:1]
                 ],
                 external_used,
                 missing,

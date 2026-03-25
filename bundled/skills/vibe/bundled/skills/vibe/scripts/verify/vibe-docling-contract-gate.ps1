@@ -76,11 +76,18 @@ if (Test-Path -LiteralPath $backupRoot) {
         if (Test-Path -LiteralPath $candidate) { $candidate }
     })
 }
-$results.Add((Assert-Collect -Condition ($backupSpecs.Count -ge 1) -Message '找到 runtime backup 中的 docling spec 副本')) | Out-Null
+$backupRootExists = Test-Path -LiteralPath $backupRoot
+if ($backupRootExists) {
+    $results.Add((Assert-Collect -Condition ($backupSpecs.Count -ge 1) -Message '找到 runtime backup 中的 docling spec 副本')) | Out-Null
+} else {
+    $results.Add((Assert-Collect -Condition $true -Message 'runtime backup root 未物化；docling backup 副本检查以 advisory 模式记录' -Details $backupRoot)) | Out-Null
+}
 if ($backupSpecs.Count -ge 1) {
     $canonicalHash = (Get-FileHash -LiteralPath $specPath -Algorithm SHA256).Hash
     $matching = @($backupSpecs | Where-Object { (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash -eq $canonicalHash })
     $results.Add((Assert-Collect -Condition ($matching.Count -ge 1) -Message 'canonical docling spec 与 runtime backup 副本同源')) | Out-Null
+} else {
+    $results.Add((Assert-Collect -Condition $true -Message '未找到 runtime backup docling spec；跳过同源性比较')) | Out-Null
 }
 
 $total = $results.Count

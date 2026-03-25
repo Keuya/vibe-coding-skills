@@ -1,5 +1,22 @@
 # VCO Changelog
 
+## v2.3.49 (2026-03-23)
+
+- Hardened install/check path resolution so PowerShell and shell entrypoints no longer assume deep parent-directory layouts when launched from shallow release worktrees under `/tmp`.
+- Added adapter-registry fallback resolution for installed-runtime check surfaces, so `check.ps1` and `check.sh` keep working from pure installed `skills/vibe` roots without repo-level `adapters/index.json`.
+- Centralized parent-path and canonical-repo detection helpers, then applied the same guardrails across PowerShell and Python adapter/install tooling to reduce cross-surface divergence.
+- Added installed-runtime regression coverage for pure installed-script health checks.
+- Detailed release notes: `docs/releases/v2.3.49.md`.
+
+
+## v2.3.48 (2026-03-23)
+
+- Normalized legacy `benchmark_autonomous` input to `interactive_governed`, making `interactive_governed` the only effective governed runtime mode while preserving silent compatibility for older callers.
+- Updated runtime bridge tests and governed proof gates so the compatibility downgrade is verified explicitly instead of routing legacy mode through unattended execution.
+- Hardened `scripts/verify/vibe-adaptive-routing-readiness-gate.ps1` to handle single-file telemetry without crashing the release train.
+- Detailed release notes: `docs/releases/v2.3.48.md`.
+
+
 ## v2.3.47 (2026-03-15)
 
 - Added canonical no-silent-fallback governance plus implementation guardrails so degraded paths must stay explicit, warned, and non-authoritative.

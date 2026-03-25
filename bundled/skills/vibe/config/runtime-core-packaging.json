@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "package_id": "runtime-core",
+  "summary": "Host-neutral runtime-core payload that can be installed without writing Codex-shaped host state.",
+  "directories": [
+    "skills",
+    "commands",
+    "config"
+  ],
+  "copy_directories": [
+    {
+      "source": "bundled/skills",
+      "target": "skills"
+    },
+    {
+      "source": "commands",
+      "target": "commands"
+    }
+  ],
+  "copy_files": [
+    {
+      "source": "config/upstream-lock.json",
+      "target": "config/upstream-lock.json",
+      "optional": false
+    },
+    {
+      "source": "config/skills-lock.json",
+      "target": "config/skills-lock.json",
+      "optional": true
+    }
+  ],
+  "canonical_vibe_mirror": {
+    "enabled": true,
+    "target_relpath": "skills/vibe"
+  }
+}

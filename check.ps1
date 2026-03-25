@@ -1,7 +1,7 @@
 param(
   [ValidateSet("minimal", "full")]
   [string]$Profile = "full",
-  [ValidateSet("codex", "claude-code", "windsurf")]
+  [ValidateSet("codex", "claude-code", "cursor", "windsurf")]
   [string]$HostId = "codex",
   [string]$TargetRoot = '',
   [switch]$SkipRuntimeFreshnessGate,
@@ -18,7 +18,7 @@ $Adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 
 function Test-CanonicalRepoExecution {
   param([string]$RepoRoot)
-  return (Test-Path -LiteralPath (Join-Path $RepoRoot '.git'))
+  return (Test-VgoCanonicalRepoExecution -StartPath $RepoRoot)
 }
 
 function Get-CheckGovernance {
@@ -420,7 +420,7 @@ function Invoke-AdapterSpecificChecks {
     Check-Path -Label "settings.json" -Path (Join-Path $TargetRoot 'settings.json')
   }
   if ([string]$Adapter.check_mode -eq 'preview-guidance') {
-    Write-Host '[INFO] claude preview hook/settings scaffold remains intentionally unavailable while the author works through compatibility issues; this is a current product boundary, not an install failure' -ForegroundColor Cyan
+    Write-Host ("[INFO] {0} preview hook/settings scaffold remains intentionally unavailable while the author works through compatibility issues; this is a current product boundary, not an install failure" -f $Adapter.id) -ForegroundColor Cyan
   }
   if ([string]$Adapter.check_mode -eq 'governed') {
     Check-Path -Label "plugins manifest" -Path (Join-Path $TargetRoot 'config\plugins-manifest.codex.json')

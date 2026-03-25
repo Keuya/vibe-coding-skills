@@ -1,6 +1,7 @@
 # 安装路径：高级 host / lane 参考
 
 > 大多数用户先看两条主路径：
+>
 > - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)
 > - [`manual-copy-install.md`](./manual-copy-install.md)
 
@@ -46,6 +47,83 @@ pwsh -File .\check.ps1 -HostId claude-code -Profile full -Deep
 bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code
 bash ./check.sh --host claude-code --profile full --deep
 ```
+
+## 旧版本怎么升级
+
+旧版本用户不需要先卸载。
+对大多数用户，最简单、最推荐的做法就是重新走一遍提示词安装。
+
+也就是说，只要让 AI 按 [`one-click-install-release-copy.md`](./one-click-install-release-copy.md) 再安装一次，通常就够了。
+只有在 AI 不能代你执行、或者你需要手动排障时，下面这些命令才有必要。
+
+### 如果你本地还保留着这个仓库
+
+先更新仓库：
+
+```bash
+git pull
+```
+
+如果你是按发布版本使用，而不是跟着 `main` 走，可以改成：
+
+```bash
+git fetch --tags --force
+git checkout vX.Y.Z
+```
+
+然后重新执行安装。
+
+### 升级已安装的 Codex 版本
+
+```powershell
+pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId codex
+pwsh -File .\check.ps1 -HostId codex -Profile full -Deep
+```
+
+```bash
+bash ./scripts/bootstrap/one-shot-setup.sh --host codex
+bash ./check.sh --host codex --profile full --deep
+```
+
+### 升级已安装的 Claude Code 版本
+
+```powershell
+pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId claude-code
+pwsh -File .\check.ps1 -HostId claude-code -Profile full -Deep
+```
+
+```bash
+bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code
+bash ./check.sh --host claude-code --profile full --deep
+```
+
+### 如果你本地已经没有仓库副本
+
+重新 clone 最新仓库，然后按上面的命令重新安装即可。
+
+```bash
+git clone https://github.com/foryourhealth111-pixel/Vibe-Skills.git
+cd Vibe-Skills
+```
+
+### 怎么确认已经升级成功
+
+如果你只是想让 AI 帮你重装，这一步通常也不必手动做。
+只有在你需要自己核对版本时，再看下面这个文件。
+
+Codex 默认安装到 `~/.codex` 时，可以直接查看版本治理文件：
+
+```bash
+jq -r '.release.version, .release.updated' ~/.codex/skills/vibe/config/version-governance.json
+```
+
+如果你装在自定义 `TargetRoot`，把上面的 `~/.codex` 换成你自己的安装根目录。
+
+### 升级时会覆盖什么
+
+- 安装器会更新目标宿主下的 VibeSkills 运行时文件
+- 原有宿主配置仍然应保留，用户只需要继续维护自己本地的 `env` / provider 配置
+- 旧版本里已经被冻结的 hook 行为，不会因为这次升级突然重新启用
 
 ## 必须说清楚的边界
 

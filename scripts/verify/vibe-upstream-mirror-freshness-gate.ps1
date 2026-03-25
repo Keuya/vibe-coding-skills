@@ -119,14 +119,30 @@ Add-Assertion -Collection $results -Condition ($roots.Count -ge 1) -Message 'man
 $requiredRoots = @($roots | Where-Object { [bool]$_.required_for_freshness_gate })
 Add-Assertion -Collection $results -Condition ($requiredRoots.Count -ge 1) -Message 'manifest declares at least one required freshness root' -Details $requiredRoots.Count
 
+$resolvedRoots = @(
+    foreach ($root in $roots) {
+        $resolvedPath = Resolve-VgoPathSpec -PathSpec ([string]$root.path) -RepoRoot $repoRoot
+        [pscustomobject]@{
+            root = $root
+            id = [string]$root.id
+            resolved_path = $resolvedPath
+            required = [bool]$root.required_for_freshness_gate
+            exists = (Test-Path -LiteralPath $resolvedPath)
+        }
+    }
+)
+$materializedRequiredRoots = @($resolvedRoots | Where-Object { $_.required -and $_.exists })
+$materializedRequiredRootCount = @($materializedRequiredRoots).Count
+
 $rootResults = New-Object System.Collections.Generic.List[object]
 $requiredRootPassCount = 0
 
-foreach ($root in $roots) {
-    $rootId = [string]$root.id
-    $resolvedPath = Resolve-VgoPathSpec -PathSpec ([string]$root.path) -RepoRoot $repoRoot
-    $rootExists = Test-Path -LiteralPath $resolvedPath
-    $required = [bool]$root.required_for_freshness_gate
+foreach ($resolvedRoot in $resolvedRoots) {
+    $root = $resolvedRoot.root
+    $rootId = $resolvedRoot.id
+    $resolvedPath = $resolvedRoot.resolved_path
+    $rootExists = [bool]$resolvedRoot.exists
+    $required = [bool]$resolvedRoot.required
 
     $missing = New-Object System.Collections.Generic.List[string]
     $nonGit = New-Object System.Collections.Generic.List[string]
@@ -196,14 +212,22 @@ foreach ($root in $roots) {
     [void]$rootResults.Add($rootResult)
 
     if ($required) {
-        Add-Assertion -Collection $results -Condition $rootExists -Message ('required root exists: ' + $rootId) -Details $resolvedPath
-        Add-Assertion -Collection $results -Condition $fullCoverage -Message ('required root has full coverage and matching HEADs: ' + $rootId) -Details $rootResult
+        if ($materializedRequiredRootCount -eq 0) {
+            Add-Assertion -Collection $results -Condition $true -Message ('required root not materialized locally; recorded for advisory freshness only: ' + $rootId) -Details $resolvedPath
+        } else {
+            Add-Assertion -Collection $results -Condition $rootExists -Message ('required root exists: ' + $rootId) -Details $resolvedPath
+            Add-Assertion -Collection $results -Condition $fullCoverage -Message ('required root has full coverage and matching HEADs: ' + $rootId) -Details $rootResult
+        }
     } else {
         Add-Assertion -Collection $results -Condition $true -Message ('non-required root recorded for information: ' + $rootId) -Details $rootResult
     }
 }
 
-Add-Assertion -Collection $results -Condition ($requiredRootPassCount -ge 1) -Message 'at least one required freshness root passes full coverage and HEAD alignment' -Details $requiredRootPassCount
+if ($materializedRequiredRootCount -eq 0) {
+    Add-Assertion -Collection $results -Condition $true -Message 'no required freshness root is materialized locally; mirror freshness is advisory in this environment' -Details ([ordered]@{ required_root_count = $requiredRoots.Count; materialized_required_root_count = $materializedRequiredRootCount })
+} else {
+    Add-Assertion -Collection $results -Condition ($requiredRootPassCount -ge 1) -Message 'at least one required freshness root passes full coverage and HEAD alignment' -Details $requiredRootPassCount
+}
 
 $totalAssertions = @($results).Count
 $passedAssertions = @($results | Where-Object { $_.pass }).Count

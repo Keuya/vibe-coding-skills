@@ -94,6 +94,7 @@ Wave34 把 `third_party/vco-ecosystem-mirror` 的 15 个镜像来源纳入 **ups
 - `workspace_live`（`third_party/vco-ecosystem-mirror`）是当前唯一 authoritative freshness baseline；
 - gate 的 pass rule 是 `at_least_one_required_root_with_scope_coverage_and_matching_heads`；
 - 如果 required root 缺项、不是 git repo、无法解析 HEAD、或与 manifest 的 `observed_head_sha` 漂移，freshness gate 必须 fail。
+- 如果当前环境没有 materialized required root，freshness gate 只保留 advisory 记录，不应单独阻断 release cut。
 
 ## Audit Workflow
 

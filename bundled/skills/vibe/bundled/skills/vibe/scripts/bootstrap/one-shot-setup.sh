@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PROFILE="full"
-TARGET_ROOT="${HOME}/.codex"
+HOST_ID=""
+HOST_ID_EXPLICIT="false"
+TARGET_ROOT=""
 SKIP_EXTERNAL_INSTALL="false"
 STRICT_OFFLINE="false"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
@@ -13,6 +15,7 @@ ARK_API_KEY_INPUT=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --profile) PROFILE="$2"; shift 2 ;;
+    --host) HOST_ID="$2"; HOST_ID_EXPLICIT="true"; shift 2 ;;
     --target-root) TARGET_ROOT="$2"; shift 2 ;;
     --skip-external-install) SKIP_EXTERNAL_INSTALL="true"; shift ;;
     --strict-offline) STRICT_OFFLINE="true"; shift ;;
@@ -27,6 +30,97 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+is_interactive_shell() {
+  [[ -t 0 && -t 1 ]]
+}
+
+resolve_host_id() {
+  local host_id="${1:-${VCO_HOST_ID:-codex}}"
+  host_id="$(printf '%s' "${host_id}" | tr '[:upper:]' '[:lower:]')"
+  case "${host_id}" in
+    codex) printf '%s' 'codex' ;;
+    claude|claude-code) printf '%s' 'claude-code' ;;
+    *)
+      echo "[FAIL] Unsupported VCO host id: ${host_id}. Supported values: codex, claude-code" >&2
+      exit 1
+      ;;
+  esac
+}
+
+prompt_for_host_id() {
+  local choice normalized
+  echo "Select the install target before bootstrap:"
+  echo "  1) codex        - strongest governed lane"
+  echo "  2) claude-code  - preview scaffold lane"
+  while true; do
+    read -r -p "Install into which agent? [1-2]: " choice
+    normalized="$(printf '%s' "${choice}" | tr '[:upper:]' '[:lower:]' | xargs)"
+    case "${normalized}" in
+      1|codex) HOST_ID='codex'; return 0 ;;
+      2|claude|claude-code) HOST_ID='claude-code'; return 0 ;;
+      *)
+        echo "[WARN] Unsupported choice: ${choice}. Enter 1, 2, or a supported host name." >&2
+        ;;
+    esac
+  done
+}
+
+ensure_requested_host_id() {
+  if [[ "${HOST_ID_EXPLICIT}" == "true" && -n "${HOST_ID}" ]]; then
+    return 0
+  fi
+  if [[ -n "${VCO_HOST_ID:-}" ]]; then
+    HOST_ID="${VCO_HOST_ID}"
+    return 0
+  fi
+  if is_interactive_shell; then
+    prompt_for_host_id
+    return 0
+  fi
+  echo "[FAIL] No host was provided for one-shot bootstrap." >&2
+  echo "[FAIL] Pass --host codex|claude-code when running non-interactively." >&2
+  return 1
+}
+
+resolve_default_target_root() {
+  local host_id="$1"
+  case "${host_id}" in
+    codex) printf '%s' "${CODEX_HOME:-${HOME}/.codex}" ;;
+    claude-code) printf '%s' "${CLAUDE_HOME:-${HOME}/.claude}" ;;
+    *)
+      echo "[FAIL] Unsupported VCO host id for target-root resolution: ${host_id}" >&2
+      exit 1
+      ;;
+  esac
+}
+
+assert_target_root_matches_host_intent() {
+  local target_root="$1"
+  local host_id="$2"
+  local leaf
+  leaf="$(basename "${target_root}")"
+  leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
+  if [[ "${host_id}" == "codex" && "${leaf}" == ".claude" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Claude Code home, but host='codex'." >&2
+    echo "[FAIL] Pass --host claude-code for preview guidance or use a Codex target root." >&2
+    exit 1
+  fi
+  if [[ "${host_id}" == "claude-code" && "${leaf}" == ".codex" ]]; then
+    echo "[FAIL] Target root '${target_root}' looks like a Codex home, but host='claude-code'." >&2
+    echo "[FAIL] Use --host codex for the official closure lane or choose a Claude Code target root." >&2
+    exit 1
+  fi
+}
+
+if ! ensure_requested_host_id; then
+  exit 1
+fi
+HOST_ID="$(resolve_host_id "${HOST_ID}")"
+if [[ -z "${TARGET_ROOT}" ]]; then
+  TARGET_ROOT="$(resolve_default_target_root "${HOST_ID}")"
+fi
+assert_target_root_matches_host_intent "${TARGET_ROOT}" "${HOST_ID}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 INSTALL_SH="${REPO_ROOT}/install.sh"
@@ -34,6 +128,8 @@ CHECK_SH="${REPO_ROOT}/check.sh"
 MATERIALIZE_PS1="${REPO_ROOT}/scripts/setup/materialize-codex-mcp-profile.ps1"
 PERSIST_OPENAI_PS1="${REPO_ROOT}/scripts/setup/persist-codex-openai-env.ps1"
 PERSIST_ARK_PS1="${REPO_ROOT}/scripts/setup/persist-codex-ark-env.ps1"
+CLAUDE_SCAFFOLD_SH="${REPO_ROOT}/scripts/bootstrap/scaffold-claude-preview.sh"
+ADAPTER_RESOLVER="${REPO_ROOT}/scripts/common/resolve_vgo_adapter.py"
 
 require_cmd() {
   local cmd="$1"
@@ -54,6 +150,17 @@ pick_python() {
     return 0
   fi
   return 1
+}
+
+adapter_query() {
+  local property="$1"
+  local python_bin=""
+  python_bin="$(pick_python || true)"
+  if [[ -z "${python_bin}" ]]; then
+    echo "[FAIL] Python is required for adapter-driven bootstrap metadata." >&2
+    exit 1
+  fi
+  "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${REPO_ROOT}" --host "${HOST_ID}" --property "${property}"
 }
 
 read_existing_settings_env_value() {
@@ -215,8 +322,12 @@ if [[ "${SKIP_EXTERNAL_INSTALL}" != "true" ]]; then
   require_cmd npm "required for claude-flow / external CLI provisioning"
 fi
 
+ADAPTER_BOOTSTRAP_MODE="$(adapter_query bootstrap_mode)"
+
 echo "=== VCO One-Shot Setup (shell) ==="
 echo "Repo root             : ${REPO_ROOT}"
+echo "Host                  : ${HOST_ID}"
+echo "Mode                  : ${ADAPTER_BOOTSTRAP_MODE}"
 echo "Target root           : ${TARGET_ROOT}"
 echo "Profile               : ${PROFILE}"
 echo "StrictOffline         : ${STRICT_OFFLINE}"
@@ -225,7 +336,7 @@ if [[ "${SKIP_EXTERNAL_INSTALL}" != "true" ]]; then
   echo "External CLI install  : enabled (npm-based steps such as claude-flow may take several minutes; deprecated warnings are advisory unless the command exits non-zero)"
 fi
 
-install_args=(--profile "${PROFILE}" --target-root "${TARGET_ROOT}")
+install_args=(--profile "${PROFILE}" --host "${HOST_ID}" --target-root "${TARGET_ROOT}")
 if [[ "${SKIP_EXTERNAL_INSTALL}" != "true" ]]; then
   install_args+=(--install-external)
 fi
@@ -234,63 +345,80 @@ if [[ "${STRICT_OFFLINE}" == "true" ]]; then
 fi
 
 echo
-echo "[1/5] Installing governed runtime payload..."
+echo "[1/5] Installing adapter payload..."
 bash "${INSTALL_SH}" "${install_args[@]}"
 
-resolved_openai_api_key="${OPENAI_API_KEY_INPUT:-${OPENAI_API_KEY:-}}"
-existing_openai_key=""
-if existing_openai_key="$(read_existing_settings_env_value "${TARGET_ROOT}" "OPENAI_API_KEY" 2>/dev/null)"; then
-  :
-else
+if [[ "${ADAPTER_BOOTSTRAP_MODE}" == "governed" ]]; then
+  resolved_openai_api_key="${OPENAI_API_KEY_INPUT:-${OPENAI_API_KEY:-}}"
   existing_openai_key=""
-fi
-if [[ -n "${resolved_openai_api_key}" ]]; then
-  echo "[2/5] Seeding OPENAI settings into target settings.json..."
-  if command -v pwsh >/dev/null 2>&1; then
-    pwsh -NoProfile -File "${PERSIST_OPENAI_PS1}" -CodexRoot "${TARGET_ROOT}" -BaseUrl "${OPENAI_BASE_URL}" -ApiKey "${resolved_openai_api_key}"
+  if existing_openai_key="$(read_existing_settings_env_value "${TARGET_ROOT}" "OPENAI_API_KEY" 2>/dev/null)"; then
+    :
   else
-    seed_settings_env_with_python "${TARGET_ROOT}" "openai" "${OPENAI_BASE_URL}" "${resolved_openai_api_key}"
+    existing_openai_key=""
   fi
-elif [[ -n "${existing_openai_key}" ]]; then
-  echo "[2/5] OPENAI settings already exist in target settings.json; keeping current value."
-else
-  echo "[WARN] OPENAI_API_KEY not provided and not present in the current environment. Full online readiness will remain pending."
-fi
+  if [[ -n "${resolved_openai_api_key}" ]]; then
+    echo "[2/5] Seeding OPENAI settings into target settings.json..."
+    if command -v pwsh >/dev/null 2>&1; then
+      pwsh -NoProfile -File "${PERSIST_OPENAI_PS1}" -CodexRoot "${TARGET_ROOT}" -BaseUrl "${OPENAI_BASE_URL}" -ApiKey "${resolved_openai_api_key}"
+    else
+      seed_settings_env_with_python "${TARGET_ROOT}" "openai" "${OPENAI_BASE_URL}" "${resolved_openai_api_key}"
+    fi
+  elif [[ -n "${existing_openai_key}" ]]; then
+    echo "[2/5] OPENAI settings already exist in target settings.json; keeping current value."
+  else
+    echo "[WARN] OPENAI_API_KEY not provided and not present in the current environment. Full online readiness will remain pending."
+  fi
 
-resolved_ark_api_key="${ARK_API_KEY_INPUT:-${ARK_API_KEY:-}}"
-existing_ark_key=""
-if existing_ark_key="$(read_existing_settings_env_value "${TARGET_ROOT}" "ARK_API_KEY" 2>/dev/null)"; then
-  :
-else
+  resolved_ark_api_key="${ARK_API_KEY_INPUT:-${ARK_API_KEY:-}}"
   existing_ark_key=""
-fi
-if [[ -n "${resolved_ark_api_key}" ]]; then
-  echo "[3/5] Seeding ARK settings into target settings.json..."
-  if command -v pwsh >/dev/null 2>&1; then
-    pwsh -NoProfile -File "${PERSIST_ARK_PS1}" -CodexRoot "${TARGET_ROOT}" -BaseUrl "${ARK_BASE_URL}" -ApiKey "${resolved_ark_api_key}"
+  if existing_ark_key="$(read_existing_settings_env_value "${TARGET_ROOT}" "ARK_API_KEY" 2>/dev/null)"; then
+    :
   else
-    seed_settings_env_with_python "${TARGET_ROOT}" "ark" "${ARK_BASE_URL}" "${resolved_ark_api_key}"
+    existing_ark_key=""
   fi
-elif [[ -n "${existing_ark_key}" ]]; then
-  echo "[3/5] ARK settings already exist in target settings.json; keeping current value."
-else
-  echo "[3/5] ARK settings not provided; skipping optional ARK seeding."
-fi
+  if [[ -n "${resolved_ark_api_key}" ]]; then
+    echo "[3/5] Seeding ARK settings into target settings.json..."
+    if command -v pwsh >/dev/null 2>&1; then
+      pwsh -NoProfile -File "${PERSIST_ARK_PS1}" -CodexRoot "${TARGET_ROOT}" -BaseUrl "${ARK_BASE_URL}" -ApiKey "${resolved_ark_api_key}"
+    else
+      seed_settings_env_with_python "${TARGET_ROOT}" "ark" "${ARK_BASE_URL}" "${resolved_ark_api_key}"
+    fi
+  elif [[ -n "${existing_ark_key}" ]]; then
+    echo "[3/5] ARK settings already exist in target settings.json; keeping current value."
+  else
+    echo "[3/5] ARK settings not provided; skipping optional ARK seeding."
+  fi
 
-echo "[4/5] Materializing MCP profile..."
-if command -v pwsh >/dev/null 2>&1; then
-  pwsh -NoProfile -File "${MATERIALIZE_PS1}" -TargetRoot "${TARGET_ROOT}" -Force >/dev/null
-else
-  materialize_mcp_profile_with_python "${REPO_ROOT}" "${TARGET_ROOT}" "${PROFILE}"
-fi
+  echo "[4/5] Materializing MCP profile..."
+  if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -File "${MATERIALIZE_PS1}" -TargetRoot "${TARGET_ROOT}" -Force >/dev/null
+  else
+    materialize_mcp_profile_with_python "${REPO_ROOT}" "${TARGET_ROOT}" "${PROFILE}"
+  fi
 
-echo "[5/5] Running deep health check..."
-bash "${CHECK_SH}" --profile "${PROFILE}" --target-root "${TARGET_ROOT}" --deep
+  echo "[5/5] Running deep health check..."
+  bash "${CHECK_SH}" --profile "${PROFILE}" --host "${HOST_ID}" --target-root "${TARGET_ROOT}" --deep
+elif [[ "${ADAPTER_BOOTSTRAP_MODE}" == "preview-guidance" ]]; then
+  echo "[2/5] Hook installation is frozen for Claude Code because of compatibility issues."
+  bash "${CLAUDE_SCAFFOLD_SH}" --repo-root "${REPO_ROOT}" --target-root "${TARGET_ROOT}" --force >/dev/null
+  echo "[3/5] No hook files or preview settings were installed into the target root."
+  echo "[4/5] Claude provider settings remain host-managed. Open ${TARGET_ROOT}/settings.json and add only the missing env fields there. Do not paste API keys into chat."
+  echo "[5/5] Running preview guidance health check..."
+  bash "${CHECK_SH}" --profile "${PROFILE}" --host "${HOST_ID}" --target-root "${TARGET_ROOT}" --deep
+else
+  echo "[2/5] Runtime-core lane does not materialize host settings."
+  echo "[3/5] Runtime-core lane does not seed provider settings. Configure url, apikey, and model in the target agent's local settings or local environment variables. Do not paste secrets into chat."
+  echo "[4/5] MCP materialization skipped for runtime-core lane."
+  echo "[5/5] Running runtime-core health check..."
+  bash "${CHECK_SH}" --profile "${PROFILE}" --host "${HOST_ID}" --target-root "${TARGET_ROOT}" --deep
+fi
 
 echo
 echo "One-shot setup completed."
-echo "- Re-run deep doctor anytime with: bash ./check.sh --profile ${PROFILE} --target-root \"${TARGET_ROOT}\" --deep"
-echo "- MCP active file: ${TARGET_ROOT}/mcp/servers.active.json"
+echo "- Re-run deep doctor anytime with: bash ./check.sh --profile ${PROFILE} --host ${HOST_ID} --target-root \"${TARGET_ROOT}\" --deep"
+if [[ "${ADAPTER_BOOTSTRAP_MODE}" == "governed" ]]; then
+  echo "- MCP active file: ${TARGET_ROOT}/mcp/servers.active.json"
+fi
 echo "- Doctor artifacts: ${REPO_ROOT}/outputs/verify"
 if ! command -v pwsh >/dev/null 2>&1; then
   if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then

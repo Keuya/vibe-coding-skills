@@ -1,6 +1,8 @@
 param(
   [ValidateSet("minimal", "full")]
   [string]$Profile = "full",
+  [ValidateSet("codex", "claude-code")]
+  [string]$HostId = "codex",
   [string]$TargetRoot = '',
   [switch]$InstallExternal,
   [switch]$StrictOffline,
@@ -10,13 +12,15 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $RepoRoot 'scripts\common\vibe-governance-helpers.ps1')
-if ([string]::IsNullOrWhiteSpace($TargetRoot)) {
-  $TargetRoot = Resolve-VgoTargetRoot
-}
+. (Join-Path $RepoRoot 'scripts\common\Resolve-VgoAdapter.ps1')
+$HostId = Resolve-VgoHostId -HostId $HostId
+$TargetRoot = Resolve-VgoTargetRoot -TargetRoot $TargetRoot -HostId $HostId
+Assert-VgoTargetRootMatchesHostIntent -TargetRoot $TargetRoot -HostId $HostId
+$Adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 
 function Test-CanonicalRepoExecution {
   param([string]$RepoRoot)
-  return (Test-Path -LiteralPath (Join-Path $RepoRoot '.git'))
+  return (Test-VgoCanonicalRepoExecution -StartPath $RepoRoot)
 }
 function Get-PreferredPythonCommand {
   foreach ($candidate in @('python', 'python3')) {
@@ -205,7 +209,9 @@ function Sync-VibeCanonicalToTarget {
     Copy-DirContent -Source $srcDir -Destination $dstDir
   }
 }
-Write-Host "=== VCO Codex Installer ===" -ForegroundColor Cyan
+Write-Host "=== VCO Adapter Installer ===" -ForegroundColor Cyan
+Write-Host "Host   : $HostId"
+Write-Host "Mode   : $($Adapter.install_mode)"
 Write-Host "Profile: $Profile"
 Write-Host "Target : $TargetRoot"
 Write-Host "StrictOffline: $StrictOffline"
@@ -217,182 +223,34 @@ $targetVibeRel = [string]$installRuntimeConfig.target_relpath
 if ([string]::IsNullOrWhiteSpace($targetVibeRel)) {
   $targetVibeRel = 'skills\vibe'
 }
-$canonicalSkillsRoot = Split-Path -Parent $RepoRoot
-$workspaceRoot = Split-Path -Parent $canonicalSkillsRoot
-$paths = @(
-  "skills",
-  "rules",
-  "hooks",
-  "agents\templates",
-  "mcp\profiles",
-  "config",
-  "commands"
-)
-foreach ($p in $paths) {
-  New-Item -ItemType Directory -Force -Path (Join-Path $TargetRoot $p) | Out-Null
+
+$adapterInstallerPath = Join-Path $RepoRoot 'scripts\install\Install-VgoAdapter.ps1'
+if (-not (Test-Path -LiteralPath $adapterInstallerPath)) {
+  throw "Adapter installer script missing: $adapterInstallerPath"
 }
-Copy-DirContent -Source (Join-Path $RepoRoot 'bundled\skills') -Destination (Join-Path $TargetRoot 'skills')
-# Ensure unified /vibe entry uses the latest router implementation (script + modules) after install.
-$vibeRouterSourceDir = Join-Path $RepoRoot 'scripts\router'
-$vibeRouterTargetDir = Join-Path (Join-Path $TargetRoot $targetVibeRel) 'scripts\router'
-if (Test-Path -LiteralPath $vibeRouterSourceDir) {
-  Copy-DirContent -Source $vibeRouterSourceDir -Destination $vibeRouterTargetDir
+$adapterInstallResult = & $adapterInstallerPath -RepoRoot $RepoRoot -TargetRoot $TargetRoot -HostId $HostId -Profile $Profile -AllowExternalSkillFallback:$AllowExternalSkillFallback
+$adapterInstallReceipt = $null
+if ($adapterInstallResult) {
+  try {
+    $adapterInstallReceipt = ($adapterInstallResult | Out-String) | ConvertFrom-Json
+  } catch {
+    $adapterInstallReceipt = $null
+  }
 }
-# Enforce canonical vibe mirror files/dirs to avoid main-vs-bundled drift after install.
-Sync-VibeCanonicalToTarget -RepoRoot $RepoRoot -TargetRoot $TargetRoot
-$requiredCore = @('dialectic', 'local-vco-roles', 'spec-kit-vibe-compat', 'superclaude-framework-compat', 'ralph-loop', 'cancel-ralph', 'tdd-guide', 'think-harder')
-$requiredSp = @('brainstorming', 'writing-plans', 'subagent-driven-development', 'systematic-debugging')
-$optionalSp = @('requesting-code-review', 'receiving-code-review', 'verification-before-completion')
-$spCanonicalRoot = Join-Path $workspaceRoot 'skills'
-$legacySpRoot = Join-Path $workspaceRoot 'superpowers\skills'
-$spSrcRoot = Join-Path $RepoRoot 'bundled\superpowers-skills'
 $externalFallbackUsed = New-Object System.Collections.Generic.List[string]
-$missingRequiredSkills = New-Object System.Collections.Generic.List[string]
-foreach ($name in $requiredCore) {
-
-  if ([string]::IsNullOrWhiteSpace($name)) {
-
-    continue
-
-  }
-
-  $ensureSkillArgs = @{
-
-    Name = $name
-
-    Required = $true
-
-    FallbackSources = @(
-
-      (Join-Path $canonicalSkillsRoot $name),
-
-      (Join-Path $spCanonicalRoot $name),
-
-      (Join-Path $legacySpRoot $name),
-
-      (Join-Path $spSrcRoot $name)
-
-    )
-
-    TargetRoot = $TargetRoot
-
-    AllowExternalSkillFallback = $AllowExternalSkillFallback
-
-    ExternalFallbackUsed = $externalFallbackUsed
-
-    MissingRequiredSkills = $missingRequiredSkills
-
-  }
-
-  Ensure-SkillPresent @ensureSkillArgs
-
-}
-
-
-
-foreach ($name in $requiredSp) {
-
-  if ([string]::IsNullOrWhiteSpace($name)) {
-
-    continue
-
-  }
-
-  $ensureSkillArgs = @{
-
-    Name = $name
-
-    Required = $true
-
-    FallbackSources = @(
-
-      (Join-Path $spCanonicalRoot $name),
-
-      (Join-Path $legacySpRoot $name),
-
-      (Join-Path $spSrcRoot $name),
-
-      (Join-Path $canonicalSkillsRoot $name)
-
-    )
-
-    TargetRoot = $TargetRoot
-
-    AllowExternalSkillFallback = $AllowExternalSkillFallback
-
-    ExternalFallbackUsed = $externalFallbackUsed
-
-    MissingRequiredSkills = $missingRequiredSkills
-
-  }
-
-  Ensure-SkillPresent @ensureSkillArgs
-
-}
-
-
-
-if ($Profile -eq 'full') {
-
-  foreach ($name in $optionalSp) {
-
-    if ([string]::IsNullOrWhiteSpace($name)) {
-
-      continue
-
+if ($null -ne $adapterInstallReceipt -and $adapterInstallReceipt.PSObject.Properties.Name -contains 'external_fallback_used') {
+  foreach ($name in @($adapterInstallReceipt.external_fallback_used)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$name)) {
+      $externalFallbackUsed.Add([string]$name) | Out-Null
     }
-
-    $ensureSkillArgs = @{
-
-      Name = $name
-
-      Required = $false
-
-      FallbackSources = @(
-
-        (Join-Path $spCanonicalRoot $name),
-
-        (Join-Path $legacySpRoot $name),
-
-        (Join-Path $spSrcRoot $name),
-
-        (Join-Path $canonicalSkillsRoot $name)
-
-      )
-
-      TargetRoot = $TargetRoot
-
-      AllowExternalSkillFallback = $AllowExternalSkillFallback
-
-      ExternalFallbackUsed = $externalFallbackUsed
-
-      MissingRequiredSkills = $missingRequiredSkills
-
-    }
-
-    Ensure-SkillPresent @ensureSkillArgs
-
   }
+}
 
-}
-Copy-DirContent -Source (Join-Path $RepoRoot 'rules') -Destination (Join-Path $TargetRoot 'rules')
-Copy-DirContent -Source (Join-Path $RepoRoot 'hooks') -Destination (Join-Path $TargetRoot 'hooks')
-Copy-DirContent -Source (Join-Path $RepoRoot 'agents\templates') -Destination (Join-Path $TargetRoot 'agents\templates')
-Copy-DirContent -Source (Join-Path $RepoRoot 'mcp') -Destination (Join-Path $TargetRoot 'mcp')
-Copy-Item -LiteralPath (Join-Path $RepoRoot 'config\plugins-manifest.codex.json') -Destination (Join-Path $TargetRoot 'config\plugins-manifest.codex.json') -Force
-Copy-Item -LiteralPath (Join-Path $RepoRoot 'config\upstream-lock.json') -Destination (Join-Path $TargetRoot 'config\upstream-lock.json') -Force
-if (Test-Path -LiteralPath (Join-Path $RepoRoot 'config\skills-lock.json')) {
-  Copy-Item -LiteralPath (Join-Path $RepoRoot 'config\skills-lock.json') -Destination (Join-Path $TargetRoot 'config\skills-lock.json') -Force
-}
-$settingsTarget = Join-Path $TargetRoot 'settings.json'
-if (-not (Test-Path -LiteralPath $settingsTarget)) {
-  Copy-Item -LiteralPath (Join-Path $RepoRoot 'config\settings.template.codex.json') -Destination $settingsTarget -Force
-  Write-Host "Created settings.json from template" -ForegroundColor Yellow
-} else {
-  Write-Host "settings.json already exists (kept as-is)"
-}
 if ($InstallExternal) {
-  Write-Host "Installing optional external dependencies..."
+  if ($Adapter.install_mode -ne 'governed') {
+    Write-Warning "InstallExternal is currently only applied to the governed Codex lane. Skipping external install for host '$HostId'."
+  } else {
+    Write-Host "Installing optional external dependencies..."
   $pythonCommand = Get-PreferredPythonCommand
   if (Get-Command git -ErrorAction SilentlyContinue) {
     $temp = Join-Path $env:TEMP ("superclaude-" + [guid]::NewGuid().ToString("N"))
@@ -484,9 +342,7 @@ if ($InstallExternal) {
   } catch {
     Write-Warning "Failed to process plugin manifest"
   }
-}
-if ($missingRequiredSkills.Count -gt 0) {
-  throw ("Missing required vendored skills: " + (($missingRequiredSkills | Select-Object -Unique) -join ", "))
+  }
 }
 if ($StrictOffline) {
   $offlineGate = Join-Path $RepoRoot 'scripts\verify\vibe-offline-skills-gate.ps1'

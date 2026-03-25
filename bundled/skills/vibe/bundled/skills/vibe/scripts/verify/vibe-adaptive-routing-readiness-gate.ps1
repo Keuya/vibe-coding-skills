@@ -76,6 +76,7 @@ $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom
 $allowedStages = @('off', 'shadow_ready', 'soft_candidate', 'strict_candidate')
 $telemetryDir = Join-Path $context.repoRoot 'outputs\telemetry'
 $routeEvents = if (Test-Path -LiteralPath $telemetryDir) { @(Get-ChildItem -LiteralPath $telemetryDir -Filter 'route-events-*.jsonl' -File -ErrorAction SilentlyContinue) } else { @() }
+$routeEventCount = @($routeEvents).Count
 
 Add-Assertion -Assertions $assertions -Pass ($allowedStages -contains [string]$config.stage) -Message 'adaptive routing stage is in allowed readiness set' -Details $config.stage
 Add-Assertion -Assertions $assertions -Pass ([bool]$config.guardrails.advice_first) -Message 'guardrail advice_first enabled'
@@ -84,7 +85,7 @@ Add-Assertion -Assertions $assertions -Pass ([bool]$config.guardrails.auto_promo
 Add-Assertion -Assertions $assertions -Pass ([bool]$config.guardrails.no_second_router) -Message 'guardrail no_second_router enabled'
 Add-Assertion -Assertions $assertions -Pass (@($config.baseline_heuristics).Count -ge 3) -Message 'at least three baseline heuristics are defined' -Details @($config.baseline_heuristics).Count
 Add-Assertion -Assertions $assertions -Pass (@($config.evaluation_scenarios).Count -ge 3) -Message 'at least three evaluation scenarios are defined' -Details @($config.evaluation_scenarios).Count
-Add-Assertion -Assertions $assertions -Pass ($routeEvents.Count -gt 0) -Message 'route event telemetry exists for replay/audit' -Details $routeEvents.Count
+Add-Assertion -Assertions $assertions -Pass ($routeEventCount -gt 0) -Message 'route event telemetry exists for replay/audit' -Details $routeEventCount
 
 if ($Strict) {
     Add-Assertion -Assertions $assertions -Pass ([string]$config.stage -eq 'shadow_ready') -Message 'strict mode requires stage shadow_ready' -Details $config.stage
@@ -103,7 +104,7 @@ $artifact = [pscustomobject]@{
     assertions = @($assertions)
     summary = [ordered]@{
         failure_count = $failureCount
-        telemetry_files = $routeEvents.Count
+        telemetry_files = $routeEventCount
     }
 }
 

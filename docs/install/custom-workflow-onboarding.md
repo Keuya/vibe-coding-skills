@@ -9,7 +9,7 @@
 - `workflow`（默认推荐）
 - 或 `full`
 
-`framework-only` 也可接入，但你需要自行补齐工作流核心依赖，否则会出现“声明成功但调用价值不足”。
+框架版（当前真实 profile 为 `minimal`）也可接入，但你需要自行补齐工作流核心依赖，否则会出现“声明成功但调用价值不足”。
 
 ## 接入路径（唯一支持）
 
@@ -125,7 +125,7 @@
 更新时建议：
 
 - 尽量保持原 profile 不变
-- 如果要从 `full/workflow` 降到 `framework-only`，先检查你的 custom workflow 的 `requires`
+- 如果要从 `full/workflow` 降到框架版（`minimal`），先检查你的 custom workflow 的 `requires`
 
 更新后必须：
 
@@ -159,6 +159,7 @@
 ```text
 请把我的工作流按 VibeSkills 受治理方式接入，不要新建第二套路由。
 目标宿主：codex、claude-code 或 windsurf。
+目标宿主：codex、claude-code、cursor 或 windsurf。
 请执行：
 1) 检查 lane 是否为 workflow/full，不满足就给迁移建议；
 2) 在 <TARGET_ROOT>/skills/custom/<workflow-id>/ 生成 SKILL.md 草案；
@@ -175,11 +176,12 @@
 ```text
 请帮我更新当前的 VibeSkills。
 目标宿主：codex、claude-code 或 windsurf。
+目标宿主：codex、claude-code、cursor 或 windsurf。
 当前公开版本：全量版本 + 可自定义添加治理。
 请执行：
 1) 先检查 `skills/custom/` 和 `config/custom-workflows.json` 是否存在；
 2) 先提醒我哪些内容通常可保留，哪些官方受管路径改动可能被覆盖；
-3) 这次更新按 `full` 处理，不要误降成 `framework-only`；
+3) 这次更新按 `full` 处理，不要误降成框架版（`minimal`）；
 4) 更新后运行 `check --deep`；
 5) 用 truth-first 口径告诉我：
    - custom workflow 是否仍在
@@ -195,11 +197,12 @@
 ```text
 请帮我更新当前的 VibeSkills。
 目标宿主：codex、claude-code 或 windsurf。
+目标宿主：codex、claude-code、cursor 或 windsurf。
 当前公开版本：仅核心框架 + 可自定义添加治理。
 请执行：
 1) 先检查 `skills/custom/` 和 `config/custom-workflows.json` 是否存在；
 2) 先提醒我哪些内容通常可保留，哪些官方受管路径改动可能被覆盖；
-3) 这次更新按 `framework-only` 处理；
+3) 这次更新按框架版对应的真实 profile `minimal` 处理；
 4) 更新后运行 `check --deep`；
 5) 用 truth-first 口径告诉我：
    - custom workflow 是否仍在

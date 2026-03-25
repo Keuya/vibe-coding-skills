@@ -18,7 +18,7 @@ $Adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 
 function Test-CanonicalRepoExecution {
   param([string]$RepoRoot)
-  return (Test-Path -LiteralPath (Join-Path $RepoRoot '.git'))
+  return (Test-VgoCanonicalRepoExecution -StartPath $RepoRoot)
 }
 
 function Get-CheckGovernance {
