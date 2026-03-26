@@ -17,6 +17,7 @@
 ### 参考说明
 
 - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)：默认推荐入口，先看版本和宿主选择，再跳转到对应提示词
+- [`framework-only-path.md`](./framework-only-path.md)：仅核心框架路径，兼容旧入口名
 - [`recommended-full-path.md`](./recommended-full-path.md)：高级 host / lane / 命令参考
 - [`manual-copy-install.md`](./manual-copy-install.md)：离线或无管理员权限时的手动复制路径
 - [`installation-rules.md`](./installation-rules.md)：安装助手必须遵守的 truth-first 规则

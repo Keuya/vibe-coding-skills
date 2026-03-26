@@ -17,6 +17,7 @@ This directory contains the public install, upgrade, and custom-integration docs
 ### Reference Docs
 
 - [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md): default entrypoint with host/version selection and links to prompt files
+- [`framework-only-path.en.md`](./framework-only-path.en.md): framework-only path, kept as a compatibility entry
 - [`recommended-full-path.en.md`](./recommended-full-path.en.md): advanced host, lane, and command reference
 - [`manual-copy-install.en.md`](./manual-copy-install.en.md): manual copy path for offline or no-admin environments
 - [`installation-rules.en.md`](./installation-rules.en.md): truth-first rules every install assistant must follow

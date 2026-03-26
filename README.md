@@ -497,7 +497,7 @@ _Skills keep growing — but you don't need to manage them individually._
 |:---:|:---|:---|
 | **You get** | vibe runtime + full governance + all 340+ skills | vibe runtime + governance skeleton (no pre-loaded skills) |
 | **Best for** | Out-of-the-box use, extend as needed | Framework only, add skills selectively |
-| **Install** | [⚡ Prompt-based install (recommended)](./docs/install/one-click-install-release-copy.en.md) | [🔧 Framework-only install](./docs/install/framework-only-path.md) |
+| **Install** | [⚡ Prompt-based install (recommended)](./docs/install/one-click-install-release-copy.en.md) | [🔧 Framework-only install](./docs/install/framework-only-path.en.md) |
 
 </div>
 
