@@ -1,28 +1,34 @@
 {
   "adapter_id": "opencode",
-  "closure_level": "runtime-core-only-preview",
-  "install_mode": "runtime-core",
-  "check_mode": "runtime-core",
-  "bootstrap_mode": "runtime-core",
+  "closure_level": "preview-guidance",
+  "install_mode": "preview-guidance",
+  "check_mode": "preview-guidance",
+  "bootstrap_mode": "preview-guidance",
   "repo_managed_payload": [
+    "runtime core payload",
+    "OpenCode command wrappers under commands/** and command/**",
+    "OpenCode agent wrappers under agents/** and agent/**",
+    "OpenCode preview config example under opencode.json.example"
+  ],
+  "host_state_written": [
     "skills/**",
     "commands/**",
-    "config/upstream-lock.json",
-    "config/skills-lock.json",
-    "canonical vibe mirror under skills/vibe/**"
+    "command/**",
+    "agents/**",
+    "agent/**",
+    "opencode.json.example"
   ],
-  "host_state_written": [],
   "host_managed_boundaries": [
-    "all host settings",
+    "final opencode.json ownership",
     "plugin provisioning",
     "MCP registration",
     "provider credentials",
-    "runtime integration"
+    "runtime model/provider selection"
   ],
   "verification_contract": [
     "runtime freshness gate",
     "runtime BOM/frontmatter gate",
     "runtime coherence gate",
-    "runtime-core presence check"
+    "OpenCode preview smoke gate"
   ]
 }

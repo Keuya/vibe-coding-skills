@@ -3,15 +3,15 @@
   "lane_id": "host-opencode",
   "lane_kind": "host-adapter",
   "host_id": "opencode",
-  "stability": "not-yet-proven",
+  "stability": "preview",
   "source_release": {
     "version": "2.3.47",
     "updated": "2026-03-15"
   },
-  "summary": "OpenCode host adapter target. The repo can install a neutral runtime-core payload for experimentation, but no host-native closure is promised yet.",
+  "summary": "OpenCode host adapter preview. The repo can install runtime-core plus OpenCode-native command and agent wrapper payload into OpenCode roots, but final host config and platform closure remain incomplete.",
   "runtime_ownership": {
-    "owner": "none",
-    "notes": "This lane exists to prevent overclaim. It freezes a truthful 'not-yet-proven' status until contract + replay proof exists."
+    "owner": "host_managed",
+    "notes": "This lane stays at preview because the repository does not take ownership of the real opencode.json, provider credentials, plugin provisioning, or unresolved runtime discovery gaps."
   },
   "entrypoints": {
     "install_primary": "install.ps1 --host opencode",
@@ -21,18 +21,39 @@
   },
   "capability_promises": [
     {
-      "id": "no_overclaim_until_proved",
+      "id": "opencode_preview_payload_exists",
       "promise_level": "promised",
       "evidence_paths": [
-        "docs/universalization/host-capability-matrix.md"
+        "config/opencode/commands/vibe.md",
+        "config/opencode/agents/vibe-plan.md",
+        "config/opencode/opencode.json.example"
+      ]
+    },
+    {
+      "id": "router_authority_remains_local",
+      "promise_level": "promised",
+      "evidence_paths": [
+        "docs/universalization/router-model-neutrality.md",
+        "scripts/router/resolve-pack-route.ps1"
+      ]
+    },
+    {
+      "id": "opencode_install_check_entrypoints_exist",
+      "promise_level": "promised",
+      "evidence_paths": [
+        "install.ps1",
+        "install.sh",
+        "check.ps1",
+        "check.sh",
+        "docs/install/opencode-path.en.md"
       ]
     }
   ],
   "non_goals": [
-    "official_runtime_install_entrypoints",
-    "official_runtime_check_entrypoints",
+    "full_opencode_json_ownership",
     "host_plugin_provisioning",
-    "cross_platform_parity_claims"
+    "cross_platform_parity_claims",
+    "supported-with-constraints_promotion"
   ],
   "docs": {
     "distribution_lanes": "docs/universalization/distribution-lanes.md",
@@ -49,7 +70,7 @@
     "host_support": {
       "truth_source": "docs/universalization/host-capability-matrix.md",
       "interpretation": "host_matrix_rating",
-      "rating": "not-yet-proven"
+      "rating": "preview"
     }
   }
 }

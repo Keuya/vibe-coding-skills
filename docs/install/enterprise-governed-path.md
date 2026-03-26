@@ -7,6 +7,11 @@
 - `dist/manifests/vibeskills-codex.json`（Codex lane，supported-with-constraints）
 - `dist/manifests/vibeskills-core.json`（contract layer）
 
+补充说明：
+
+- `opencode` 现在已有 preview adapter lane，但还不属于这份 enterprise-governed 主路径
+- 如果组织要评估 OpenCode，请先从 [`opencode-path.md`](./opencode-path.md) 和对应 proof artifacts 开始，而不是把它当成 Codex 等价交付
+
 并且必须遵守 `docs/universalization/platform-parity-contract.md` 的反过度承诺规则。
 
 ## 适合谁
@@ -73,4 +78,3 @@ pwsh -File .\scripts\verify\vibe-version-packaging-gate.ps1
 - 出现 `core_install_incomplete`：立即停止推广
 - 版本一致性 / 离线闭包 / 打包治理 gate 失败：立即停止升级并回滚
 - 文档或对外口径把 `supported-with-constraints` / `preview` 说成 `full-authoritative`：立即撤回承诺并修订发布说明
-

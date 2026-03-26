@@ -9,10 +9,11 @@
 
 ## 当前支持边界
 
-当前公开支持面只包括：
+当前公开安装面包括：
 
 - `codex`
 - `claude-code`
+- `opencode`
 
 除此之外的其他代理，当前版本都不应被描述成“已支持安装”。
 
@@ -34,6 +35,7 @@
 - `commands/`
 - `skills/vibe/` runtime mirror
 - 安装脚本、检查脚本、doctor / verify 入口
+- OpenCode preview command/agent 包装器
 
 这些内容属于 repo-governed surface。
 
@@ -43,8 +45,9 @@
 
 - `~/.codex/settings.json`
 - `~/.claude/settings.json`
+- `~/.config/opencode/opencode.json`
 - 本地环境变量
-- 宿主侧 MCP 注册
+- 宿主侧 MCP 注册或信任决策
 
 这些不属于“仓库已经自动完成”的范围。
 
@@ -78,8 +81,6 @@
 - “先把一串宿主插件全部装上再说”
 - “Codex 默认要补一套 Claude Code 风格 hook/plugin 面”
 - “某些历史插件是 Codex 标准安装前置”
-
-如果某些历史能力未来有明确、可验证、可维护的官方接入方式，再单独更新文档。当前版本不这么描述。
 
 ### 在线能力怎么处理
 
@@ -148,23 +149,69 @@
 
 如果本地还没配好这些值，也不能把环境描述成“已完成 online readiness”。
 
+## OpenCode 的默认策略
+
+对 `opencode`，当前口径应该描述成 preview adapter，而不是“又一个完整闭环宿主”。
+
+### 当前真实状态
+
+`opencode` 现在是：
+
+- preview adapter
+- 有真实的 `install/check` 入口
+- 仓库会写入 skills、command/agent 包装器和 `opencode.json.example`
+- 真正的 `opencode.json`、provider 凭据、plugin 安装与 MCP 信任仍由宿主管理
+
+### 仓库会做什么
+
+当前仓库会：
+
+- 安装 runtime-core + VibeSkills 技能载荷
+- 安装 OpenCode command/agent 包装器
+- 写入 `opencode.json.example`
+- 运行对应的 preview 检查
+
+### 仓库不会做什么
+
+当前仓库不会自动完成：
+
+- 覆盖真实 `opencode.json`
+- 写入生产 provider 凭据
+- 安装宿主 plugin
+- 替用户决定 MCP 信任
+
+### 用户应当怎么做
+
+正确方式是：
+
+- 把 preview payload 装到 `OPENCODE_HOME`、`~/.config/opencode` 或项目内 `./.opencode`
+- 自己处理真实 `opencode.json`
+- 自己补 provider 凭据
+- 自己决定 plugin 安装与 MCP 信任
+
+如果要看完整路径说明，直接看：
+
+- [`opencode-path.md`](./opencode-path.md)
+
 ## 宿主插件的当前政策结论
 
 如果只看当前版本，公开文档应该坚持下面这组结论：
 
 1. `codex` 没有额外的默认宿主插件前置要求。
-2. `claude-code` 也不是靠“补一堆宿主插件”来完成接入，而是靠 preview guidance + 用户本地配置补全。
-3. 历史上出现过的某些插件名，不等于当前社区文档还应该继续推荐它们。
-4. 只要某个能力没有被仓库稳定、公开、可验证地接入，就不该写成默认安装要求。
+2. `claude-code` 不是靠“补一堆宿主插件”来完成接入，而是靠 preview guidance + 用户本地配置补全。
+3. `opencode` 也不是“仓库接管整个宿主”，而是 preview adapter + host-managed 正式配置。
+4. 历史上出现过的某些插件名，不等于当前社区文档还应该继续推荐它们。
+5. 只要某个能力没有被仓库稳定、公开、可验证地接入，就不该写成默认安装要求。
 
 ## 推荐的社区表述
 
 如果你要在 issue、README、讨论区或安装提示词里引用这份策略，推荐用下面这种说法：
 
-- 当前版本只支持 `codex` 和 `claude-code`
+- 当前版本公开安装面包括 `codex`、`claude-code` 和 `opencode`
 - `codex` 走本地 settings + MCP + 可选 CLI 的保守增强路线
 - `codex` / `claude-code` 当前都不安装 hook，因为兼容性问题尚未解决
 - `claude-code` 走 preview guidance 路线，不覆盖真实 `settings.json`
+- `opencode` 走 preview adapter 路线，不覆盖真实 `opencode.json`
 - provider 的 `url` / `apikey` / `model` 由用户在本地配置，不在聊天里提供
 - 其他代理目前不在公开支持面内
 

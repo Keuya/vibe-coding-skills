@@ -36,6 +36,22 @@
       "settings_map": "adapters/claude-code/settings-map.json",
       "closure": "adapters/claude-code/closure.json",
       "manifest": "dist/host-claude-code/manifest.json"
+    },
+    {
+      "id": "opencode",
+      "status": "preview",
+      "install_mode": "preview-guidance",
+      "check_mode": "preview-guidance",
+      "bootstrap_mode": "preview-guidance",
+      "default_target_root": {
+        "env": "OPENCODE_HOME",
+        "rel": ".config/opencode",
+        "kind": "host-home"
+      },
+      "host_profile": "adapters/opencode/host-profile.json",
+      "settings_map": "adapters/opencode/settings-map.json",
+      "closure": "adapters/opencode/closure.json",
+      "manifest": "dist/host-opencode/manifest.json"
     }
   ]
 }

@@ -4,16 +4,17 @@
 
 **把 VibeSkills 的运行时目录复制到目标宿主目录里。**
 
-当前这条路径只面向两个宿主：
+当前这条路径面向三个公开宿主：
 
 - `codex`
 - `claude-code`
+- `opencode`
 
-如果你的目标不是这两个宿主，当前版本不应描述成“已支持安装”。
+如果你的目标不是这三个宿主，当前版本不应描述成“已支持安装”。
 
 ## 你要复制什么
 
-把下面这些内容复制到目标宿主目录中：
+对 `codex` / `claude-code`，把下面这些内容复制到目标宿主目录中：
 
 - `skills/`
 - `commands/`
@@ -28,9 +29,30 @@
 - `config/*.json`：锁文件和版本对齐信息
 - `skills/vibe/`：VCO 运行时镜像
 
+### 如果你的目标是 OpenCode
+
+OpenCode preview 手动复制需要的载荷是：
+
+- `skills/`
+- `commands/*.md`
+- `command/*.md`
+- `agents/*.md`
+- `agent/*.md`
+- `config/opencode/opencode.json.example`
+
+目标根目录应当是：
+
+- `OPENCODE_HOME`
+- 或 `~/.config/opencode`
+- 或项目内的 `./.opencode`
+
+如果你准备手动复制 OpenCode 载荷，优先结合这份专门文档一起做：
+
+- [`opencode-path.md`](./opencode-path.md)
+
 ## 复制到哪里
 
-复制到你的目标宿主根目录下。
+对 `codex` / `claude-code`，复制到你的目标宿主根目录下。
 
 也就是让目标目录里最终能看到这些路径：
 
@@ -63,6 +85,17 @@
   - `ANTHROPIC_BASE_URL`
   - `ANTHROPIC_AUTH_TOKEN`
 
+### 如果你装到 OpenCode
+
+你还需要自己处理：
+
+- 真正的 `opencode.json`
+- provider 凭据
+- plugin 安装
+- MCP 信任决策
+
+当前仓库只提供 `opencode.json.example` 作为 preview scaffold，不接管正式宿主配置。
+
 ## 当前不会自动帮你做什么
 
 手动复制安装不会自动完成这些事：
@@ -71,11 +104,13 @@
 - MCP 注册
 - provider 凭据写入
 - Claude Code 真实 `settings.json` 修改
+- OpenCode 真实 `opencode.json` 修改
 
 其中要特别注意：
 
 - `codex` / `claude-code` 当前都**不提供 hook 安装**
 - hook 目前因为兼容性问题，暂时被冻结
+- `opencode` 当前也不接管宿主 plugin 与正式配置
 
 ## 最后一个边界
 
@@ -94,3 +129,4 @@
 那就不要走手动复制，直接看：
 
 - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)
+- [`opencode-path.md`](./opencode-path.md)

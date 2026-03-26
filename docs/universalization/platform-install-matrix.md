@@ -29,4 +29,5 @@ This document only maps that truth into the install entrypoints.
 ## Lane Applicability
 
 - `official-runtime` and `host-codex` inherit this platform matrix.
-- `core`, `host-claude-code`, and `host-opencode` do not claim a governed install closure lane yet.
+- `host-claude-code` and `host-opencode` expose preview scaffolds, but do not claim governed install closure.
+- `core` remains contract-only and does not claim a host-native install lane.

@@ -19,7 +19,7 @@ It does **not** promise that all host dependencies can be installed in one shot.
 | `host-codex` | `install.* --host codex` | `check.* --host codex` | governed-with-constraints | strongest current lane |
 | `host-claude-code` | `install.* --host claude-code` | `check.* --host claude-code` | preview-scaffold | writes truthful scaffold only |
 | `generic` | `install.* --host generic` | `check.* --host generic` | runtime-core-only | neutral target root only |
-| `host-opencode` | `install.* --host opencode` | `check.* --host opencode` | runtime-core-only | neutral target root only |
+| `host-opencode` | `install.* --host opencode` | `check.* --host opencode` | preview-scaffold | writes skills + command/agent wrappers + example config into OpenCode roots, but does not own the real `opencode.json` |
 | `core` | none | none | none | contracts only |
 
 ## Host-Managed Boundaries

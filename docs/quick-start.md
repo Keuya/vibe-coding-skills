@@ -20,6 +20,10 @@
 
 这里的主入口不是一堆命令，而是一段可以直接复制给 AI 的安装提示词。
 
+如果你的目标宿主是 OpenCode，也可以直接看：
+
+- [`install/opencode-path.md`](./install/opencode-path.md)
+
 ## 我想理解这个项目为什么会做出来
 
 看：
@@ -34,6 +38,7 @@
 
 - [`install/recommended-full-path.md`](./install/recommended-full-path.md)
 - [`cold-start-install-paths.md`](./cold-start-install-paths.md)
+- [`install/opencode-path.md`](./install/opencode-path.md)
 
 它们比公开入口更完整，也更偏 operator / heavy-user 视角。
 

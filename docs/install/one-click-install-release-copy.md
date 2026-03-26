@@ -2,10 +2,17 @@
 
 这是当前默认安装方式。
 
-暂时只支持两个目标宿主：
+当前公开安装入口覆盖三个目标宿主：
 
 - `codex`
 - `claude-code`
+- `opencode`
+
+其中：
+
+- `codex`：当前最强的 repo-governed lane
+- `claude-code`：preview guidance lane
+- `opencode`：preview adapter lane，走直接 `install/check`，不走 one-shot bootstrap
 
 ## 复制给 AI 的提示词
 
@@ -14,11 +21,11 @@
 仓库地址：https://github.com/foryourhealth111-pixel/Vibe-Skills
 
 在执行任何安装命令前，你必须先问我：
-“你要把 VibeSkills 安装到哪个宿主里？当前只支持：codex 或 claude-code。”
+“你要把 VibeSkills 安装到哪个宿主里？当前支持：codex、claude-code、opencode。”
 
 规则：
 1. 在我明确回答目标宿主之前，不要开始安装。
-2. 如果我回答的不是 `codex` 或 `claude-code`，请直接告诉我：当前版本暂不支持该宿主安装，并停止继续伪装安装。
+2. 如果我回答的不是 `codex`、`claude-code` 或 `opencode`，请直接告诉我：当前版本暂不支持该宿主安装，并停止继续伪装安装。
 3. 先判断当前系统是 Windows 还是 Linux / macOS，并使用对应命令格式。
 4. 如果我选择 `codex`：
    - Linux / macOS 使用 `bash ./scripts/bootstrap/one-shot-setup.sh --host codex`
@@ -39,26 +46,36 @@
      - `VCO_AI_PROVIDER_URL`
      - `VCO_AI_PROVIDER_API_KEY`
      - `VCO_AI_PROVIDER_MODEL`
-6. 对 `codex` 和 `claude-code`，都不要要求我把密钥、URL 或 model 直接粘贴到聊天里；只告诉我去本地 settings 或本地环境变量里配置。
-7. 如果这些本地 provider 字段没有配置好，不能把环境描述成“已完成 online readiness”。
-8. 安装完成后，请用简洁中文告诉我：
+6. 如果我选择 `opencode`：
+   - Linux / macOS 使用 `./install.sh --host opencode`，然后执行 `./check.sh --host opencode`
+   - Windows 使用 `pwsh -NoProfile -File ./install.ps1 -HostId opencode`，然后执行 `pwsh -NoProfile -File ./check.ps1 -HostId opencode`
+   - 明确告诉我：OpenCode 当前是 preview adapter，不是 full closure。
+   - 明确告诉我：当前仓库会安装 skills、command/agent 包装器和 `opencode.json.example`，但不接管真正的 `opencode.json`。
+   - 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`。
+   - 如果我想把载荷装到项目内，请改用 `--target-root ./.opencode`。
+   - 不要伪装成已经自动完成 plugin 安装、provider 凭据写入或 MCP 信任决策。
+   - 提醒我查看 `docs/install/opencode-path.md`。
+7. 对三个宿主，都不要要求我把密钥、URL 或 model 直接粘贴到聊天里；只告诉我去本地 settings 或本地环境变量里配置。
+8. 如果这些本地 provider 字段没有配置好，不能把环境描述成“已完成 online readiness”。
+9. 安装完成后，请用简洁中文告诉我：
    - 目标宿主
    - 实际执行的命令
    - 已完成的部分
    - 仍需我手动处理的部分
-9. 不要把宿主插件、MCP 注册、provider 凭据伪装成已经自动完成。
+10. 不要把宿主插件、MCP 注册、provider 凭据伪装成已经自动完成。
 ```
 
 ## 这条路径适合谁
 
-- 想让 AI 先判断该走 `codex` 还是 `claude-code`
+- 想让 AI 帮你判断该走 `codex`、`claude-code` 还是 `opencode`
 - 不想自己先研究安装脚本的人
 - 想先完成一轮真实安装，再看剩余手动项的人
 
 ## 这条路径会帮你做到什么
 
 - 先确认目标宿主，避免装错 lane
-- 运行对应的 bootstrap + check
+- 对 `codex` / `claude-code` 运行对应的 bootstrap + check
+- 对 `opencode` 运行对应的 direct install + check
 - 诚实告诉你哪些仍然是宿主侧工作
 
 ## 它不会假装替你完成什么
@@ -70,6 +87,7 @@
 - hook 的后续兼容性等待
 - `url` / `apikey` / `model` 的本地填写
 - Claude Code 的真实 `settings.json` 人工补充
+- OpenCode 的真实 `opencode.json`、plugin 安装与 MCP 信任决策
 
 ## 第二条主路径
 
@@ -82,4 +100,5 @@
 如果你要看更细的宿主边界，再看：
 
 - [`recommended-full-path.md`](./recommended-full-path.md)
+- [`opencode-path.md`](./opencode-path.md)
 - [`../cold-start-install-paths.md`](../cold-start-install-paths.md)

@@ -201,11 +201,31 @@ function Install-ClaudeGuidancePayload {
     return
 }
 
+function Install-OpenCodeGuidancePayload {
+    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\commands') -Destination (Join-Path $TargetRoot 'commands')
+    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\commands') -Destination (Join-Path $TargetRoot 'command')
+    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\agents') -Destination (Join-Path $TargetRoot 'agents')
+    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\agents') -Destination (Join-Path $TargetRoot 'agent')
+
+    $exampleConfig = Join-Path $RepoRoot 'config\opencode\opencode.json.example'
+    if (Test-Path -LiteralPath $exampleConfig) {
+        Copy-Item -LiteralPath $exampleConfig -Destination (Join-Path $TargetRoot 'opencode.json.example') -Force
+    }
+}
+
 $adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 $result = Install-RuntimeCorePayload -Adapter $adapter
 switch ([string]$adapter.install_mode) {
     'governed' { Install-GovernedCodexPayload }
-    'preview-guidance' { Install-ClaudeGuidancePayload }
+    'preview-guidance' {
+        if ([string]$adapter.id -eq 'claude-code') {
+            Install-ClaudeGuidancePayload
+        } elseif ([string]$adapter.id -eq 'opencode') {
+            Install-OpenCodeGuidancePayload
+        } else {
+            throw "Unsupported preview-guidance adapter id: $($adapter.id)"
+        }
+    }
     'runtime-core' { }
     default { throw "Unsupported adapter install mode: $($adapter.install_mode)" }
 }

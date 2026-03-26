@@ -12,6 +12,7 @@ Boundary first:
 - Windows is the current strongest reference path
 - Linux only reaches the current authoritative full-featured lane when `pwsh` is available
 - Linux without `pwsh` can still install and run, but it is `degraded-but-supported`, not equivalent to the full Windows lane
+- `opencode` now has its own preview adapter install path, but it is outside the scope of these "full-featured" prompts; use [`opencode-path.en.md`](./opencode-path.en.md) instead.
 
 ## Universal Prompt
 
@@ -131,8 +132,6 @@ Requirements:
 > Reminder: AI governance layer values must be filled in by the user in local files or local environment variables. Do not ask the user to paste `url`, `apikey`, or `model` into chat.
 ```
 
-
-
 ## Suggested README / Community Framing
 
 If you want to place this into a README, issue template, or community post, add one sentence like this:
@@ -142,5 +141,6 @@ If you want to place this into a README, issue template, or community post, add 
 ## Related Docs
 
 - [`recommended-full-path.en.md`](./recommended-full-path.en.md)
+- [`opencode-path.en.md`](./opencode-path.en.md)
 - [`../one-shot-setup.md`](../one-shot-setup.md)
 - [`../cold-start-install-paths.en.md`](../cold-start-install-paths.en.md)

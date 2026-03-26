@@ -31,7 +31,7 @@ Dist manifests may point to these assets, but must not replace them.
 | `core` | universal contracts and schemas only | none | contract-only |
 | `host-codex` | strongest host adapter lane | governed-with-constraints | supported-with-constraints |
 | `host-claude-code` | preview host adapter lane | preview-scaffold via shared entrypoints | preview only |
-| `host-opencode` | future host adapter lane | runtime-core-only via neutral target root | not-yet-proven only |
+| `host-opencode` | preview host adapter lane | preview-scaffold via shared entrypoints | preview only |
 | `generic` | neutral contract consumer lane | runtime-core-only via neutral target root | advisory-only |
 
 ## Important Boundary
@@ -41,6 +41,11 @@ Dist manifests may point to these assets, but must not replace them.
 - the repo can install canonical skills, commands, locks, and mirrored `skills/vibe/**`
 - the repo does **not** claim host-native settings, plugin, MCP, or credential closure
 - target roots should remain neutral, not a fake `.codex` / `.claude` host home
+
+`preview-scaffold` means:
+
+- the repo may install bounded host-native payload such as wrapper files or example config
+- the repo still does not claim final host settings ownership or replay-backed platform parity
 
 ## Truth Sources
 

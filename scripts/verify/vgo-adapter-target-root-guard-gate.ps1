@@ -14,11 +14,14 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 
 $cases = @(
     @{ host = 'codex'; target = 'C:\Users\demo\.claude'; should_throw = $true },
+    @{ host = 'codex'; target = 'C:\Users\demo\.config\opencode'; should_throw = $true },
     @{ host = 'claude-code'; target = 'C:\Users\demo\.codex'; should_throw = $true },
+    @{ host = 'claude-code'; target = 'C:\Users\demo\.config\opencode'; should_throw = $true },
     @{ host = 'generic'; target = 'C:\Users\demo\.codex'; should_throw = $true },
     @{ host = 'generic'; target = 'C:\Users\demo\.vibe-skills\generic'; should_throw = $false },
     @{ host = 'opencode'; target = 'C:\Users\demo\.claude'; should_throw = $true },
-    @{ host = 'opencode'; target = 'C:\Users\demo\.vibe-skills\opencode'; should_throw = $false }
+    @{ host = 'opencode'; target = 'C:\Users\demo\.config\opencode'; should_throw = $false },
+    @{ host = 'opencode'; target = 'C:\repo\.opencode'; should_throw = $false }
 )
 
 $failures = @()

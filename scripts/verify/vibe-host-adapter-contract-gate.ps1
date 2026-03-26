@@ -22,7 +22,10 @@ $checks = @(
     @{ Path = 'codex/platform-macos.json'; MustExist = $true },
     @{ Path = 'claude-code/platform-windows.json'; MustExist = $true },
     @{ Path = 'claude-code/platform-linux.json'; MustExist = $true },
-    @{ Path = 'claude-code/platform-macos.json'; MustExist = $true }
+    @{ Path = 'claude-code/platform-macos.json'; MustExist = $true },
+    @{ Path = 'opencode/platform-windows.json'; MustExist = $true },
+    @{ Path = 'opencode/platform-linux.json'; MustExist = $true },
+    @{ Path = 'opencode/platform-macos.json'; MustExist = $true }
 )
 
 foreach ($check in $checks) {
@@ -46,8 +49,11 @@ if (Test-Path -LiteralPath $codexProfilePath) {
 $openCodeProfilePath = Join-Path $adapterRoot 'opencode/host-profile.json'
 if (Test-Path -LiteralPath $openCodeProfilePath) {
     $opencode = Get-Content -LiteralPath $openCodeProfilePath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($opencode.status -ne 'not-yet-proven') {
-        $failures += "opencode must remain not-yet-proven until a real adapter exists"
+    if ($opencode.status -ne 'preview') {
+        $failures += "opencode must now be preview"
+    }
+    if ($opencode.runtime_role -ne 'host-adapter-preview') {
+        $failures += "opencode runtime_role must be host-adapter-preview"
     }
 }
 

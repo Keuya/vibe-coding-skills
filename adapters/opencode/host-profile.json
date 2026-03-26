@@ -1,39 +1,50 @@
 {
   "adapter_id": "opencode",
   "host_name": "OpenCode",
-  "status": "not-yet-proven",
-  "runtime_role": "future-host-adapter",
+  "status": "preview",
+  "runtime_role": "host-adapter-preview",
   "source_evidence": [
-    "config/runtime-core-packaging.json",
+    "config/opencode/commands/vibe.md",
+    "config/opencode/agents/vibe-plan.md",
+    "config/opencode/opencode.json.example",
+    "docs/install/opencode-path.en.md",
     "adapters/opencode/closure.json",
     "install.ps1",
     "check.ps1"
   ],
   "settings_surface": {
-    "path": "neutral target root",
+    "path": "~/.config/opencode/opencode.json",
     "managed_by_repo": false,
-    "notes": "The repository currently supports only a neutral runtime-core lane for OpenCode-targeted experiments, not a host-native contract."
+    "notes": "The repository installs skills, commands, and agents into OpenCode roots, but the real opencode.json remains host-managed. The repo only ships an example config scaffold for preview guidance."
   },
   "host_managed_surfaces": [
-    "all plugin provisioning",
-    "all settings materialization",
-    "all MCP registration",
-    "all provider credential storage"
+    "final permission policy",
+    "provider credentials",
+    "plugin provisioning",
+    "MCP registration",
+    "model/provider selection"
   ],
   "capabilities": {
-    "fs.read": "unknown",
-    "fs.write": "unknown",
-    "shell.exec": "unknown",
-    "mcp.client": "unknown",
-    "settings.materialize": "runtime-core-only",
-    "plugin.provision": "unsupported",
-    "agent.spawn": "unknown",
-    "route.provider_call": "unknown",
-    "route.offline_fallback": "unknown",
-    "release.verify": "runtime-core-only"
+    "fs.read": "expected",
+    "fs.write": "expected",
+    "shell.exec": "expected",
+    "mcp.client": "supported-with-constraints",
+    "settings.materialize": "preview-guidance",
+    "plugin.provision": "manual-host-managed",
+    "agent.spawn": "expected",
+    "route.provider_call": "supported-with-constraints",
+    "route.offline_fallback": "not-yet-proven",
+    "release.verify": "preview-guidance"
   },
   "degrade_contract": {
-    "current_state": "not-yet-proven host; runtime-core-only neutral lane"
+    "missing_provider_credentials": "degraded-but-supported",
+    "missing_user_permission_policy": "degraded-but-supported",
+    "unverified_platform_lane": "not-yet-proven",
+    "skill_debug_surface_diverges_from_docs": "preview-guidance-only"
   },
-  "supported_platform_contracts": []
+  "supported_platform_contracts": [
+    "adapters/opencode/platform-windows.json",
+    "adapters/opencode/platform-linux.json",
+    "adapters/opencode/platform-macos.json"
+  ]
 }

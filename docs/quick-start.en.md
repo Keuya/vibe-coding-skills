@@ -20,6 +20,10 @@ Go straight to:
 
 The main entry there is not a wall of commands. It is a prompt you can copy into your AI assistant.
 
+If your target host is OpenCode, you can also go straight to:
+
+- [`install/opencode-path.en.md`](./install/opencode-path.en.md)
+
 ## I want to understand why this project exists
 
 Read:
@@ -34,6 +38,7 @@ Read these:
 
 - [`install/recommended-full-path.en.md`](./install/recommended-full-path.en.md)
 - [`cold-start-install-paths.en.md`](./cold-start-install-paths.en.md)
+- [`install/opencode-path.en.md`](./install/opencode-path.en.md)
 
 They are more complete and more operator-oriented than the public entry pages.
 

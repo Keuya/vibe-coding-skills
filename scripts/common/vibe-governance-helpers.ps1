@@ -173,8 +173,10 @@ function Resolve-VgoHostId {
         'codex' { return 'codex' }
         'claude' { return 'claude-code' }
         'claude-code' { return 'claude-code' }
+        'opencode' { return 'opencode' }
+        'generic' { return 'generic' }
         default {
-            throw "Unsupported VCO host id: $resolved. Supported values: codex, claude-code"
+            throw "Unsupported VCO host id: $resolved. Supported values: codex, claude-code, opencode, generic"
         }
     }
 }
@@ -198,6 +200,15 @@ function Resolve-VgoDefaultTargetRoot {
                 return [System.IO.Path]::GetFullPath($env:CLAUDE_HOME)
             }
             return [System.IO.Path]::GetFullPath((Join-Path $homeDir '.claude'))
+        }
+        'opencode' {
+            if (-not [string]::IsNullOrWhiteSpace($env:OPENCODE_HOME)) {
+                return [System.IO.Path]::GetFullPath($env:OPENCODE_HOME)
+            }
+            return [System.IO.Path]::GetFullPath((Join-Path (Join-Path $homeDir '.config') 'opencode'))
+        }
+        'generic' {
+            return [System.IO.Path]::GetFullPath((Join-Path (Join-Path $homeDir '.vibe-skills') 'generic'))
         }
         default {
             throw "Unsupported VCO host id: $resolvedHostId"
@@ -239,8 +250,11 @@ function Assert-VgoTargetRootMatchesHostIntent {
     )
 
     $resolvedHostId = Resolve-VgoHostId -HostId $HostId
-    $leaf = Split-Path -Leaf ([System.IO.Path]::GetFullPath($TargetRoot))
+    $fullTargetRoot = [System.IO.Path]::GetFullPath($TargetRoot)
+    $leaf = Split-Path -Leaf $fullTargetRoot
     $normalizedLeaf = if ([string]::IsNullOrWhiteSpace($leaf)) { '' } else { $leaf.Trim().ToLowerInvariant() }
+    $normalizedPath = $fullTargetRoot.Trim().Replace('\', '/').ToLowerInvariant()
+    $looksLikeOpenCodeRoot = ($normalizedLeaf -eq '.opencode') -or $normalizedPath.EndsWith('/.config/opencode')
 
     switch ($resolvedHostId) {
         'codex' {
@@ -250,11 +264,45 @@ function Assert-VgoTargetRootMatchesHostIntent {
                     $TargetRoot
                 ))
             }
+            if ($looksLikeOpenCodeRoot) {
+                throw ([string]::Format(
+                    "TargetRoot '{0}' looks like an OpenCode root, but HostId resolved to 'codex'. Pass -HostId opencode for the OpenCode preview lane or use a Codex target root.",
+                    $TargetRoot
+                ))
+            }
         }
         'claude-code' {
             if ($normalizedLeaf -eq '.codex') {
                 throw ([string]::Format(
                     "TargetRoot '{0}' looks like a Codex home, but HostId resolved to 'claude-code'. Use -HostId codex for the official closure lane or choose a Claude Code target root.",
+                    $TargetRoot
+                ))
+            }
+            if ($looksLikeOpenCodeRoot) {
+                throw ([string]::Format(
+                    "TargetRoot '{0}' looks like an OpenCode root, but HostId resolved to 'claude-code'. Use -HostId opencode for the OpenCode preview lane or choose a Claude Code target root.",
+                    $TargetRoot
+                ))
+            }
+        }
+        'opencode' {
+            if ($normalizedLeaf -eq '.codex') {
+                throw ([string]::Format(
+                    "TargetRoot '{0}' looks like a Codex home, but HostId resolved to 'opencode'. Use -HostId codex for the official closure lane or choose an OpenCode target root.",
+                    $TargetRoot
+                ))
+            }
+            if ($normalizedLeaf -eq '.claude') {
+                throw ([string]::Format(
+                    "TargetRoot '{0}' looks like a Claude Code home, but HostId resolved to 'opencode'. Use -HostId claude-code for Claude preview guidance or choose an OpenCode target root.",
+                    $TargetRoot
+                ))
+            }
+        }
+        'generic' {
+            if ($normalizedLeaf -eq '.codex' -or $normalizedLeaf -eq '.claude' -or $looksLikeOpenCodeRoot) {
+                throw ([string]::Format(
+                    "TargetRoot '{0}' looks like a host-native root, but HostId resolved to 'generic'. Use a neutral generic target root instead.",
                     $TargetRoot
                 ))
             }
