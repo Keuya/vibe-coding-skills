@@ -1,23 +1,24 @@
-# Install Path: Advanced Host / Lane Reference
+# Multi-Host Install Command Reference
 
 > Most users should start with:
 >
 > - [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md)
 > - [`manual-copy-install.en.md`](./manual-copy-install.en.md)
+> - [`openclaw-path.en.md`](./openclaw-path.en.md)
 > - [`opencode-path.en.md`](./opencode-path.en.md)
 
-This document explains the current real support boundary and the concrete commands per host.
+This document summarizes the install commands and default roots for the six supported hosts.
 
-## Current Supported Surface
+## Supported Hosts and Install Styles
 
-| Host | Mode | Default root | Current wording |
+| Host | Install style | Default root | Notes |
 | --- | --- | --- | --- |
-| `codex` | governed | `~/.codex` | strongest supported path today |
-| `claude-code` | supported install-and-use path | `~/.claude` | keeps real host settings boundaries explicit |
-| `cursor` | supported install-and-use path | `~/.cursor` | keeps real host settings boundaries explicit |
-| `windsurf` | supported install-and-use path + runtime adapter | `~/.codeium/windsurf` | includes runtime-adapter integration while keeping real host settings boundaries explicit |
-| `openclaw` | `preview` / `runtime-core-preview` / `runtime-core` | `OPENCLAW_HOME` or `~/.openclaw` | focused on runtime-core payload install, validation, and distribution |
-| `opencode` | preview adapter | `OPENCODE_HOME` or `~/.config/opencode` | uses direct install/check and focuses on skills + command/agent wrappers + preview scaffold |
+| `codex` | one-shot setup + check | `~/.codex` | default recommended path |
+| `claude-code` | one-shot setup + check | `~/.claude` | supported install-and-use path |
+| `cursor` | one-shot setup + check | `~/.cursor` | supported install-and-use path |
+| `windsurf` | one-shot setup + check | `~/.codeium/windsurf` | supported install-and-use path |
+| `openclaw` | one-shot setup + check | `OPENCLAW_HOME` or `~/.openclaw` | host-specific details: [`openclaw-path.en.md`](./openclaw-path.en.md) |
+| `opencode` | direct install + check | `OPENCODE_HOME` or `~/.config/opencode` | host-specific details: [`opencode-path.en.md`](./opencode-path.en.md) |
 
 `TargetRoot` is only a path.
 `HostId` / `--host` decides host semantics.
@@ -89,13 +90,13 @@ bash ./check.sh --host openclaw --profile full --deep
 ### OpenCode
 
 ```powershell
-pwsh -NoProfile -File .\install.ps1 -HostId opencode
-pwsh -NoProfile -File .\check.ps1 -HostId opencode
+pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile full
+pwsh -NoProfile -File .\check.ps1 -HostId opencode -Profile full
 ```
 
 ```bash
-bash ./install.sh --host opencode
-bash ./check.sh --host opencode
+bash ./install.sh --host opencode --profile full
+bash ./check.sh --host opencode --profile full
 ```
 
 If you want the “Framework Only + Customizable Governance” variant, replace `full` with `minimal`.
@@ -115,11 +116,10 @@ git fetch --tags --force
 git checkout vX.Y.Z
 ```
 
-## Boundaries That Must Stay Explicit
+## What You Still Handle Locally After Install
 
 ### Codex
 
-- this is the governed path
 - hooks remain frozen; that is not an install failure
 - `OPENAI_*` only covers Codex base online provider access
 - `VCO_AI_PROVIDER_*` is the optional governance-AI online layer
@@ -138,21 +138,18 @@ git checkout vX.Y.Z
 
 ### Windsurf
 
-- this host has a supported install-and-use path with runtime-adapter integration
 - the default root is `~/.codeium/windsurf`
 - the repo currently owns only shared runtime payload plus optional materialization of `mcp_config.json` and `global_workflows/`
 - Windsurf-native local settings remain managed on the Windsurf side
 
 ### OpenClaw
 
-- this host is described with the `preview` / `runtime-core-preview` / `runtime-core` wording
 - the default target root is `OPENCLAW_HOME` or `~/.openclaw`
-- attach / copy / bundle center on runtime-core payload install, validation, and distribution
+- the dedicated host guide expands attach / copy / bundle details
 - OpenClaw-local configuration remains managed on the OpenClaw side
 
 ### OpenCode
 
-- this host is described as a preview-adapter path, not full closure
 - the default target root is `OPENCODE_HOME`, otherwise `~/.config/opencode`
 - direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
 - the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain host-managed

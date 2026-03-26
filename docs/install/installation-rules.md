@@ -13,6 +13,7 @@
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 ## 规则 2：再确认版本
 
@@ -43,12 +44,12 @@
 
 不要再把框架版本伪装成 `framework-only`，因为当前脚本真实接受的是 `minimal` / `full`。
 
-## 规则 7：Codex 要按 governed 口径描述
+## 规则 7：Codex 按默认推荐路径描述
 
 如果用户选择 `codex`：
 
 - 运行 `--host codex`
-- 明确说明这是当前最完整的 governed 路径
+- 明确说明这是当前默认推荐路径
 - hook 当前因兼容性问题被冻结；这不是安装失败
 - 如需 Codex 基础在线 provider，去本地 `~/.codex/settings.json` 的 `env` 或本地环境变量配置 `OPENAI_*`
 - 如需治理 AI 在线层，再按需补 `VCO_AI_PROVIDER_*`
@@ -61,7 +62,7 @@
 - 运行 `--host claude-code`
 - 明确说明当前提供支持的安装与使用路径
 - hook 当前冻结；这不是安装失败
-- 不再写 `settings.vibe.preview.json`
+- 不要声称安装器会额外写入 Claude Code 的宿主 settings 文件
 - 引导用户自己补 `~/.claude/settings.json` 的 `env`
 
 ## 规则 9：Cursor 也按“支持的安装与使用路径”口径描述
@@ -73,39 +74,45 @@
 - 当前不接管 Cursor 的真实 settings 与宿主原生扩展面
 - 引导用户自己检查和维护 `~/.cursor/settings.json`
 
-## 规则 10：Windsurf 要按“支持的安装与使用路径，且已接入 runtime adapter”口径描述
+## 规则 10：Windsurf 按“支持的安装与使用路径”口径描述
 
 如果用户选择 `windsurf`：
 
 - 运行 `--host windsurf`
-- 明确说明当前提供支持的安装与使用路径，且已接入 runtime adapter
+- 明确说明当前提供支持的安装与使用路径
 - 默认宿主根目录是 `~/.codeium/windsurf`
-- repo 当前只负责 shared runtime payload，以及按需物化 `mcp_config.json` 与 `global_workflows/`
+- 当前仓库只负责共享安装内容，以及按需物化 `mcp_config.json` 与 `global_workflows/`
 - Windsurf 宿主本地设置仍由用户在宿主侧完成
 
-## 规则 11：OpenClaw 必须按 preview / runtime-core-preview / runtime-core 口径描述
+## 规则 11：OpenClaw 按“支持的安装与使用路径”口径描述
 
 如果用户选择 `openclaw`：
 
 - 运行 `--host openclaw`
-- 明确说明这是 `preview` 宿主，closure level 是 `runtime-core-preview`，install/check mode 是 `runtime-core`
+- 明确说明当前提供支持的安装与使用路径
 - 默认目标根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`
-- 明确三条路径：
-  - attach：接入并校验已有 `OPENCLAW_HOME`（或 `~/.openclaw`）目录
-  - copy：通过 install/check 入口复制 runtime-core payload 到目标根目录
-  - bundle：按 `dist/host-openclaw/manifest.json` 与 `dist/manifests/vibeskills-openclaw.json` 消费分发清单
-- 聚焦 runtime-core payload 的安装、检查与分发结果
+- 如果用户需要 attach / copy / bundle 等更细路径，继续看 [`openclaw-path.md`](./openclaw-path.md)
 - 宿主侧本地配置仍按 OpenClaw 方式完成
 
-## 规则 12：不要要求用户把密钥贴到聊天里
+## 规则 12：OpenCode 按“支持的安装与使用路径”口径描述
 
-对五个支持宿主，都不要要求用户把密钥、URL 或 model 直接粘贴到聊天里；只引导用户去本地 settings 或本地环境变量配置。
+如果用户选择 `opencode`：
 
-## 规则 13：区分“本地安装完成”和“在线能力就绪”
+- 运行 `--host opencode`
+- 明确说明当前提供支持的安装与使用路径
+- 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`
+- direct install/check 会写入 skills、command/agent wrappers 与 `opencode.json.example`
+- 真实 `opencode.json`、provider 凭据、plugin 安装和 MCP 信任仍由宿主侧本地完成
+
+## 规则 13：不要要求用户把密钥贴到聊天里
+
+对六个支持宿主，都不要要求用户把密钥、URL 或 model 直接粘贴到聊天里；只引导用户去本地 settings 或本地环境变量配置。
+
+## 规则 14：区分“本地安装完成”和“在线能力就绪”
 
 如果本地 provider 字段没有配置好，就不能把环境描述成“online ready”。
 
-## 规则 14：输出安装或更新结果时必须说清楚
+## 规则 15：输出安装或更新结果时必须说清楚
 
 结果摘要至少应包含：
 
@@ -116,7 +123,7 @@
 - 已完成的部分
 - 仍需用户手动处理的部分
 
-## 规则 15：框架版本不是开箱即用全量体验
+## 规则 16：框架版本不是开箱即用全量体验
 
 如果用户选择 `仅核心框架 + 可自定义添加治理` / `minimal`，必须额外提醒：
 

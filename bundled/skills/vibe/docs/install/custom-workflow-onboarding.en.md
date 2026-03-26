@@ -158,7 +158,7 @@ Use the following prompt if you want an assistant to onboard a workflow in the g
 
 ```text
 Please onboard my workflow into VibeSkills using the governed path. Do not create a second routing system.
-Target host: codex, claude-code, cursor, windsurf, or openclaw.
+Target host: codex, claude-code, cursor, windsurf, openclaw, or opencode.
 Please:
 1) check whether the lane is workflow/full, and if not, recommend the migration path;
 2) generate a SKILL.md draft under <TARGET_ROOT>/skills/custom/<workflow-id>/;
@@ -174,7 +174,7 @@ Do not ask me to paste any API key, URL, or model into chat.
 
 ```text
 Please update my current VibeSkills install.
-Target host: codex, claude-code, cursor, windsurf, or openclaw.
+Target host: codex, claude-code, cursor, windsurf, openclaw, or opencode.
 Current public version: Full Version + Customizable Governance.
 Please:
 1) check whether `skills/custom/` and `config/custom-workflows.json` exist;
@@ -194,7 +194,7 @@ Do not ask me to paste any API key, URL, or model into chat.
 
 ```text
 Please update my current VibeSkills install.
-Target host: codex, claude-code, cursor, windsurf, or openclaw.
+Target host: codex, claude-code, cursor, windsurf, openclaw, or opencode.
 Current public version: Framework Only + Customizable Governance.
 Please:
 1) check whether `skills/custom/` and `config/custom-workflows.json` exist;

@@ -1,23 +1,24 @@
-# 安装路径：高级 host / lane 参考
+# 多宿主安装命令参考
 
 > 普通用户优先看：
 >
 > - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)
 > - [`manual-copy-install.md`](./manual-copy-install.md)
+> - [`openclaw-path.md`](./openclaw-path.md)
 > - [`opencode-path.md`](./opencode-path.md)
 
-这份文档只解释当前真实支持边界，以及六个宿主对应的安装命令。
+这份文档汇总六个支持宿主对应的安装命令与默认根目录。
 
-## 当前支持面
+## 支持宿主与安装方式
 
-| 宿主 | 模式 | 默认根目录 | 当前口径 |
+| 宿主 | 安装方式 | 默认根目录 | 说明 |
 | --- | --- | --- | --- |
-| `codex` | governed | `~/.codex` | 当前最完整路径 |
-| `claude-code` | 支持的安装与使用路径 | `~/.claude` | 保持真实宿主设置边界 |
-| `cursor` | 支持的安装与使用路径 | `~/.cursor` | 保持真实宿主设置边界 |
-| `windsurf` | 支持的安装与使用路径 + runtime adapter | `~/.codeium/windsurf` | 已接入 runtime adapter，保持真实宿主设置边界 |
-| `openclaw` | `preview` / `runtime-core-preview` / `runtime-core` | `OPENCLAW_HOME` 或 `~/.openclaw` | 聚焦 runtime-core payload 的安装、校验与分发 |
-| `opencode` | preview adapter | `OPENCODE_HOME` 或 `~/.config/opencode` | 走 direct install/check，聚焦 skills + command/agent wrappers + preview scaffold |
+| `codex` | one-shot setup + check | `~/.codex` | 默认推荐路径 |
+| `claude-code` | one-shot setup + check | `~/.claude` | 支持安装与使用 |
+| `cursor` | one-shot setup + check | `~/.cursor` | 支持安装与使用 |
+| `windsurf` | one-shot setup + check | `~/.codeium/windsurf` | 支持安装与使用 |
+| `openclaw` | one-shot setup + check | `OPENCLAW_HOME` 或 `~/.openclaw` | 宿主细节见 [`openclaw-path.md`](./openclaw-path.md) |
+| `opencode` | direct install + check | `OPENCODE_HOME` 或 `~/.config/opencode` | 宿主细节见 [`opencode-path.md`](./opencode-path.md) |
 
 `TargetRoot` 只是路径。
 `HostId` / `--host` 才决定宿主语义。
@@ -89,13 +90,13 @@ bash ./check.sh --host openclaw --profile full --deep
 ### OpenCode
 
 ```powershell
-pwsh -NoProfile -File .\install.ps1 -HostId opencode
-pwsh -NoProfile -File .\check.ps1 -HostId opencode
+pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile full
+pwsh -NoProfile -File .\check.ps1 -HostId opencode -Profile full
 ```
 
 ```bash
-bash ./install.sh --host opencode
-bash ./check.sh --host opencode
+bash ./install.sh --host opencode --profile full
+bash ./check.sh --host opencode --profile full
 ```
 
 如果你要装“仅核心框架 + 可自定义添加治理”，把上面的 `full` 改成 `minimal`。
@@ -115,11 +116,10 @@ git fetch --tags --force
 git checkout vX.Y.Z
 ```
 
-## 必须保持真实的边界
+## 安装后仍需你本地处理的内容
 
 ### Codex
 
-- 这是 governed 路径
 - hook 当前冻结；这不是安装失败
 - `OPENAI_*` 只代表 Codex 基础在线 provider
 - `VCO_AI_PROVIDER_*` 才是治理 AI 在线层的可选增强项
@@ -138,21 +138,18 @@ git checkout vX.Y.Z
 
 ### Windsurf
 
-- 当前提供支持的安装与使用路径，且已接入 runtime adapter
 - 默认根目录是 `~/.codeium/windsurf`
 - repo 当前只负责 shared runtime payload，以及按需物化 `mcp_config.json` 与 `global_workflows/`
 - Windsurf 宿主自身的本地设置仍按 Windsurf 自身方式管理
 
 ### OpenClaw
 
-- 当前按 `preview` / `runtime-core-preview` / `runtime-core` 路径描述
 - 默认目标根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`
-- attach / copy / bundle 三路径围绕 runtime-core payload 的安装、校验与分发
+- 宿主专页会展开 attach / copy / bundle 等细节
 - OpenClaw 宿主自身的本地配置仍按 OpenClaw 自身方式管理
 
 ### OpenCode
 
-- 当前按 preview adapter 路径描述，不是 full closure
 - 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`
 - direct install/check 会写入 skills、command/agent wrappers 与 `opencode.json.example`
 - 真实 `opencode.json`、provider 凭据、plugin 安装和 MCP 信任仍按宿主自身方式管理

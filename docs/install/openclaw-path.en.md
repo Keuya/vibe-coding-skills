@@ -1,22 +1,14 @@
-# OpenClaw Host Notes
+# OpenClaw Install and Use Guide
 
-This document defines the current public installation wording for OpenClaw.
+This document summarizes the most common commands, default root, and follow-up notes for installing VibeSkills into OpenClaw.
 
-## One-Line Wording
+## Default Install Information
 
-- `status`: `preview`
-- `closure_level`: `runtime-core-preview`
-- `install_mode` / `check_mode`: `runtime-core`
 - default target root: `OPENCLAW_HOME` or `~/.openclaw`
+- default install style: one-shot setup + check
+- host-local configuration still stays on the OpenClaw side
 
-Contract sources:
-
-- `adapters/index.json`
-- `adapters/openclaw/host-profile.json`
-- `adapters/openclaw/closure.json`
-- `adapters/openclaw/settings-map.json`
-
-## Three Paths (attach / copy / bundle)
+## Common Install Paths
 
 ### Attach Path
 
@@ -30,7 +22,7 @@ bash ./check.sh --host openclaw --target-root "${OPENCLAW_HOME:-$HOME/.openclaw}
 
 ### Copy Path
 
-Goal: copy the runtime-core payload into `OPENCLAW_HOME` or `~/.openclaw` through the install entrypoint.
+Goal: copy the repo-distributed content into `OPENCLAW_HOME` or `~/.openclaw` through the install entrypoint.
 
 Example:
 
@@ -41,7 +33,7 @@ bash ./check.sh --host openclaw --profile full --deep
 
 ### Bundle Path
 
-Goal: consume the OpenClaw runtime-core preview package through distribution manifests.
+Goal: consume the OpenClaw distribution package through distribution manifests.
 
 Manifest entrypoints:
 
@@ -50,7 +42,15 @@ Manifest entrypoints:
 
 ## Current Focus
 
-- describe OpenClaw with the `preview` / `runtime-core-preview` / `runtime-core` wording
 - keep the target root consistent as `OPENCLAW_HOME` or `~/.openclaw`
-- focus on runtime-core payload install, validation, and distribution
+- focus on install, validation, and distribution of the repo-distributed content
 - keep host-local configuration on the OpenClaw side
+
+## Contract Sources
+
+If you need the deeper adapter contract or distribution references, continue with:
+
+- `adapters/index.json`
+- `adapters/openclaw/host-profile.json`
+- `adapters/openclaw/closure.json`
+- `adapters/openclaw/settings-map.json`

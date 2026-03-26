@@ -13,17 +13,20 @@ This document answers only three questions:
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
-Other agents should not currently be described as having an official install closure.
+Other agents should not currently be described as having a supported install path.
 
 ## Global Principle
 
-- install the repo-governed payload first
+- install the repo-distributed content first
 - add host-local configuration only as needed
 - if a capability is not stably, publicly, and verifiably owned by the repo, do not write it as a default install requirement
-- for OpenClaw, write it as `preview` / `runtime-core-preview` / `runtime-core`
 - for OpenClaw, make the default root explicit: `OPENCLAW_HOME` or `~/.openclaw`
-- for OpenClaw, make the three paths explicit: attach / copy / bundle
+- keep deeper OpenClaw path details in the dedicated host guide
+- for OpenCode, make the default root explicit: `OPENCODE_HOME` or `~/.config/opencode`
+- for OpenCode, make it explicit that direct install/check does not take ownership of the real `opencode.json`
+- for deeper host contracts and proof details, point readers to the host guides or `dist/*` / `adapters/*`
 
 ## Codex
 
@@ -47,25 +50,33 @@ Other agents should not currently be described as having an official install clo
 
 ## Windsurf
 
-- supported install-and-use path with runtime-adapter integration
+- supported install-and-use path
 - default root is `~/.codeium/windsurf`
-- the repo currently owns only shared runtime payload plus optional materialization of `mcp_config.json` and `global_workflows/`
+- the repo currently owns only shared install content plus optional materialization of `mcp_config.json` and `global_workflows/`
 - Windsurf-native local settings remain managed on the Windsurf side
 
 ## OpenClaw
 
-- supported install-and-use path at the current `preview` (`runtime-core-preview`) level
-- install/check runs in `runtime-core` mode with default target root from `OPENCLAW_HOME` or `~/.openclaw`
-- attach / copy / bundle cover runtime-core payload installation, validation, and distribution
+- supported install-and-use path
+- default target root is `OPENCLAW_HOME` or `~/.openclaw`
+- deeper attach / copy / bundle guidance lives in [`openclaw-path.en.md`](./openclaw-path.en.md)
 - OpenClaw-local configuration remains managed on the OpenClaw side
+
+## OpenCode
+
+- supported install-and-use path
+- default target root is `OPENCODE_HOME` or `~/.config/opencode`
+- direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
+- the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain managed on the OpenCode side
 
 ## Recommended Community Wording
 
-- the current version supports `codex`, `claude-code`, `cursor`, `windsurf`, and `openclaw`
-- `codex` follows the governed path
+- the current version supports `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, and `opencode`
+- `codex` is the default recommended path
 - `claude-code` and `cursor` have a supported install-and-use path
-- `windsurf` has a supported install-and-use path with runtime-adapter integration
-- `openclaw` follows the `preview` / `runtime-core-preview` / `runtime-core` wording
-- `openclaw` uses `OPENCLAW_HOME` or `~/.openclaw` as the default root, with attach / copy / bundle paths
+- `windsurf` has a supported install-and-use path
+- `openclaw` has a supported install-and-use path, with default root from `OPENCLAW_HOME` or `~/.openclaw`
+- `opencode` has a supported install-and-use path, with default root from `OPENCODE_HOME` or `~/.config/opencode`
+- `opencode` uses direct install/check and does not take ownership of the real `opencode.json`
 - hooks remain frozen across the current public surface; that is not a user install failure
 - provider `url` / `apikey` / `model` values stay local and should not be pasted into chat

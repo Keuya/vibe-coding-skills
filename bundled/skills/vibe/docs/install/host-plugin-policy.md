@@ -13,17 +13,20 @@
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
-其他代理当前不应被描述成“已有官方安装闭环”。
+其他代理当前不应被描述成“已有支持的安装路径”。
 
 ## 总体原则
 
-- 先把 repo-governed payload 安装好
+- 先把仓库分发内容安装好
 - 再按真实需求补宿主侧配置
 - 没有被仓库稳定、公开、可验证接管的能力，不要写成默认安装要求
-- OpenClaw 口径必须写清：`preview` / `runtime-core-preview` / `runtime-core`
 - OpenClaw 默认根目录必须写清：`OPENCLAW_HOME` 或 `~/.openclaw`
-- OpenClaw 安装路径必须写清：attach / copy / bundle 三路径
+- OpenClaw 更细的安装路径说明放在宿主专页
+- OpenCode 默认根目录必须写清：`OPENCODE_HOME` 或 `~/.config/opencode`
+- OpenCode 必须写清它走 direct install/check，不接管真实 `opencode.json`
+- 如需查看更细的宿主契约和 proof 信息，继续看宿主专页或 `dist/*` / `adapters/*`
 
 ## Codex
 
@@ -47,25 +50,33 @@
 
 ## Windsurf
 
-- 提供支持的安装与使用路径，且已接入 runtime adapter
+- 提供支持的安装与使用路径
 - 默认根目录是 `~/.codeium/windsurf`
-- repo 当前只负责 shared runtime payload，以及按需物化 `mcp_config.json` 和 `global_workflows/`
+- 当前仓库只负责共享安装内容，以及按需物化 `mcp_config.json` 和 `global_workflows/`
 - Windsurf 宿主本地设置仍按 Windsurf 自身方式管理
 
 ## OpenClaw
 
-- 提供支持的安装与使用路径，但当前只到 `preview`（`runtime-core-preview`）
-- install/check 走 `runtime-core` 模式，默认目标根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`
-- attach / copy / bundle 三路径都围绕 runtime-core payload 的安装、校验与分发
+- 提供支持的安装与使用路径
+- 默认目标根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`
+- 更细的 attach / copy / bundle 路径放在 [`openclaw-path.md`](./openclaw-path.md)
 - 宿主侧本地配置仍按 OpenClaw 自身方式管理
+
+## OpenCode
+
+- 提供支持的安装与使用路径
+- 默认目标根目录是 `OPENCODE_HOME` 或 `~/.config/opencode`
+- direct install/check 会写入 skills、command/agent wrappers 与 `opencode.json.example`
+- 真实 `opencode.json`、provider 凭据、plugin 安装与 MCP 信任仍按宿主自身方式管理
 
 ## 推荐的社区表述
 
-- 当前版本支持 `codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`
-- `codex` 走 governed 路径
+- 当前版本支持 `codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`、`opencode`
+- `codex` 是默认推荐路径
 - `claude-code` / `cursor` 提供支持的安装与使用路径
-- `windsurf` 提供支持的安装与使用路径，且已接入 runtime adapter
-- `openclaw` 按 `preview` / `runtime-core-preview` / `runtime-core` 描述
-- `openclaw` 默认根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`，并明确 attach / copy / bundle 三路径
+- `windsurf` 提供支持的安装与使用路径
+- `openclaw` 提供支持的安装与使用路径，默认根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`
+- `opencode` 提供支持的安装与使用路径，默认根目录是 `OPENCODE_HOME` 或 `~/.config/opencode`
+- `opencode` 走 direct install/check，且不接管真实 `opencode.json`
 - hooks 在当前公开支持面里统一冻结；这不是用户安装失败
 - provider 的 `url` / `apikey` / `model` 由用户在本地配置，不要要求用户贴到聊天里

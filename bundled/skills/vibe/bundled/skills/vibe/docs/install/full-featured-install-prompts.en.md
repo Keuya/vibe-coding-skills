@@ -1,22 +1,25 @@
-# Full-Featured Install Prompts (Standard Recommended Install)
+# Codex Deep Install Prompts (Optional Advanced Path)
 
-This document provides **copy-paste prompts for AI coding assistants / agents** so users can trigger the VibeSkills standard recommended install path more easily.
+This document provides **copy-paste prompts for AI coding assistants / agents** for people who specifically want the deeper Codex automation path.
 
-Boundary first:
+Before you use it:
 
-- "full-featured" here means **repo-governed full closure**
-- for most users, that is the same thing as the **standard recommended install**
+- this is not the only default install entry for the project
+- for most people, [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md) is the simpler starting point
+- this document is mainly for Codex users who want the agent to handle the Windows / Linux differences automatically
 - the current default lane should treat `scrapling` as a default local runtime surface
 - the current default lane should treat `Cognee` as the governed long-term enhancement lane
 - `Composio / Activepieces` should be described as prewired but setup-required external action surfaces
 - Windows is the current strongest reference path
 - Linux only reaches the current authoritative full-featured lane when `pwsh` is available
 - Linux without `pwsh` can still install and run, but it is `degraded-but-supported`, not equivalent to the full Windows lane
+- if your target host is not Codex, use [`recommended-full-path.en.md`](./recommended-full-path.en.md) or the matching host-specific guide instead.
 
 ## Universal Prompt
 
 Use this when:
 
+- you explicitly want the Codex path
 - the user does not want to choose platform-specific commands manually
 - the agent should detect Windows vs Linux
 - you want one-shot bootstrap + doctor + truthful boundary reporting
@@ -24,7 +27,7 @@ Use this when:
 Copy:
 
 ```text
-Please install the current repository using the VibeSkills recommended full-featured path, while staying strictly truth-first.
+Please install the current repository using the VibeSkills Codex deep install path, while staying strictly truth-first.
 Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 1. Detect whether the current system is Windows or Linux.
 2. If it is Windows:
@@ -71,7 +74,7 @@ Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 > Reminder: AI governance layer values must be filled in by the user in local files or local environment variables. Do not ask the user to paste `url`, `apikey`, or `model` into chat.
 ```
 
-## Windows Prompt
+## Windows Deep Install Prompt
 
 Use this when:
 
@@ -81,7 +84,7 @@ Use this when:
 Copy:
 
 ```text
-Please install the current repository using the Windows recommended full-featured path.
+Please install the current repository using the Windows-recommended Codex deep path.
 Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 Requirements:
 
@@ -101,7 +104,7 @@ Requirements:
 7. If AI governance layer values are needed, tell me where to configure them locally instead of asking me to paste `url`, `apikey`, or `model` into chat.
 ```
 
-## Linux Prompt
+## Linux Deep Install Prompt
 
 Use this when:
 
@@ -111,7 +114,7 @@ Use this when:
 Copy:
 
 ```text
-Please install the current repository using the Linux recommended full-featured path, and first determine whether this Linux environment has `pwsh`.
+Please install the current repository using the Linux-recommended Codex deep path, and first determine whether this Linux environment has `pwsh`.
 Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 Requirements:
 
@@ -133,8 +136,6 @@ Requirements:
 > Reminder: AI governance layer values must be filled in by the user in local files or local environment variables. Do not ask the user to paste `url`, `apikey`, or `model` into chat.
 ```
 
-
-
 ## Suggested README / Community Framing
 
 If you want to place this into a README, issue template, or community post, add one sentence like this:
@@ -143,6 +144,8 @@ If you want to place this into a README, issue template, or community post, add 
 
 ## Related Docs
 
+- [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md)
 - [`recommended-full-path.en.md`](./recommended-full-path.en.md)
+- [`opencode-path.en.md`](./opencode-path.en.md)
 - [`../one-shot-setup.md`](../one-shot-setup.md)
 - [`../cold-start-install-paths.en.md`](../cold-start-install-paths.en.md)

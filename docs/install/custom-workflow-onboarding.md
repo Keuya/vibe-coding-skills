@@ -158,7 +158,7 @@
 
 ```text
 请把我的工作流按 VibeSkills 受治理方式接入，不要新建第二套路由。
-目标宿主：codex、claude-code、cursor、windsurf 或 openclaw。
+目标宿主：codex、claude-code、cursor、windsurf、openclaw 或 opencode。
 请执行：
 1) 检查 lane 是否为 workflow/full，不满足就给迁移建议；
 2) 在 <TARGET_ROOT>/skills/custom/<workflow-id>/ 生成 SKILL.md 草案；
@@ -174,7 +174,7 @@
 
 ```text
 请帮我更新当前的 VibeSkills。
-目标宿主：codex、claude-code、cursor、windsurf 或 openclaw。
+目标宿主：codex、claude-code、cursor、windsurf、openclaw 或 opencode。
 当前公开版本：全量版本 + 可自定义添加治理。
 请执行：
 1) 先检查 `skills/custom/` 和 `config/custom-workflows.json` 是否存在；
@@ -194,7 +194,7 @@
 
 ```text
 请帮我更新当前的 VibeSkills。
-目标宿主：codex、claude-code、cursor、windsurf 或 openclaw。
+目标宿主：codex、claude-code、cursor、windsurf、openclaw 或 opencode。
 当前公开版本：仅核心框架 + 可自定义添加治理。
 请执行：
 1) 先检查 `skills/custom/` 和 `config/custom-workflows.json` 是否存在；

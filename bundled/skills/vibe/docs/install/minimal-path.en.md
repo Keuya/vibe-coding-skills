@@ -29,12 +29,17 @@ According to `docs/universalization/platform-parity-contract.md`:
 - Linux gets close to that path only when `pwsh` is installed and PowerShell gates can run; otherwise it is explicitly **degraded**
 - macOS remains `not-yet-proven`
 
-### Claude Code / Generic Host
+### Claude Code / OpenCode / Generic Host
 
 - Claude Code: `preview` in the current repository, with templates and guidance but without a Codex-equivalent repo-governed install/check closure
+- OpenCode: `preview` in the current repository, with direct install/check entrypoints and a dedicated install path
 - Generic Host: `advisory-only`, meaning contract and document consumption only, with no runtime promise
 
 If you are not running on Codex, treat this path as document/contract consumption plus minimal self-check, not as an official runtime install.
+
+If your target is OpenCode, continue with:
+
+- [`opencode-path.en.md`](./opencode-path.en.md)
 
 ## Recommended Commands
 

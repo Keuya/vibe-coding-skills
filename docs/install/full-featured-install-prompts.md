@@ -1,15 +1,16 @@
-# 满血版安装提示词（标准推荐安装）
+# Codex 深度安装提示词（可选高级路径）
 
-这份文档给的是**可直接复制给 AI 编码助手 / Agent 的安装提示词**，目标是让用户更容易完成 VibeSkills 的“标准推荐安装”。
+这份文档给的是**可直接复制给 AI 编码助手 / Agent 的安装提示词**，适合想走 Codex 深度自动化安装路径的用户。
 
-注意边界：
+使用前先确认：
 
-- 这里的“满血版”指 **repo-governed full closure**。
-- 对多数用户，它等价于“标准推荐安装”，不是“第一天就把所有增强面全部装满”。
+- 这不是整个项目唯一的默认安装入口
+- 对大多数用户，先看 [`one-click-install-release-copy.md`](./one-click-install-release-copy.md) 会更直接
+- 这份文档主要服务 Codex 用户，尤其是希望让 Agent 自动处理 Windows / Linux 差异的人
 - Windows 是当前最强参考路径。
 - Linux 只有在宿主已具备 `pwsh` 时，才可进入当前权威满血路径。
 - Linux 如果没有 `pwsh`，仍可安装和使用，但属于 `degraded-but-supported`，不应被表述成等价满血。
-- `opencode` 已有单独的 preview adapter 安装路径，但它不属于这份“满血版”提示词范围；请改看 [`opencode-path.md`](./opencode-path.md)。
+- 如果你的目标宿主不是 Codex，请改看 [`recommended-full-path.md`](./recommended-full-path.md) 或对应宿主专页。
 
 ## 通用主提示词
 
@@ -21,6 +22,7 @@
 
 适合：
 
+- 用户明确要走 Codex 路径
 - 用户不想自己判断平台命令
 - 希望 Agent 自动识别 Windows / Linux
 - 希望一次性执行 one-shot + doctor + 边界说明
@@ -28,7 +30,7 @@
 直接复制：
 
 ```text
-请你把当前仓库按 VibeSkills 标准推荐安装路径装好，并严格遵守 truth-first 原则：
+请你把当前仓库按 VibeSkills Codex 深度安装路径装好，并严格遵守 truth-first 原则：
 仓库地址：https://github.com/foryourhealth111-pixel/Vibe-Skills
 1. 先识别当前系统是 Windows 还是 Linux。
 2. 如果是 Windows：
@@ -66,7 +68,7 @@
 > 提醒：AI 智能治理层相关配置必须由用户在本地文件或本地环境变量中填写。不要要求用户在聊天里直接提供 `url`、`apikey`、`model`。
 ```
 
-## Windows 满血安装提示词
+## Windows 深度安装提示词
 
 适合：
 
@@ -76,7 +78,7 @@
 直接复制：
 
 ```text
-请你把当前仓库按 Windows 推荐满血路径安装好。
+请你把当前仓库按 Windows 推荐的 Codex 深度路径安装好。
 仓库地址：https://github.com/foryourhealth111-pixel/Vibe-Skills
 要求：
 
@@ -96,7 +98,7 @@
 7. 如果需要启用 AI 智能治理层相关配置，不要让我把 `url`、`apikey`、`model` 发到聊天里，而是告诉我应该在本地哪里配置。
 ```
 
-## Linux 满血安装提示词
+## Linux 深度安装提示词
 
 适合：
 
@@ -106,7 +108,7 @@
 直接复制：
 
 ```text
-请你把当前仓库按 Linux 推荐满血路径安装好，并先判断当前 Linux 是否具备 `pwsh`。
+请你把当前仓库按 Linux 推荐的 Codex 深度路径安装好，并先判断当前 Linux 是否具备 `pwsh`。
 仓库地址：https://github.com/foryourhealth111-pixel/Vibe-Skills
 要求：
 
@@ -137,6 +139,7 @@
 
 ## 相关文档
 
+- [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)
 - [`recommended-full-path.md`](./recommended-full-path.md)
 - [`opencode-path.md`](./opencode-path.md)
 - [`../one-shot-setup.md`](../one-shot-setup.md)

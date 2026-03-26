@@ -17,7 +17,9 @@ This directory contains the public install, upgrade, and custom-integration docs
 ### Reference Docs
 
 - [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md): default entrypoint with host/version selection and links to prompt files
-- [`recommended-full-path.en.md`](./recommended-full-path.en.md): advanced host, lane, and command reference
+- [`recommended-full-path.en.md`](./recommended-full-path.en.md): multi-host install command reference
+- [`openclaw-path.en.md`](./openclaw-path.en.md): dedicated install-and-use guide for OpenClaw
+- [`opencode-path.en.md`](./opencode-path.en.md): dedicated install-and-use guide for OpenCode
 - [`manual-copy-install.en.md`](./manual-copy-install.en.md): manual copy path for offline or no-admin environments
 - [`installation-rules.en.md`](./installation-rules.en.md): truth-first rules every install assistant must follow
 - [`configuration-guide.en.md`](./configuration-guide.en.md): local configuration guidance
@@ -43,14 +45,16 @@ Keep the public wording user-friendly, then map to the real profile at execution
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 Within that scope:
 
-- `codex`: governed and currently the strongest path
+- `codex`: the default recommended path
 - `claude-code`: supported install-and-use path
 - `cursor`: supported install-and-use path
-- `windsurf`: supported install-and-use path with runtime-adapter integration
-- `openclaw`: preview / runtime-core-preview / runtime-core path
+- `windsurf`: supported install-and-use path
+- `openclaw`: supported install-and-use path; see the dedicated host guide for details
+- `opencode`: supported install-and-use path; see the dedicated host guide for details
 
 Other hosts should not currently be described as supported installation targets.
 

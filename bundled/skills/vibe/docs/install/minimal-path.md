@@ -29,12 +29,17 @@
 - Linux **只有在安装了 `pwsh`** 并能跑 PowerShell gates 时，才接近权威路径；否则属于 **degraded**，不是“偷偷满血”
 - macOS 仍是 `not-yet-proven`
 
-### Claude Code / Generic Host
+### Claude Code / OpenCode / Generic Host
 
 - Claude Code：此仓库当前是 `preview`（模板与指导存在，但没有与 Codex 等价的 repo-governed install/check 闭环）
+- OpenCode：此仓库当前也是 `preview`，但有独立的 direct `install/check` 入口和专门安装说明
 - Generic Host：`advisory-only`（只能消费契约与文档，不做运行时承诺）
 
 如果你不是在 Codex 上运行，请把本路径理解为：**文档/契约消费 + 最小自检**，而不是“官方运行时安装”。
+
+如果你的目标是 OpenCode，请直接看：
+
+- [`opencode-path.md`](./opencode-path.md)
 
 ## 推荐命令（不接管主链）
 
@@ -68,4 +73,3 @@ bash ./check.sh
 
 - `docs/install/recommended-full-path.md`
 - `docs/install/enterprise-governed-path.md`
-

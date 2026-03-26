@@ -17,7 +17,9 @@
 ### 参考说明
 
 - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)：默认推荐入口，先看版本和宿主选择，再跳转到对应提示词
-- [`recommended-full-path.md`](./recommended-full-path.md)：高级 host / lane / 命令参考
+- [`recommended-full-path.md`](./recommended-full-path.md)：多宿主安装命令参考
+- [`openclaw-path.md`](./openclaw-path.md)：OpenClaw 专用安装与使用说明
+- [`opencode-path.md`](./opencode-path.md)：OpenCode 专用安装与使用说明
 - [`manual-copy-install.md`](./manual-copy-install.md)：离线或无管理员权限时的手动复制路径
 - [`installation-rules.md`](./installation-rules.md)：安装助手必须遵守的 truth-first 规则
 - [`configuration-guide.md`](./configuration-guide.md)：本地配置说明
@@ -43,14 +45,16 @@
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 其中：
 
-- `codex`：governed / 当前最完整路径
+- `codex`：默认推荐路径
 - `claude-code`：支持的安装与使用路径
 - `cursor`：支持的安装与使用路径
-- `windsurf`：支持的安装与使用路径，且已接入 runtime adapter
-- `openclaw`：preview / runtime-core-preview / runtime-core 路径
+- `windsurf`：支持的安装与使用路径
+- `openclaw`：支持的安装与使用路径，细节见专页
+- `opencode`：支持的安装与使用路径，细节见专页
 
 其他宿主当前不应被描述成“已支持安装”。
 

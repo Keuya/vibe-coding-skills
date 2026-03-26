@@ -1,4 +1,4 @@
-# Prompt-Based Install (Recommended Default)
+# Install Entry (Recommended Default)
 
 This is the default public install entrypoint.
 
@@ -19,16 +19,18 @@ Public version maps to:
 - [`prompts/full-version-update.en.md`](./prompts/full-version-update.en.md)
 - [`prompts/framework-only-update.en.md`](./prompts/framework-only-update.en.md)
 
-## Host-Specific Notes
+## Host-Specific Pages
 
-- `openclaw` still follows the preview runtime-core path; see [`openclaw-path.en.md`](./openclaw-path.en.md)
-- `opencode` currently uses its own preview-adapter path and does not reuse these one-shot prompt flows; go straight to [`opencode-path.en.md`](./opencode-path.en.md)
+If you are installing into one of these hosts, go straight to the matching guide:
+
+- `openclaw`: [`openclaw-path.en.md`](./openclaw-path.en.md)
+- `opencode`: [`opencode-path.en.md`](./opencode-path.en.md)
 
 ## Read Next Only If Needed
 
 - Framework-only command path:
   - [`minimal-path.en.md`](./minimal-path.en.md)
-- Lower-level command and boundary docs:
+- More install commands and host details:
   - [`recommended-full-path.en.md`](./recommended-full-path.en.md)
   - [`manual-copy-install.en.md`](./manual-copy-install.en.md)
   - [`host-plugin-policy.en.md`](./host-plugin-policy.en.md)

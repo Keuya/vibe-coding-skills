@@ -1,4 +1,4 @@
-# 提示词安装（默认推荐）
+# 安装入口（默认推荐）
 
 这是当前默认推荐的公开安装入口。
 
@@ -19,16 +19,18 @@
 - [`prompts/full-version-update.md`](./prompts/full-version-update.md)
 - [`prompts/framework-only-update.md`](./prompts/framework-only-update.md)
 
-## 宿主专用说明
+## 宿主专页
 
-- `openclaw` 继续按 preview runtime-core 路径处理，细节看 [`openclaw-path.md`](./openclaw-path.md)
-- `opencode` 当前走独立的 preview adapter 路径，不复用这组 one-shot 提示词；直接看 [`opencode-path.md`](./opencode-path.md)
+如果你要装到以下宿主，可以直接看对应专页：
+
+- `openclaw`：[`openclaw-path.md`](./openclaw-path.md)
+- `opencode`：[`opencode-path.md`](./opencode-path.md)
 
 ## 需要时再继续看
 
 - 仅核心框架命令路径：
   - [`minimal-path.md`](./minimal-path.md)
-- 更底层的命令和边界：
+- 更多安装命令和宿主细节：
   - [`recommended-full-path.md`](./recommended-full-path.md)
   - [`manual-copy-install.md`](./manual-copy-install.md)
   - [`host-plugin-policy.md`](./host-plugin-policy.md)

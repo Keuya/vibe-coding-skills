@@ -1,10 +1,10 @@
-# 提示词安装（默认推荐）
+# 安装入口（默认推荐）
 
 这是当前默认推荐的公开安装入口。
 
 ## 先选两件事
 
-1. 先确认宿主：`codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`
+1. 先确认宿主：`codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`、`opencode`
 2. 再确认版本：`全量版本 + 可自定义添加治理` 或 `仅核心框架 + 可自定义添加治理`
 
 公开版本映射到：
@@ -19,14 +19,23 @@
 - [`prompts/full-version-update.md`](./prompts/full-version-update.md)
 - [`prompts/framework-only-update.md`](./prompts/framework-only-update.md)
 
+## 宿主专页
+
+如果你要装到以下宿主，可以直接看对应专页：
+
+- `openclaw`：[`openclaw-path.md`](./openclaw-path.md)
+- `opencode`：[`opencode-path.md`](./opencode-path.md)
+
 ## 需要时再继续看
 
 - 仅核心框架命令路径：
   - [`minimal-path.md`](./minimal-path.md)
-- 更底层的命令和边界：
+- 更多安装命令和宿主细节：
   - [`recommended-full-path.md`](./recommended-full-path.md)
   - [`manual-copy-install.md`](./manual-copy-install.md)
   - [`host-plugin-policy.md`](./host-plugin-policy.md)
+  - [`openclaw-path.md`](./openclaw-path.md)
+  - [`opencode-path.md`](./opencode-path.md)
 - 后续接自己的 workflow / skill：
   - [`custom-workflow-onboarding.md`](./custom-workflow-onboarding.md)
   - [`custom-skill-governance-rules.md`](./custom-skill-governance-rules.md)
