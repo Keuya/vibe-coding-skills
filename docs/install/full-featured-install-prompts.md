@@ -9,6 +9,7 @@
 - Windows 是当前最强参考路径。
 - Linux 只有在宿主已具备 `pwsh` 时，才可进入当前权威满血路径。
 - Linux 如果没有 `pwsh`，仍可安装和使用，但属于 `degraded-but-supported`，不应被表述成等价满血。
+- `opencode` 已有单独的 preview adapter 安装路径，但它不属于这份“满血版”提示词范围；请改看 [`opencode-path.md`](./opencode-path.md)。
 
 ## 通用主提示词
 
@@ -128,7 +129,6 @@
 
 ```
 
-
 ## 给用户的话术建议
 
 如果你准备把这段发到 README、Issue 模板或社区帖子里，建议配一行说明：
@@ -138,5 +138,6 @@
 ## 相关文档
 
 - [`recommended-full-path.md`](./recommended-full-path.md)
+- [`opencode-path.md`](./opencode-path.md)
 - [`../one-shot-setup.md`](../one-shot-setup.md)
 - [`../cold-start-install-paths.md`](../cold-start-install-paths.md)

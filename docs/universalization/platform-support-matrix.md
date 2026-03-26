@@ -60,6 +60,7 @@ Examples:
 
 - "Codex supported" is incomplete without saying whether the support claim is Windows-only, Linux-with-pwsh, or degraded.
 - "Linux supported" is incomplete without saying whether the lane is official runtime, host adapter preview, or heuristic-only.
+- "OpenCode preview install exists" is incomplete without saying which platform replay evidence has actually been frozen.
 
 The correct statement pattern is:
 

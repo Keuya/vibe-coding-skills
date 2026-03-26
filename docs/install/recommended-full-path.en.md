@@ -4,6 +4,7 @@
 >
 > - [`one-click-install-release-copy.en.md`](./one-click-install-release-copy.en.md)
 > - [`manual-copy-install.en.md`](./manual-copy-install.en.md)
+> - [`opencode-path.en.md`](./opencode-path.en.md)
 
 This document explains the current real support boundary and the concrete commands per host.
 
@@ -16,6 +17,7 @@ This document explains the current real support boundary and the concrete comman
 | `cursor` | supported install-and-use path | `~/.cursor` | keeps real host settings boundaries explicit |
 | `windsurf` | supported install-and-use path + runtime adapter | `~/.codeium/windsurf` | includes runtime-adapter integration while keeping real host settings boundaries explicit |
 | `openclaw` | `preview` / `runtime-core-preview` / `runtime-core` | `OPENCLAW_HOME` or `~/.openclaw` | focused on runtime-core payload install, validation, and distribution |
+| `opencode` | preview adapter | `OPENCODE_HOME` or `~/.config/opencode` | uses direct install/check and focuses on skills + command/agent wrappers + preview scaffold |
 
 `TargetRoot` is only a path.
 `HostId` / `--host` decides host semantics.
@@ -84,6 +86,18 @@ bash ./scripts/bootstrap/one-shot-setup.sh --host openclaw --profile full
 bash ./check.sh --host openclaw --profile full --deep
 ```
 
+### OpenCode
+
+```powershell
+pwsh -NoProfile -File .\install.ps1 -HostId opencode
+pwsh -NoProfile -File .\check.ps1 -HostId opencode
+```
+
+```bash
+bash ./install.sh --host opencode
+bash ./check.sh --host opencode
+```
+
 If you want the “Framework Only + Customizable Governance” variant, replace `full` with `minimal`.
 
 ## Upgrade Flow
@@ -135,3 +149,11 @@ git checkout vX.Y.Z
 - the default target root is `OPENCLAW_HOME` or `~/.openclaw`
 - attach / copy / bundle center on runtime-core payload install, validation, and distribution
 - OpenClaw-local configuration remains managed on the OpenClaw side
+
+### OpenCode
+
+- this host is described as a preview-adapter path, not full closure
+- the default target root is `OPENCODE_HOME`, otherwise `~/.config/opencode`
+- direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
+- the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain host-managed
+- use `--target-root ./.opencode` when you want project-local isolation

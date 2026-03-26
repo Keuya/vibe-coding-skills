@@ -12,7 +12,8 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 
 . (Join-Path $RepoRoot 'scripts\common\Resolve-VgoAdapter.ps1')
 
-$registry = Get-VgoAdapterRegistry -RepoRoot $RepoRoot
+$registryResolution = Resolve-VgoAdapterRegistry -RepoRoot $RepoRoot
+$registry = $registryResolution.registry
 $failures = @()
 $rows = @()
 

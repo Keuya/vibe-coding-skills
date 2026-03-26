@@ -4,13 +4,14 @@
 
 ## 一句话结论
 
-当前公开支持五个宿主：
+当前公开支持六个宿主：
 
 - `codex`
 - `claude-code`
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 其中：
 
@@ -19,6 +20,7 @@
 - `cursor`：preview guidance
 - `windsurf`：preview runtime-core
 - `openclaw`：`preview` / `runtime-core-preview` / `runtime-core`
+- `opencode`：preview adapter
 
 其他宿主当前都不应被描述成“已支持安装”。
 
@@ -122,6 +124,34 @@ bash ./check.sh --host openclaw --profile full --deep
 
 - full closure
 - 自动代管 OpenClaw 宿主本地配置
+
+## OpenCode
+
+```bash
+bash ./install.sh --host opencode
+bash ./check.sh --host opencode
+```
+
+你会得到：
+
+- runtime-core payload
+- VibeSkills skill payload
+- OpenCode command / agent wrappers
+- `opencode.json.example`
+
+你不会得到：
+
+- one-shot bootstrap
+- 覆盖真实 `~/.config/opencode/opencode.json`
+- 自动 plugin 安装
+- 自动写入 provider 凭据
+- 自动替你做 MCP 信任决策
+
+后续动作：
+
+- 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`
+- 如果你要项目内隔离安装，改用 `--target-root ./.opencode`
+- 继续看 [`install/opencode-path.md`](./install/opencode-path.md)
 
 ## 冷启动阶段必须守住的边界
 

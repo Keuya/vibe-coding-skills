@@ -15,6 +15,7 @@ if (-not (Test-Path -LiteralPath $docsPath)) {
 $checks = @(
     @{ Path = 'codex/settings-map.json'; MustExist = $true },
     @{ Path = 'claude-code/settings-map.json'; MustExist = $true },
+    @{ Path = 'cursor/settings-map.json'; MustExist = $true },
     @{ Path = 'windsurf/settings-map.json'; MustExist = $true },
     @{ Path = 'openclaw/settings-map.json'; MustExist = $true },
     @{ Path = 'opencode/settings-map.json'; MustExist = $true },
@@ -25,6 +26,12 @@ $checks = @(
     @{ Path = 'claude-code/platform-windows.json'; MustExist = $true },
     @{ Path = 'claude-code/platform-linux.json'; MustExist = $true },
     @{ Path = 'claude-code/platform-macos.json'; MustExist = $true },
+    @{ Path = 'cursor/platform-windows.json'; MustExist = $true },
+    @{ Path = 'cursor/platform-linux.json'; MustExist = $true },
+    @{ Path = 'cursor/platform-macos.json'; MustExist = $true },
+    @{ Path = 'opencode/platform-windows.json'; MustExist = $true },
+    @{ Path = 'opencode/platform-linux.json'; MustExist = $true },
+    @{ Path = 'opencode/platform-macos.json'; MustExist = $true }
     @{ Path = 'windsurf/platform-windows.json'; MustExist = $true },
     @{ Path = 'windsurf/platform-linux.json'; MustExist = $true },
     @{ Path = 'windsurf/platform-macos.json'; MustExist = $true },
@@ -54,8 +61,11 @@ if (Test-Path -LiteralPath $codexProfilePath) {
 $openCodeProfilePath = Join-Path $adapterRoot 'opencode/host-profile.json'
 if (Test-Path -LiteralPath $openCodeProfilePath) {
     $opencode = Get-Content -LiteralPath $openCodeProfilePath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($opencode.status -ne 'not-yet-proven') {
-        $failures += "opencode must remain not-yet-proven until a real adapter exists"
+    if ($opencode.status -ne 'preview') {
+        $failures += "opencode must now be preview"
+    }
+    if ($opencode.runtime_role -ne 'host-adapter-preview') {
+        $failures += "opencode runtime_role must be host-adapter-preview"
     }
 }
 

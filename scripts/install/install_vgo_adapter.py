@@ -335,6 +335,18 @@ def install_claude_guidance_payload(repo_root: Path, target_root: Path):
     return
 
 
+def install_opencode_guidance_payload(repo_root: Path, target_root: Path):
+    commands_root = repo_root / "config" / "opencode" / "commands"
+    agents_root = repo_root / "config" / "opencode" / "agents"
+    example_config = repo_root / "config" / "opencode" / "opencode.json.example"
+
+    copy_tree(commands_root, target_root / "commands")
+    copy_tree(commands_root, target_root / "command")
+    copy_tree(agents_root, target_root / "agents")
+    copy_tree(agents_root, target_root / "agent")
+    if example_config.exists():
+        copy_file(example_config, target_root / "opencode.json.example")
+
 def install_runtime_core_mode_payload(repo_root: Path, target_root: Path):
     commands_root = repo_root / "commands"
     if commands_root.exists():
@@ -364,7 +376,12 @@ def main():
     if mode == "governed":
         install_codex_payload(repo_root, target_root)
     elif mode == "preview-guidance":
-        install_claude_guidance_payload(repo_root, target_root)
+        if adapter["id"] == "opencode":
+            install_opencode_guidance_payload(repo_root, target_root)
+        elif adapter["id"] in {"claude-code", "cursor"}:
+            install_claude_guidance_payload(repo_root, target_root)
+        else:
+            raise SystemExit(f"Unsupported preview-guidance adapter id: {adapter['id']}")
     elif mode == "runtime-core":
         install_runtime_core_mode_payload(repo_root, target_root)
     else:

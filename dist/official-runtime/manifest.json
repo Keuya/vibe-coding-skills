@@ -92,7 +92,7 @@
       "ratings": {
         "codex": "supported-with-constraints",
         "claude_code": "preview",
-        "opencode": "not-yet-proven",
+        "opencode": "preview",
         "generic": "advisory-only"
       }
     }

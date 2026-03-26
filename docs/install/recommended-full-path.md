@@ -4,8 +4,9 @@
 >
 > - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)
 > - [`manual-copy-install.md`](./manual-copy-install.md)
+> - [`opencode-path.md`](./opencode-path.md)
 
-这份文档只解释当前真实支持边界，以及五个宿主对应的安装命令。
+这份文档只解释当前真实支持边界，以及六个宿主对应的安装命令。
 
 ## 当前支持面
 
@@ -16,6 +17,7 @@
 | `cursor` | 支持的安装与使用路径 | `~/.cursor` | 保持真实宿主设置边界 |
 | `windsurf` | 支持的安装与使用路径 + runtime adapter | `~/.codeium/windsurf` | 已接入 runtime adapter，保持真实宿主设置边界 |
 | `openclaw` | `preview` / `runtime-core-preview` / `runtime-core` | `OPENCLAW_HOME` 或 `~/.openclaw` | 聚焦 runtime-core payload 的安装、校验与分发 |
+| `opencode` | preview adapter | `OPENCODE_HOME` 或 `~/.config/opencode` | 走 direct install/check，聚焦 skills + command/agent wrappers + preview scaffold |
 
 `TargetRoot` 只是路径。
 `HostId` / `--host` 才决定宿主语义。
@@ -84,6 +86,18 @@ bash ./scripts/bootstrap/one-shot-setup.sh --host openclaw --profile full
 bash ./check.sh --host openclaw --profile full --deep
 ```
 
+### OpenCode
+
+```powershell
+pwsh -NoProfile -File .\install.ps1 -HostId opencode
+pwsh -NoProfile -File .\check.ps1 -HostId opencode
+```
+
+```bash
+bash ./install.sh --host opencode
+bash ./check.sh --host opencode
+```
+
 如果你要装“仅核心框架 + 可自定义添加治理”，把上面的 `full` 改成 `minimal`。
 
 ## 更新方式
@@ -135,3 +149,11 @@ git checkout vX.Y.Z
 - 默认目标根目录是 `OPENCLAW_HOME` 或 `~/.openclaw`
 - attach / copy / bundle 三路径围绕 runtime-core payload 的安装、校验与分发
 - OpenClaw 宿主自身的本地配置仍按 OpenClaw 自身方式管理
+
+### OpenCode
+
+- 当前按 preview adapter 路径描述，不是 full closure
+- 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`
+- direct install/check 会写入 skills、command/agent wrappers 与 `opencode.json.example`
+- 真实 `opencode.json`、provider 凭据、plugin 安装和 MCP 信任仍按宿主自身方式管理
+- 如需项目内隔离安装，使用 `--target-root ./.opencode`

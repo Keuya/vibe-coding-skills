@@ -2,6 +2,12 @@
 
 `vco-skills-codex` 现在提供一个面向支持宿主的单命令 bootstrap 入口，用来把 **仓库可自动化的部分** 一次性落地，并在最后给出一份深度 readiness 报告。
 
+这份文档当前只覆盖 `codex` 和 `claude-code` 的 one-shot bootstrap。
+
+如果你的目标宿主是 `opencode`，请改走 direct install/check 路径：
+
+- [`install/opencode-path.md`](./install/opencode-path.md)
+
 如果你还不知道自己应该走哪种安装方式，先看：
 
 - [`cold-start-install-paths.md`](./cold-start-install-paths.md)
@@ -144,9 +150,9 @@ bash ./check.sh --profile full --deep
 4. 再补官方支持的 MCP surfaces
 5. `Composio / Activepieces` 仅在你确实需要外部操作能力时再做 setup，并保持 confirm-gated
 
-1. 如果 `OPENAI_API_KEY` 仍是 `placeholder` 或 `missing`，先在本地配置 key，不要在聊天里粘贴。
-2. 如果是 Claude Code，打开 `~/.claude/settings.json`，只补充缺失的 `env` 字段；当前版本不会再生成 `settings.vibe.preview.json`。
-3. 如果 `manual_action_required` 的 MCP server 是 `stdio` 模式，先安装对应命令行依赖，再在 host 中注册。
+6. 如果 `OPENAI_API_KEY` 仍是 `placeholder` 或 `missing`，先在本地配置 key，不要在聊天里粘贴。
+7. 如果是 Claude Code，打开 `~/.claude/settings.json`，只补充缺失的 `env` 字段；当前版本不会再生成 `settings.vibe.preview.json`。
+8. 如果 `manual_action_required` 的 MCP server 是 `stdio` 模式，先安装对应命令行依赖，再在 host 中注册。
 
 当前 `full` profile 最重要的人工补齐项是：
 

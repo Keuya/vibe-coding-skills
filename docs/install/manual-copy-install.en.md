@@ -9,6 +9,7 @@ The current public host surface includes:
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 ## Core Files To Copy
 
@@ -26,11 +27,23 @@ Copy these into the target root:
 - `cursor` -> `~/.cursor`
 - `windsurf` -> `~/.codeium/windsurf`
 - `openclaw` -> `OPENCLAW_HOME` or `~/.openclaw`
+- `opencode` -> `OPENCODE_HOME` or `~/.config/opencode`
 
 If the target is `windsurf`, also note:
 
 - mirror `commands/` into `global_workflows/` if you want parity with the scripted result
 - copy `mcp/servers.template.json` to `mcp_config.json` when it is missing
+
+If the target is `opencode`, switch to the OpenCode preview payload:
+
+- `skills/`
+- `commands/*.md`
+- `command/*.md`
+- `agents/*.md`
+- `agent/*.md`
+- `opencode.json.example`
+
+Then use [`opencode-path.en.md`](./opencode-path.en.md) for the preview-adapter follow-up steps.
 
 ## What You Still Need To Do Yourself
 
@@ -61,10 +74,16 @@ If the target is `windsurf`, also note:
 - use the attach / copy / bundle guidance when you want parity with the scripted path
 - finish host-local configuration inside OpenClaw itself
 
+### OpenCode
+
+- confirm the preview payload under `OPENCODE_HOME` or `~/.config/opencode`
+- keep the real `opencode.json`, provider credentials, plugin installation, and MCP trust host-managed
+- use `./.opencode` when you want a project-local isolated target
+
 ## What This Path Does Not Complete Automatically
 
 - hook installation
 - provider credential wiring
 - automatic takeover of host-local configuration
 
-Across the current public surface, none of the five hosts should be described as “hooks installed automatically.”
+Across the current public surface, none of the six hosts should be described as “hooks installed automatically.”

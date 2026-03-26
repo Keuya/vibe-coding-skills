@@ -13,6 +13,7 @@ This document answers only three questions:
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 Other agents should not currently be described as having an official install closure.
 
@@ -24,6 +25,9 @@ Other agents should not currently be described as having an official install clo
 - for OpenClaw, write it as `preview` / `runtime-core-preview` / `runtime-core`
 - for OpenClaw, make the default root explicit: `OPENCLAW_HOME` or `~/.openclaw`
 - for OpenClaw, make the three paths explicit: attach / copy / bundle
+- for OpenCode, write it as a preview-adapter path
+- for OpenCode, make the default root explicit: `OPENCODE_HOME` or `~/.config/opencode`
+- for OpenCode, make it explicit that direct install/check does not take ownership of the real `opencode.json`
 
 ## Codex
 
@@ -59,13 +63,22 @@ Other agents should not currently be described as having an official install clo
 - attach / copy / bundle cover runtime-core payload installation, validation, and distribution
 - OpenClaw-local configuration remains managed on the OpenClaw side
 
+## OpenCode
+
+- supported install-and-use path at the current preview-adapter level
+- default target root is `OPENCODE_HOME` or `~/.config/opencode`
+- direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
+- the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain managed on the OpenCode side
+
 ## Recommended Community Wording
 
-- the current version supports `codex`, `claude-code`, `cursor`, `windsurf`, and `openclaw`
+- the current version supports `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, and `opencode`
 - `codex` follows the governed path
 - `claude-code` and `cursor` have a supported install-and-use path
 - `windsurf` has a supported install-and-use path with runtime-adapter integration
 - `openclaw` follows the `preview` / `runtime-core-preview` / `runtime-core` wording
 - `openclaw` uses `OPENCLAW_HOME` or `~/.openclaw` as the default root, with attach / copy / bundle paths
+- `opencode` follows preview-adapter wording, with default root from `OPENCODE_HOME` or `~/.config/opencode`
+- `opencode` uses direct install/check and does not take ownership of the real `opencode.json`
 - hooks remain frozen across the current public surface; that is not a user install failure
 - provider `url` / `apikey` / `model` values stay local and should not be pasted into chat

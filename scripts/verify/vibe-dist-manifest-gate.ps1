@@ -199,7 +199,7 @@ $requiredPublicManifests = @(
     [pscustomobject]@{ package_id = 'vibeskills-cursor'; path = 'dist/manifests/vibeskills-cursor.json'; expected_status = 'preview' },
     [pscustomobject]@{ package_id = 'vibeskills-windsurf'; path = 'dist/manifests/vibeskills-windsurf.json'; expected_status = 'preview' },
     [pscustomobject]@{ package_id = 'vibeskills-openclaw'; path = 'dist/manifests/vibeskills-openclaw.json'; expected_status = 'preview' },
-    [pscustomobject]@{ package_id = 'vibeskills-opencode'; path = 'dist/manifests/vibeskills-opencode.json'; expected_status = 'not-yet-proven' },
+    [pscustomobject]@{ package_id = 'vibeskills-opencode'; path = 'dist/manifests/vibeskills-opencode.json'; expected_status = 'preview' },
     [pscustomobject]@{ package_id = 'vibeskills-generic'; path = 'dist/manifests/vibeskills-generic.json'; expected_status = 'advisory-only' }
 )
 $results.dist.public_manifests = @($requiredPublicManifests | ForEach-Object { $_.path })
@@ -366,7 +366,7 @@ Add-Assertion -Collection $assertions -Condition (Test-ContentPattern -Path $doc
 
 $hostOpenCodeRow = Find-MarkdownTableRow -Path $docsHostCapabilityMatrix -RowStartsWith '| OpenCode |'
 Add-Assertion -Collection $assertions -Condition ($null -ne $hostOpenCodeRow) -Message '[truth] host capability row for OpenCode exists'
-Add-Assertion -Collection $assertions -Condition (Test-ContentPattern -Path $docsHostCapabilityMatrix -Pattern '| OpenCode | `not-yet-proven` |') -Message '[truth] OpenCode host status remains not-yet-proven in host capability matrix'
+Add-Assertion -Collection $assertions -Condition (Test-ContentPattern -Path $docsHostCapabilityMatrix -Pattern '| OpenCode | `preview` |') -Message '[truth] OpenCode host status remains preview in host capability matrix'
 
 $platformWindowsRow = Find-MarkdownTableRow -Path $docsPlatformSupportMatrix -RowStartsWith '| Windows |'
 Add-Assertion -Collection $assertions -Condition ($null -ne $platformWindowsRow) -Message '[truth] platform row for Windows exists'

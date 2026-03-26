@@ -4,13 +4,14 @@ This document answers the only cold-start questions that matter right now: which
 
 ## One-Line Conclusion
 
-The current public surface supports five hosts:
+The current public surface supports six hosts:
 
 - `codex`
 - `claude-code`
 - `cursor`
 - `windsurf`
 - `openclaw`
+- `opencode`
 
 Within that scope:
 
@@ -19,6 +20,7 @@ Within that scope:
 - `cursor`: preview guidance
 - `windsurf`: preview runtime-core
 - `openclaw`: `preview` / `runtime-core-preview` / `runtime-core`
+- `opencode`: preview adapter
 
 Other hosts should not currently be described as supported installation targets.
 
@@ -117,6 +119,34 @@ What you do not get:
 
 - full closure
 - automatic takeover of OpenClaw-local configuration
+
+## OpenCode
+
+```bash
+bash ./install.sh --host opencode
+bash ./check.sh --host opencode
+```
+
+What you get:
+
+- runtime-core payload
+- VibeSkills skill payload
+- OpenCode command / agent wrappers
+- `opencode.json.example`
+
+What you do not get:
+
+- one-shot bootstrap
+- overwrite of the real `~/.config/opencode/opencode.json`
+- automatic plugin installation
+- automatic provider credential wiring
+- automatic MCP trust decisions
+
+Next actions:
+
+- the default target root is `OPENCODE_HOME`, otherwise `~/.config/opencode`
+- for project-local isolation, use `--target-root ./.opencode`
+- read [`install/opencode-path.en.md`](./install/opencode-path.en.md)
 
 ## Boundaries That Must Hold During Cold Start
 

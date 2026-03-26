@@ -4,7 +4,7 @@ This is the default public install entrypoint.
 
 ## Choose Two Things
 
-1. Confirm the host: `codex`, `claude-code`, `cursor`, `windsurf`, or `openclaw`
+1. Confirm the host: `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, or `opencode`
 2. Confirm the public version: `Full Version + Customizable Governance` or `Framework Only + Customizable Governance`
 
 Public version maps to:
@@ -19,6 +19,11 @@ Public version maps to:
 - [`prompts/full-version-update.en.md`](./prompts/full-version-update.en.md)
 - [`prompts/framework-only-update.en.md`](./prompts/framework-only-update.en.md)
 
+## Host-Specific Notes
+
+- `openclaw` still follows the preview runtime-core path; see [`openclaw-path.en.md`](./openclaw-path.en.md)
+- `opencode` currently uses its own preview-adapter path and does not reuse these one-shot prompt flows; go straight to [`opencode-path.en.md`](./opencode-path.en.md)
+
 ## Read Next Only If Needed
 
 - Framework-only command path:
@@ -27,6 +32,8 @@ Public version maps to:
   - [`recommended-full-path.en.md`](./recommended-full-path.en.md)
   - [`manual-copy-install.en.md`](./manual-copy-install.en.md)
   - [`host-plugin-policy.en.md`](./host-plugin-policy.en.md)
+  - [`openclaw-path.en.md`](./openclaw-path.en.md)
+  - [`opencode-path.en.md`](./opencode-path.en.md)
 - If you want to bring in your own workflows or skills afterward:
   - [`custom-workflow-onboarding.en.md`](./custom-workflow-onboarding.en.md)
   - [`custom-skill-governance-rules.en.md`](./custom-skill-governance-rules.en.md)
