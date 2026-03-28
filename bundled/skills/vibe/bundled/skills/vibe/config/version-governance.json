@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
   "release": {
-    "version": "2.3.50",
-    "updated": "2026-03-26",
+    "version": "2.3.51",
+    "updated": "2026-03-28",
     "channel": "stable",
-    "notes": "Adds router AI connectivity proofing, tightens llm acceleration overlay handling, expands host-adapter/install truth across OpenClaw/OpenCode/Cursor/Windsurf, and switches Windows install verification guidance to built-in PowerShell."
+    "notes": "Adds main-chain delivery acceptance under vibe, hardens stage-bound specialist dispatch and Windows specialist runtime handoff, and promotes stricter completion-language truth for governed runs."
   },
   "source_of_truth": {
     "canonical_root": ".",

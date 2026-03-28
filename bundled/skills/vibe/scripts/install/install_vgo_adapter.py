@@ -98,6 +98,14 @@ def copy_file(src: Path, dst: Path):
     shutil.copy2(src, dst)
 
 
+def restore_skill_entrypoint_if_needed(skill_root: Path):
+    skill_md = skill_root / "SKILL.md"
+    mirror_md = skill_root / "SKILL.runtime-mirror.md"
+    if skill_md.exists() or not mirror_md.exists():
+        return
+    mirror_md.rename(skill_md)
+
+
 def parent_dir(path: Path | None) -> Path | None:
     if path is None:
         return None
@@ -245,7 +253,9 @@ def ensure_skill_present(target_root: Path, name: str, required: bool, allow_fal
         for src in fallback_sources:
             src_path = Path(src)
             if src_path.exists():
-                copy_tree(src_path, target_root / "skills" / name)
+                destination = target_root / "skills" / name
+                copy_tree(src_path, destination)
+                restore_skill_entrypoint_if_needed(destination)
                 external_used.add(name)
                 break
     if required and not skill_md.exists():
@@ -258,6 +268,10 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
         (target_root / rel).mkdir(parents=True, exist_ok=True)
     for entry in packaging["copy_directories"]:
         copy_tree(repo_root / entry["source"], target_root / entry["target"])
+        if entry["target"] == "skills":
+            for skill_dir in (target_root / "skills").iterdir():
+                if skill_dir.is_dir():
+                    restore_skill_entrypoint_if_needed(skill_dir)
     for entry in packaging["copy_files"]:
         src = repo_root / entry["source"]
         if not src.exists():

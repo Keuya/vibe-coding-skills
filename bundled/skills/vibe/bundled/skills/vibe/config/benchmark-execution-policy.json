@@ -30,6 +30,8 @@
             {
               "unit_id": "runtime-neutral-freshness-gate-tests",
               "kind": "python_command",
+              "parallelizable": true,
+              "write_scope": "tests/runtime_neutral",
               "command": "${VGO_PYTHON}",
               "arguments": [
                 "-m",
@@ -49,6 +51,8 @@
             {
               "unit_id": "version-consistency-gate",
               "kind": "powershell_file",
+              "parallelizable": true,
+              "write_scope": "scripts/verify",
               "script_path": "scripts/verify/vibe-version-consistency-gate.ps1",
               "arguments": [],
               "cwd": "${REPO_ROOT}",

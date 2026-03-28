@@ -80,6 +80,17 @@ resolve_default_target_root() {
   fi
 }
 
+safe_parent_dir() {
+  local path="${1:-}"
+  [[ -n "${path}" ]] || return 0
+  local parent=""
+  parent="$(cd "${path}/.." 2>/dev/null && pwd || true)"
+  if [[ -z "${parent}" || "${parent}" == "${path}" || "${parent}" == "/" ]]; then
+    return 0
+  fi
+  printf '%s' "${parent}"
+}
+
 canonical_repo_available() {
   local current="${1:-}"
   [[ -n "${current}" ]] || return 1
@@ -204,6 +215,54 @@ if [[ -z "${TARGET_ROOT}" ]]; then
 fi
 assert_target_root_matches_host_intent "${TARGET_ROOT}" "${HOST_ID}"
 
+resolve_codex_duplicate_skill_root() {
+  if [[ "${HOST_ID}" != "codex" ]]; then
+    return 1
+  fi
+
+  local leaf=""
+  leaf="$(basename "${TARGET_ROOT}")"
+  leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
+  if [[ "${leaf}" != ".codex" ]]; then
+    return 1
+  fi
+
+  local parent=""
+  parent="$(safe_parent_dir "${TARGET_ROOT}")"
+  if [[ -z "${parent}" ]]; then
+    return 1
+  fi
+
+  printf '%s' "${parent}/.agents/skills/vibe"
+}
+
+test_vibe_skill_dir() {
+  local root="${1:-}"
+  local skill_md="${root}/SKILL.md"
+  [[ -f "${skill_md}" ]] || return 1
+  if grep -Eq '^[[:space:]]*name:[[:space:]]*vibe[[:space:]]*$' "${skill_md}"; then
+    return 0
+  fi
+  return 1
+}
+
+check_codex_duplicate_skill_surface() {
+  local duplicate_root=""
+  duplicate_root="$(resolve_codex_duplicate_skill_root || true)"
+  if [[ -z "${duplicate_root}" || ! -d "${duplicate_root}" ]]; then
+    return 0
+  fi
+
+  if test_vibe_skill_dir "${duplicate_root}"; then
+    echo "[FAIL] duplicate Codex-discovered vibe skill surface -> ${duplicate_root}"
+    echo "[FAIL] Re-run install.sh for the default Codex root to quarantine the legacy .agents copy, or move it out of .agents/skills manually."
+    FAIL=$((FAIL+1))
+    return 0
+  fi
+
+  warn_note "unexpected directory exists at Codex duplicate-surface path: ${duplicate_root}"
+}
+
 PASS=0
 FAIL=0
 WARN=0
@@ -219,6 +278,17 @@ check_path() {
   else
     echo "[WARN] $label -> $path"
     WARN=$((WARN+1))
+  fi
+}
+
+check_absent_path() {
+  local label="$1"; local path="$2"
+  if [[ -e "$path" ]]; then
+    echo "[FAIL] $label -> $path"
+    FAIL=$((FAIL+1))
+  else
+    echo "[OK] $label"
+    PASS=$((PASS+1))
   fi
 }
 
@@ -686,6 +756,7 @@ fi
 if [[ "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
   check_path "plugins manifest" "${TARGET_ROOT}/config/plugins-manifest.codex.json"
 fi
+check_codex_duplicate_skill_surface
 check_path "upstream lock" "${TARGET_ROOT}/config/upstream-lock.json"
 check_path "vibe version governance config" "${TARGET_ROOT}/${runtime_target_rel}/config/version-governance.json"
 check_path "vibe release ledger" "${runtime_skill_root}/references/release-ledger.jsonl"
@@ -721,6 +792,8 @@ if [[ -d "${runtime_nested_skill_root}" ]]; then
   check_path "vibe bundled exploration intent profiles config" "${runtime_nested_skill_root}/config/exploration-intent-profiles.json"
   check_path "vibe bundled exploration domain map config" "${runtime_nested_skill_root}/config/exploration-domain-map.json"
   check_path "vibe bundled llm acceleration policy config" "${runtime_nested_skill_root}/config/llm-acceleration-policy.json"
+  check_absent_path "vibe nested bundled skill entrypoint hidden" "${runtime_nested_skill_root}/SKILL.md"
+  check_path "vibe nested bundled skill runtime mirror" "${runtime_nested_skill_root}/SKILL.runtime-mirror.md"
 else
   echo "[OK] vibe nested bundled config checks skipped (target absent; policy=optional)"
   PASS=$((PASS+1))

@@ -28,6 +28,18 @@ function Copy-DirContent {
     Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
 }
 
+function Restore-SkillEntryPointIfNeeded {
+    param([string]$SkillRoot)
+
+    $skillMd = Join-Path $SkillRoot 'SKILL.md'
+    $mirrorPath = Join-Path $SkillRoot 'SKILL.runtime-mirror.md'
+    if ((Test-Path -LiteralPath $skillMd -PathType Leaf) -or -not (Test-Path -LiteralPath $mirrorPath -PathType Leaf)) {
+        return
+    }
+
+    Move-Item -LiteralPath $mirrorPath -Destination $skillMd -Force
+}
+
 function Ensure-SkillPresent {
     param(
         [string]$Name,
@@ -43,7 +55,9 @@ function Ensure-SkillPresent {
         foreach ($src in $FallbackSources) {
             if ([string]::IsNullOrWhiteSpace($src)) { continue }
             if (Test-Path -LiteralPath $src) {
-                Copy-DirContent -Source $src -Destination (Join-Path $TargetRoot ("skills\" + $Name))
+                $destination = Join-Path $TargetRoot ("skills\" + $Name)
+                Copy-DirContent -Source $src -Destination $destination
+                Restore-SkillEntryPointIfNeeded -SkillRoot $destination
                 $ExternalFallbackUsed.Add($Name) | Out-Null
                 break
             }
@@ -105,6 +119,11 @@ function Install-RuntimeCorePayload {
         $src = Join-Path $RepoRoot ([string]$entry.source)
         $dst = Join-Path $TargetRoot ([string]$entry.target)
         Copy-DirContent -Source $src -Destination $dst
+        if ([string]$entry.target -eq 'skills' -and (Test-Path -LiteralPath $dst -PathType Container)) {
+            foreach ($skillDir in @(Get-ChildItem -LiteralPath $dst -Directory -ErrorAction SilentlyContinue)) {
+                Restore-SkillEntryPointIfNeeded -SkillRoot $skillDir.FullName
+            }
+        }
     }
 
     foreach ($entry in @($packaging.copy_files)) {

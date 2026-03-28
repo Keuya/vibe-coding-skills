@@ -1,5 +1,14 @@
 # VCO Changelog
 
+## v2.3.51 (2026-03-28)
+
+- Integrated downstream delivery acceptance into the normal `vibe` main chain so governed runs now freeze product acceptance semantics, plan delivery checks, and emit a per-run delivery-acceptance report during cleanup.
+- Completed the recent specialist-governance sequence on `main`: stage-bound specialist dispatch, child-lane same-round auto-absorb under root approval, and stronger native-specialist failure proofing.
+- Fixed Windows specialist runtime handoff so governed specialist execution stays usable on current Windows environments instead of breaking at the boundary between orchestration and native specialist lanes.
+- Added benchmark/scenario-backed workflow acceptance and release-truth helpers to support stricter completion-language honesty beyond pure runtime/process success.
+- Detailed release notes: `docs/releases/v2.3.51.md`.
+
+
 ## v2.3.50 (2026-03-26)
 
 - Added router AI connectivity proofing for the governance advice path, including a PowerShell gate, a runtime-neutral Python probe, and install-entry quick-check guidance that reports structured readiness states.

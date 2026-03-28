@@ -98,7 +98,7 @@ Add-Assertion -Results ([ref]$results) -Condition ($teamText.Contains('$vibe')) 
 
 $runId = "contract-gate-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
 $artifactRoot = Join-Path $repoRoot (".tmp\governed-runtime-contract-{0}" -f $runId)
-$summary = & (Join-Path $repoRoot 'scripts\runtime\invoke-vibe-runtime.ps1') -Task 'governed runtime contract smoke proof' -Mode benchmark_autonomous -RunId $runId -ArtifactRoot $artifactRoot
+$summary = & (Join-Path $repoRoot 'scripts\runtime\invoke-vibe-runtime.ps1') -Task 'I have a failing test and a stack trace. Help me debug systematically before proposing fixes.' -Mode benchmark_autonomous -RunId $runId -ArtifactRoot $artifactRoot
 
 Add-Assertion -Results ([ref]$results) -Condition ($summary.mode -eq 'interactive_governed') -Message 'runtime smoke summary normalizes legacy benchmark mode to interactive_governed'
 
@@ -120,6 +120,7 @@ foreach ($artifactPath in $artifactPaths) {
 $executeReceipt = Get-Content -LiteralPath $summary.summary.artifacts.execute_receipt -Raw -Encoding UTF8 | ConvertFrom-Json
 $executionManifest = Get-Content -LiteralPath $summary.summary.artifacts.execution_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
 $proofManifest = Get-Content -LiteralPath $summary.summary.artifacts.benchmark_proof_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+$runtimeInputPacket = Get-Content -LiteralPath $summary.summary.artifacts.runtime_input_packet -Raw -Encoding UTF8 | ConvertFrom-Json
 $generatedRequirement = Get-Content -LiteralPath $summary.summary.artifacts.requirement_doc -Raw -Encoding UTF8
 $generatedPlan = Get-Content -LiteralPath $summary.summary.artifacts.execution_plan -Raw -Encoding UTF8
 
@@ -131,6 +132,15 @@ Add-Assertion -Results ([ref]$results) -Condition ($generatedRequirement.Contain
 Add-Assertion -Results ([ref]$results) -Condition ($generatedRequirement.Contains('## Completion State')) -Message 'runtime smoke requirement doc includes anti-drift completion section'
 Add-Assertion -Results ([ref]$results) -Condition ($generatedPlan.Contains('## Anti-Proxy-Goal-Drift Controls')) -Message 'runtime smoke execution plan includes anti-drift controls section'
 Add-Assertion -Results ([ref]$results) -Condition ($generatedPlan.Contains('### Primary Objective')) -Message 'runtime smoke execution plan includes anti-drift primary objective control'
+Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.route_snapshot.selected_skill -eq 'vibe') -Message 'runtime smoke keeps vibe as the frozen route skill for governed entry'
+Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.authority_flags.explicit_runtime_skill -eq 'vibe') -Message 'runtime smoke keeps vibe as explicit runtime skill'
+Add-Assertion -Results ([ref]$results) -Condition (-not [bool]$runtimeInputPacket.divergence_shadow.skill_mismatch) -Message 'runtime smoke keeps router/runtime skill alignment for explicit governed vibe entry'
+Add-Assertion -Results ([ref]$results) -Condition (@($runtimeInputPacket.specialist_recommendations).Count -ge 1) -Message 'runtime smoke freezes bounded specialist recommendations'
+Add-Assertion -Results ([ref]$results) -Condition ((@($runtimeInputPacket.specialist_recommendations | ForEach-Object { [string]$_.skill_id }) -contains 'systematic-debugging')) -Message 'runtime smoke preserves systematic-debugging as a bounded specialist recommendation'
+Add-Assertion -Results ([ref]$results) -Condition ($generatedRequirement.Contains('## Specialist Recommendations')) -Message 'runtime smoke requirement doc includes specialist recommendations section'
+Add-Assertion -Results ([ref]$results) -Condition ($generatedPlan.Contains('## Specialist Skill Dispatch Plan')) -Message 'runtime smoke execution plan includes specialist dispatch section'
+Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.specialist_accounting.recommendation_count -ge 1) -Message 'runtime smoke execution manifest carries specialist accounting'
+Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.plan_shadow.specialist_dispatch_unit_count -ge 1) -Message 'runtime smoke plan shadow counts specialist dispatch units'
 
 $failureCount = @($results | Where-Object { -not $_.passed }).Count
 $gatePassed = ($failureCount -eq 0)

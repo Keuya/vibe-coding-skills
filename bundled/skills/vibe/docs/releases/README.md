@@ -10,7 +10,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ### Current Release Surface
 
-- [`v2.3.50.md`](v2.3.50.md): router AI connectivity probe / host-adapter expansion / single-entry install surface / Windows PowerShell default verification guidance
+- [`v2.3.51.md`](v2.3.51.md): main-chain delivery acceptance / specialist dispatch governance closure / Windows specialist runtime handoff fix
 
 ### Release Runtime / Proof Handoff
 
@@ -22,6 +22,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 
 ## Recent Governed Releases
 
+- [`v2.3.51.md`](v2.3.51.md) - 2026-03-28 - main-chain delivery acceptance / specialist dispatch governance closure / Windows specialist runtime handoff fix
 - [`v2.3.50.md`](v2.3.50.md) - 2026-03-26 - router AI connectivity probe / host-adapter expansion / single-entry install surface / Windows PowerShell default verification guidance
 - [`v2.3.49.md`](v2.3.49.md) - 2026-03-23 - shallow-worktree install/check hardening / installed-runtime adapter fallback / parent-path guard convergence
 - [`v2.3.48.md`](v2.3.48.md) - 2026-03-23 - benchmark mode compatibility downgrade / governed proof alignment / adaptive-routing gate robustness

@@ -143,7 +143,7 @@ Phase 2: Architecture (vibe-think)
   Gate: Architecture diagram approved
 
 Phase 3: Implementation (vibe-do)
-  Tool: superpowers:subagent-driven-development
+  Tool: native serial execution lane (bounded delegated units only when planned)
   Gate: All tests pass, code reviewed
 
 Phase 4: Security Review (vibe-review)
@@ -246,8 +246,8 @@ When task is purely research (no implementation):
 
 ## Transition to Implementation
 After design is approved:
-1. L grade: Switch to vibe-do with Superpowers subagent-driven-dev
-2. XL grade: Switch to vibe-team protocol (Codex native team + optional ruflo collaboration)
+1. L grade: Switch to vibe-do serial native execution (sequence-first; bounded delegation only when explicitly planned)
+2. XL grade: Switch to vibe-team protocol (wave-sequential execution with step-level bounded parallel units + optional ruflo collaboration)
 3. Always carry the plan document forward as context
 4. Execution must hand off into runtime stage 5 `plan_execute`, not bypass directly into ad-hoc coding
 5. Process-discipline helpers may influence how work is executed, but VCO remains the only governed runtime skeleton and artifact authority

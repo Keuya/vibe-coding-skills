@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-28",
+  "enabled": true,
+  "default_adapter_id": "codex",
+  "enable_env": "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION",
+  "disable_env": "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION",
+  "default_enabled": false,
+  "default_timeout_seconds": 600,
+  "degrade_contract": {
+    "status": "degraded_non_authoritative",
+    "verification_passed": false,
+    "execution_driver": "degraded_specialist_contract_receipt",
+    "hazard_alert": "Native specialist execution is unavailable or disabled; dispatch downgraded explicitly."
+  },
+  "result_schema": {
+    "status_enum": [
+      "completed",
+      "completed_with_notes",
+      "blocked"
+    ],
+    "required_fields": [
+      "status",
+      "summary",
+      "verification_notes",
+      "changed_files",
+      "bounded_output_notes"
+    ]
+  },
+  "adapters": [
+    {
+      "id": "codex",
+      "enabled": true,
+      "executable_env": "VGO_CODEX_EXECUTABLE",
+      "command": "codex",
+      "arguments_prefix": [
+        "exec",
+        "--json",
+        "--ephemeral",
+        "--full-auto"
+      ],
+      "execution_driver": "codex_exec_native_specialist"
+    }
+  ]
+}

@@ -136,6 +136,66 @@ function Format-OptionalValue {
   return $Value
 }
 
+function Resolve-CodexDuplicateSkillRoot {
+  param(
+    [string]$TargetRoot,
+    [string]$HostId
+  )
+
+  if ([string]$HostId -ne 'codex') {
+    return $null
+  }
+
+  $leaf = (Split-Path -Path $TargetRoot -Leaf).ToLowerInvariant()
+  if ($leaf -ne '.codex') {
+    return $null
+  }
+
+  $parent = Get-VgoParentPath -Path $TargetRoot
+  if ([string]::IsNullOrWhiteSpace($parent)) {
+    return $null
+  }
+
+  return (Join-Path $parent '.agents\skills\vibe')
+}
+
+function Test-VibeSkillDirectory {
+  param([string]$Path)
+
+  if ([string]::IsNullOrWhiteSpace($Path)) {
+    return $false
+  }
+
+  $skillMd = Join-Path $Path 'SKILL.md'
+  if (-not (Test-Path -LiteralPath $skillMd)) {
+    return $false
+  }
+
+  $lines = Get-Content -LiteralPath $skillMd -TotalCount 20 -Encoding UTF8
+  return [bool](@($lines | Where-Object { $_ -match '^\s*name:\s*vibe\s*$' }).Count -gt 0)
+}
+
+function Check-CodexDuplicateSkillSurface {
+  param(
+    [string]$TargetRoot,
+    [string]$HostId
+  )
+
+  $duplicateRoot = Resolve-CodexDuplicateSkillRoot -TargetRoot $TargetRoot -HostId $HostId
+  if ([string]::IsNullOrWhiteSpace($duplicateRoot) -or -not (Test-Path -LiteralPath $duplicateRoot -PathType Container)) {
+    return
+  }
+
+  if (Test-VibeSkillDirectory -Path $duplicateRoot) {
+    Write-Host ("[FAIL] duplicate Codex-discovered vibe skill surface -> {0}" -f $duplicateRoot) -ForegroundColor Red
+    Write-Host '[FAIL] Re-run install.ps1 for the default Codex root to quarantine the legacy .agents copy, or move it out of .agents/skills manually.' -ForegroundColor Red
+    $script:fail++
+    return
+  }
+
+  Warn-Note -Message ("unexpected directory exists at Codex duplicate-surface path: {0}" -f $duplicateRoot)
+}
+
 function Test-ReceiptTargetFreshness {
   param(
     [string]$TargetRoot,
@@ -413,6 +473,18 @@ function Check-Path {
   }
 }
 
+function Check-PathAbsent {
+  param([string]$Label, [string]$Path)
+
+  if (Test-Path -LiteralPath $Path) {
+    Write-Host "[FAIL] $Label -> $Path" -ForegroundColor Red
+    $script:fail++
+  } else {
+    Write-Host "[OK] $Label"
+    $script:pass++
+  }
+}
+
 function Invoke-AdapterSpecificChecks {
   param(
     [psobject]$Adapter,
@@ -487,6 +559,8 @@ function Invoke-AdapterSpecificChecks {
     Check-Path -Label "vibe bundled exploration intent profiles config" -Path (Join-Path $RuntimeNestedSkillRoot 'config\exploration-intent-profiles.json') -Required:$NestedBundledRequired
     Check-Path -Label "vibe bundled exploration domain map config" -Path (Join-Path $RuntimeNestedSkillRoot 'config\exploration-domain-map.json') -Required:$NestedBundledRequired
     Check-Path -Label "vibe bundled llm acceleration policy config" -Path (Join-Path $RuntimeNestedSkillRoot 'config\llm-acceleration-policy.json') -Required:$NestedBundledRequired
+    Check-PathAbsent -Label "vibe nested bundled skill entrypoint hidden" -Path (Join-Path $RuntimeNestedSkillRoot 'SKILL.md')
+    Check-Path -Label "vibe nested bundled skill runtime mirror" -Path (Join-Path $RuntimeNestedSkillRoot 'SKILL.runtime-mirror.md') -Required:$NestedBundledRequired
   } else {
     Write-Host ("[OK] vibe nested bundled config checks skipped (target absent; policy={0})" -f $NestedBundledPresencePolicy)
     $script:pass++
@@ -552,6 +626,7 @@ if ($null -ne $startupGovernance -and $startupGovernance.PSObject.Properties.Nam
 }
 
 Invoke-AdapterSpecificChecks -Adapter $Adapter -TargetRoot $TargetRoot -RuntimeSkillRoot $runtimeSkillRoot -RuntimeNestedSkillRoot $runtimeNestedSkillRoot -NestedBundledRequired:$nestedBundledRequired -NestedBundledPresencePolicy $nestedBundledPresencePolicy
+Check-CodexDuplicateSkillSurface -TargetRoot $TargetRoot -HostId $HostId
 
 Invoke-RuntimeFreshnessCheck -RepoRoot $RepoRoot -TargetRoot $TargetRoot -SkipGate:$SkipRuntimeFreshnessGate
 Invoke-RuntimeFrontmatterCheck -RepoRoot $RepoRoot -TargetRoot $TargetRoot
