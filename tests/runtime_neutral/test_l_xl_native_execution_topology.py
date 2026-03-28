@@ -393,8 +393,12 @@ class NativeExecutionTopologyTests(unittest.TestCase):
     def test_child_escalation_remains_advisory_and_blocks_unapproved_specialist_execution(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             artifact_root = Path(tempdir)
+            composite_task = (
+                "Analyze biological sequences with Python, draft a scientific report, "
+                "and prepare the execution planning notes."
+            )
             root_payload = run_runtime(
-                task="Root run prepares specialist dispatch and child escalation baseline.",
+                task=composite_task,
                 artifact_root=artifact_root,
                 governance_scope="root",
             )
@@ -413,7 +417,7 @@ class NativeExecutionTopologyTests(unittest.TestCase):
                 self.skipTest("Root run did not expose approved specialist dispatch skill ids")
 
             child_payload = run_runtime(
-                task="Child lane requests extra specialist help beyond approved dispatch.",
+                task=composite_task + " Child lane requests extra specialist help beyond approved dispatch.",
                 artifact_root=artifact_root,
                 governance_scope="child",
                 root_run_id=str(root_summary["run_id"]),
@@ -429,22 +433,32 @@ class NativeExecutionTopologyTests(unittest.TestCase):
 
             specialist_dispatch = child_runtime_input["specialist_dispatch"]
             self.assertEqual("advisory_until_root_approval", str(specialist_dispatch["status"]))
-            self.assertTrue(bool(specialist_dispatch["escalation_required"]))
-            self.assertEqual("root_approval_required", str(specialist_dispatch["escalation_status"]))
+            frozen_local_ids = {
+                str(entry.get("skill_id", "")).strip()
+                for entry in list(specialist_dispatch.get("local_specialist_suggestions") or [])
+                if str(entry.get("skill_id", "")).strip()
+            }
+            if frozen_local_ids:
+                self.assertTrue(bool(specialist_dispatch["escalation_required"]))
+                self.assertEqual("root_approval_required", str(specialist_dispatch["escalation_status"]))
 
             specialist_accounting = child_execution_manifest["specialist_accounting"]
             approved_child_dispatch = list(specialist_accounting["approved_dispatch"])
             approved_child_ids = {
                 str(entry.get("skill_id", "")).strip() for entry in approved_child_dispatch if str(entry.get("skill_id", "")).strip()
             }
-            self.assertEqual(1, int(specialist_accounting["approved_dispatch_count"]))
-            self.assertEqual(1, len(approved_child_ids))
-            self.assertEqual(set(approved_skill_ids[:1]), approved_child_ids)
+            self.assertEqual(1, int(specialist_accounting["frozen_approved_dispatch_count"]))
+            self.assertTrue(set(approved_skill_ids[:1]).issubset(approved_child_ids))
+            self.assertEqual(int(specialist_accounting["approved_dispatch_count"]), len(approved_child_ids))
             self.assertLessEqual(
                 int(specialist_accounting["executed_specialist_unit_count"]),
                 int(specialist_accounting["approved_dispatch_count"]),
             )
             self.assertGreaterEqual(int(specialist_accounting["degraded_specialist_unit_count"]), 0)
+            auto_absorb_gate = specialist_accounting["auto_absorb_gate"]
+            self.assertTrue(bool(auto_absorb_gate["enabled"]))
+            self.assertTrue(Path(auto_absorb_gate["receipt_path"]).exists())
+            self.assertTrue(set(auto_absorb_gate["auto_approved_skill_ids"]).issubset(frozen_local_ids))
 
             specialist_outcomes = list(specialist_accounting["specialist_dispatch_outcomes"])
             for unit in specialist_outcomes:
@@ -458,13 +472,130 @@ class NativeExecutionTopologyTests(unittest.TestCase):
                     )
 
             escalation_request_path = specialist_accounting.get("escalation_request_path")
-            if escalation_request_path:
+            if specialist_accounting["local_suggestion_count"]:
+                self.assertTrue(escalation_request_path)
                 self.assertTrue(Path(escalation_request_path).exists())
+            else:
+                self.assertFalse(bool(escalation_request_path))
             self.assertFalse(bool(child_execution_manifest["authority"]["completion_claim_allowed"]))
 
             child_session_root = Path(child_payload["session_root"])
             specialist_result_files = list(child_session_root.glob("execution-results/*specialist*.json"))
             self.assertLessEqual(len(specialist_result_files), len(specialist_outcomes))
+
+    def test_child_auto_absorb_can_fallback_to_root_escalation_when_gate_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            artifact_root = Path(tempdir)
+            composite_task = (
+                "Analyze biological sequences with Python, draft a scientific report, "
+                "and prepare the execution planning notes."
+            )
+            root_payload = run_runtime(
+                task=composite_task,
+                artifact_root=artifact_root,
+                governance_scope="root",
+            )
+            root_summary = root_payload["summary"]
+            root_artifacts = root_summary["artifacts"]
+            root_runtime_input = load_json(root_artifacts["runtime_input_packet"])
+            root_approved_dispatch = list(
+                (root_runtime_input.get("specialist_dispatch") or {}).get("approved_dispatch") or []
+            )
+            approved_skill_ids = [
+                str(item.get("skill_id", "")).strip()
+                for item in root_approved_dispatch
+                if str(item.get("skill_id", "")).strip()
+            ]
+            if len(approved_skill_ids) < 1:
+                self.skipTest("Root run did not expose approved specialist dispatch skill ids")
+
+            child_payload = run_runtime(
+                task=composite_task + " Child lane requests extra specialist help beyond approved dispatch.",
+                artifact_root=artifact_root,
+                governance_scope="child",
+                root_run_id=str(root_summary["run_id"]),
+                parent_run_id=str(root_summary["run_id"]),
+                parent_unit_id="pytest-child-topology-fallback-unit",
+                inherited_requirement_doc_path=Path(root_artifacts["requirement_doc"]),
+                inherited_execution_plan_path=Path(root_artifacts["execution_plan"]),
+                approved_specialist_skill_ids=approved_skill_ids[:1],
+                extra_env={"VGO_DISABLE_CHILD_SPECIALIST_AUTO_ABSORB": "1"},
+            )
+            child_summary = child_payload["summary"]
+            child_execution_manifest = load_json(child_summary["artifacts"]["execution_manifest"])
+
+            specialist_accounting = child_execution_manifest["specialist_accounting"]
+            approved_child_ids = {
+                str(entry.get("skill_id", "")).strip()
+                for entry in list(specialist_accounting["approved_dispatch"])
+                if str(entry.get("skill_id", "")).strip()
+            }
+            self.assertEqual(set(approved_skill_ids[:1]), approved_child_ids)
+            self.assertGreaterEqual(int(specialist_accounting["local_suggestion_count"]), 1)
+            self.assertTrue(bool(specialist_accounting["escalation_required"]))
+            self.assertTrue(Path(specialist_accounting["escalation_request_path"]).exists())
+            self.assertEqual(
+                "disabled_via_env:VGO_DISABLE_CHILD_SPECIALIST_AUTO_ABSORB",
+                str(specialist_accounting["auto_absorb_gate"]["status"]),
+            )
+            self.assertFalse(bool(child_execution_manifest["authority"]["completion_claim_allowed"]))
+
+    def test_child_auto_absorbed_specialist_dispatch_can_execute_live_native_lane_when_adapter_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            temp_path = Path(tempdir)
+            fake_codex = create_fake_codex_command(temp_path)
+            composite_task = (
+                "Analyze biological sequences with Python, draft a scientific report, "
+                "and prepare the execution planning notes."
+            )
+            root_payload = run_runtime(
+                task=composite_task,
+                artifact_root=temp_path,
+                governance_scope="root",
+            )
+            root_summary = root_payload["summary"]
+            root_artifacts = root_summary["artifacts"]
+            root_runtime_input = load_json(root_artifacts["runtime_input_packet"])
+            root_approved_dispatch = list(
+                (root_runtime_input.get("specialist_dispatch") or {}).get("approved_dispatch") or []
+            )
+            approved_skill_ids = [
+                str(item.get("skill_id", "")).strip()
+                for item in root_approved_dispatch
+                if str(item.get("skill_id", "")).strip()
+            ]
+            if len(approved_skill_ids) < 1:
+                self.skipTest("Root run did not expose approved specialist dispatch skill ids")
+
+            child_payload = run_runtime(
+                task=composite_task + " Child lane requests extra specialist help beyond approved dispatch.",
+                artifact_root=temp_path,
+                governance_scope="child",
+                root_run_id=str(root_summary["run_id"]),
+                parent_run_id=str(root_summary["run_id"]),
+                parent_unit_id="pytest-child-topology-live-native-unit",
+                inherited_requirement_doc_path=Path(root_artifacts["requirement_doc"]),
+                inherited_execution_plan_path=Path(root_artifacts["execution_plan"]),
+                approved_specialist_skill_ids=approved_skill_ids[:1],
+                extra_env={
+                    "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
+                    "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
+                    "VGO_CODEX_EXECUTABLE": str(fake_codex),
+                },
+            )
+            child_summary = child_payload["summary"]
+            child_execution_manifest = load_json(child_summary["artifacts"]["execution_manifest"])
+
+            specialist_accounting = child_execution_manifest["specialist_accounting"]
+            self.assertEqual("live_native_executed", specialist_accounting["effective_execution_status"])
+            self.assertGreaterEqual(int(specialist_accounting["auto_approved_dispatch_count"]), 1)
+            self.assertGreaterEqual(int(specialist_accounting["executed_specialist_unit_count"]), 1)
+            self.assertEqual(0, int(specialist_accounting["degraded_specialist_unit_count"]))
+            self.assertFalse(bool(child_execution_manifest["authority"]["completion_claim_allowed"]))
+            self.assertIn(
+                str(specialist_accounting["auto_absorb_gate"]["status"]),
+                {"auto_approved_same_round", "partially_auto_approved_same_round"},
+            )
 
     def test_child_divergent_specialist_request_without_overlap_escalates_without_crashing(self) -> None:
         cases = [
@@ -532,6 +663,15 @@ class NativeExecutionTopologyTests(unittest.TestCase):
                     escalation_request_path = specialist_accounting.get("escalation_request_path")
                     self.assertTrue(escalation_request_path)
                     self.assertTrue(Path(escalation_request_path).exists())
+                    escalation_request = load_json(escalation_request_path)
+                    self.assertEqual(
+                        sorted(str(skill_id) for skill_id in escalation_request["requested_specialist_skill_ids"]),
+                        sorted(
+                            str(entry.get("skill_id", "")).strip()
+                            for entry in list(specialist_accounting["local_specialist_suggestions"])
+                            if str(entry.get("skill_id", "")).strip()
+                        ),
+                    )
                     self.assertEqual("completed_local_scope", child_execution_manifest["status"])
                     self.assertFalse(bool(child_execution_manifest["authority"]["completion_claim_allowed"]))
 

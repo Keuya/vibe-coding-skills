@@ -207,7 +207,7 @@ Explicitly forbidden for child-governed lanes:
 Specialist dispatch semantics under hierarchy:
 
 - `approved_dispatch`: specialist execution approved by root and recorded in frozen plan
-- `local_suggestion`: child-surfaced specialist suggestion that remains advisory until escalation approval by root
+- `local_suggestion`: child-surfaced specialist suggestion that remains advisory in the frozen packet until root-governed execution either escalates it or auto-absorbs it through the same-round approval gate
 
 ## Artifact Contract
 

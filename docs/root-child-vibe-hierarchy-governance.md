@@ -90,12 +90,12 @@ Properties:
 
 ### Local Specialist Suggestion
 
-A child lane may detect that more specialist help is useful, but this remains a suggestion until escalated and approved by root.
+A child lane may detect that more specialist help is useful. The frozen packet keeps that request as a suggestion first, and the root-governed execute stage may same-round auto-approve safe suggestions without handing authority to the child lane.
 
 Properties:
 
-- advisory only
-- not globally active
+- advisory in the frozen packet
+- executable only after root-governed approval or same-round auto-absorb
 - cannot mutate root authority by itself
 
 ## Conflict Prevention Rules

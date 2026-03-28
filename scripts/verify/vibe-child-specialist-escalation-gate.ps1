@@ -39,14 +39,14 @@ $repoRoot = $context.repoRoot
 $results = @()
 
 $policyText = Get-Content -LiteralPath (Join-Path $repoRoot 'config\runtime-input-packet-policy.json') -Raw -Encoding UTF8
-foreach ($token in @('specialist_dispatch', 'local_specialist_suggestions', 'escalation_required', 'advisory_until_root_approval')) {
+foreach ($token in @('specialist_dispatch', 'local_specialist_suggestions', 'escalation_required', 'advisory_until_root_approval', 'auto_absorb_gate')) {
     Add-Assertion -Results ([ref]$results) -Condition ($policyText.Contains($token)) -Message ("runtime input policy contains specialist escalation token: {0}" -f $token)
 }
 
 $teamText = Get-Content -LiteralPath (Join-Path $repoRoot 'protocols\team.md') -Raw -Encoding UTF8
 $stableDocText = Get-Content -LiteralPath (Join-Path $repoRoot 'docs\root-child-vibe-hierarchy-governance.md') -Raw -Encoding UTF8
 Add-Assertion -Results ([ref]$results) -Condition ($teamText.Contains('advisory until the governed plan chooses to dispatch it')) -Message 'team protocol keeps specialist recommendation advisory-first'
-Add-Assertion -Results ([ref]$results) -Condition ($stableDocText.Contains('this remains a suggestion until escalated and approved by root')) -Message 'stable hierarchy doc requires root approval for child-local specialist suggestion'
+Add-Assertion -Results ([ref]$results) -Condition ($stableDocText.Contains('same-round auto-approve safe suggestions')) -Message 'stable hierarchy doc documents root-governed same-round absorb path'
 
 $runId = "child-specialist-escalation-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
 $artifactRoot = Join-Path $repoRoot (".tmp\child-specialist-escalation-{0}" -f $runId)
@@ -154,6 +154,13 @@ if ($hasChildSummary) {
     Add-Assertion -Results ([ref]$results) -Condition ($executionManifest.governance_scope -eq 'child') -Message 'execution manifest is marked child scope'
     Add-Assertion -Results ([ref]$results) -Condition (-not [bool]$executionManifest.authority.completion_claim_allowed) -Message 'child execution manifest cannot issue final completion claim'
     Add-Assertion -Results ([ref]$results) -Condition ($executionManifest.route_runtime_alignment.runtime_selected_skill -eq 'vibe') -Message 'execution manifest keeps explicit vibe authority'
+    $specialistAccounting = if ($executionManifest.PSObject.Properties.Name -contains 'specialist_accounting') { $executionManifest.specialist_accounting } else { $null }
+    if ($null -ne $specialistAccounting -and $specialistAccounting.PSObject.Properties.Name -contains 'auto_absorb_gate') {
+        Add-Assertion -Results ([ref]$results) -Condition ([bool]$specialistAccounting.auto_absorb_gate.enabled) -Message 'child execution manifest exposes enabled same-round auto-absorb gate'
+        if ($specialistAccounting.auto_absorb_gate.receipt_path) {
+            Add-Assertion -Results ([ref]$results) -Condition (Test-Path -LiteralPath ([string]$specialistAccounting.auto_absorb_gate.receipt_path)) -Message 'same-round auto-absorb gate emits receipt'
+        }
+    }
 
     $childClaims = if ($executionManifest.PSObject.Properties.Name -contains 'child_completion_claims') { @($executionManifest.child_completion_claims) } else { @() }
 }

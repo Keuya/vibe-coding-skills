@@ -309,6 +309,266 @@ function ConvertTo-VibeExecutedUnitReceipt {
     }
 }
 
+function Resolve-VibeEffectiveSpecialistDispatch {
+    param(
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [Parameter(Mandatory)] [object]$HierarchyState,
+        [AllowNull()] [object]$RuntimeInputPacket = $null,
+        [AllowEmptyCollection()] [object[]]$ApprovedDispatch = @(),
+        [AllowEmptyCollection()] [object[]]$LocalSuggestions = @(),
+        [AllowNull()] [object]$SuggestionContract = $null
+    )
+
+    $frozenApprovedDispatch = @($ApprovedDispatch)
+    $originalLocalSuggestions = @($LocalSuggestions)
+    $frozenApprovedSkillIds = @($frozenApprovedDispatch | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $originalLocalSkillIds = @($originalLocalSuggestions | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $originalEscalationRequired = if ($RuntimeInputPacket -and $RuntimeInputPacket.specialist_dispatch) {
+        [bool]$RuntimeInputPacket.specialist_dispatch.escalation_required
+    } else {
+        @($originalLocalSuggestions).Count -gt 0
+    }
+    $originalEscalationStatus = if ($RuntimeInputPacket -and $RuntimeInputPacket.specialist_dispatch -and $RuntimeInputPacket.specialist_dispatch.escalation_status) {
+        [string]$RuntimeInputPacket.specialist_dispatch.escalation_status
+    } elseif ($originalEscalationRequired) {
+        'root_approval_required'
+    } else {
+        'not_required'
+    }
+
+    $result = [ordered]@{
+        frozen_approved_dispatch = @($frozenApprovedDispatch)
+        frozen_approved_skill_ids = @($frozenApprovedSkillIds)
+        effective_approved_dispatch = @($frozenApprovedDispatch)
+        effective_approved_skill_ids = @($frozenApprovedSkillIds)
+        auto_approved_dispatch = @()
+        auto_approved_skill_ids = @()
+        original_local_specialist_suggestions = @($originalLocalSuggestions)
+        original_local_suggestion_skill_ids = @($originalLocalSkillIds)
+        residual_local_specialist_suggestions = @($originalLocalSuggestions)
+        residual_local_suggestion_skill_ids = @($originalLocalSkillIds)
+        escalation_required = [bool]$originalEscalationRequired
+        escalation_status = [string]$originalEscalationStatus
+        approval_owner = if ($SuggestionContract -and $SuggestionContract.PSObject.Properties.Name -contains 'approval_owner') {
+            [string]$SuggestionContract.approval_owner
+        } else {
+            'root_vibe'
+        }
+        auto_absorb_gate = [pscustomobject]@{
+            enabled = $false
+            same_round = $false
+            status = if ([string]$HierarchyState.governance_scope -eq 'child' -and @($originalLocalSuggestions).Count -gt 0) { 'disabled' } else { 'not_applicable' }
+            approval_source = $null
+            auto_approved_skill_ids = @()
+            rejected_skill_ids = @()
+            rejected_suggestions = @()
+            receipt_path = $null
+        }
+    }
+
+    if ([string]$HierarchyState.governance_scope -ne 'child' -or @($originalLocalSuggestions).Count -eq 0) {
+        return [pscustomobject]$result
+    }
+
+    $autoAbsorbGate = if ($SuggestionContract -and $SuggestionContract.PSObject.Properties.Name -contains 'auto_absorb_gate') {
+        $SuggestionContract.auto_absorb_gate
+    } else {
+        $null
+    }
+    if ($null -eq $autoAbsorbGate -or -not [bool]$autoAbsorbGate.enabled) {
+        return [pscustomobject]$result
+    }
+
+    $sameRound = $true
+    if ($autoAbsorbGate.PSObject.Properties.Name -contains 'same_round' -and $null -ne $autoAbsorbGate.same_round) {
+        $sameRound = [bool]$autoAbsorbGate.same_round
+    }
+    $approvalSource = if ($autoAbsorbGate.PSObject.Properties.Name -contains 'approval_source' -and -not [string]::IsNullOrWhiteSpace([string]$autoAbsorbGate.approval_source)) {
+        [string]$autoAbsorbGate.approval_source
+    } else {
+        'root_vibe_auto_absorb_gate'
+    }
+    $result.auto_absorb_gate.enabled = $true
+    $result.auto_absorb_gate.same_round = [bool]$sameRound
+    $result.auto_absorb_gate.approval_source = $approvalSource
+
+    if (-not $sameRound) {
+        $result.auto_absorb_gate.status = 'not_same_round'
+        return [pscustomobject]$result
+    }
+
+    if (@($frozenApprovedDispatch).Count -eq 0) {
+        $result.auto_absorb_gate.status = 'requires_existing_root_dispatch'
+        return [pscustomobject]$result
+    }
+
+    $disableEnvName = if ($autoAbsorbGate.PSObject.Properties.Name -contains 'disable_env') { [string]$autoAbsorbGate.disable_env } else { '' }
+    if (-not [string]::IsNullOrWhiteSpace($disableEnvName) -and (Test-VibeTruthyEnvironmentValue -Value ([Environment]::GetEnvironmentVariable($disableEnvName)))) {
+        $result.auto_absorb_gate.status = ("disabled_via_env:{0}" -f $disableEnvName)
+        return [pscustomobject]$result
+    }
+
+    $forceEscalationEnvName = if ($autoAbsorbGate.PSObject.Properties.Name -contains 'force_escalation_env') { [string]$autoAbsorbGate.force_escalation_env } else { '' }
+    if (-not [string]::IsNullOrWhiteSpace($forceEscalationEnvName) -and (Test-VibeTruthyEnvironmentValue -Value ([Environment]::GetEnvironmentVariable($forceEscalationEnvName)))) {
+        $result.auto_absorb_gate.status = ("forced_escalation_via_env:{0}" -f $forceEscalationEnvName)
+        return [pscustomobject]$result
+    }
+
+    $requiredRuntimeSkill = if ($autoAbsorbGate.PSObject.Properties.Name -contains 'required_runtime_skill') {
+        [string]$autoAbsorbGate.required_runtime_skill
+    } else {
+        ''
+    }
+    if (-not [string]::IsNullOrWhiteSpace($requiredRuntimeSkill)) {
+        $effectiveRuntimeSkill = if ($RuntimeInputPacket -and $RuntimeInputPacket.authority_flags) {
+            [string]$RuntimeInputPacket.authority_flags.explicit_runtime_skill
+        } else {
+            'vibe'
+        }
+        if (-not [string]::Equals($effectiveRuntimeSkill, $requiredRuntimeSkill, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $result.auto_absorb_gate.status = 'runtime_authority_mismatch'
+            return [pscustomobject]$result
+        }
+    }
+
+    $requireKnownRecommendation = $true
+    if ($autoAbsorbGate.PSObject.Properties.Name -contains 'require_known_recommendation' -and $null -ne $autoAbsorbGate.require_known_recommendation) {
+        $requireKnownRecommendation = [bool]$autoAbsorbGate.require_known_recommendation
+    }
+    $requireNativeWorkflow = $true
+    if ($autoAbsorbGate.PSObject.Properties.Name -contains 'require_native_workflow' -and $null -ne $autoAbsorbGate.require_native_workflow) {
+        $requireNativeWorkflow = [bool]$autoAbsorbGate.require_native_workflow
+    }
+    $requireNativeUsageRequired = $true
+    if ($autoAbsorbGate.PSObject.Properties.Name -contains 'require_native_usage_required' -and $null -ne $autoAbsorbGate.require_native_usage_required) {
+        $requireNativeUsageRequired = [bool]$autoAbsorbGate.require_native_usage_required
+    }
+    $maxAutoAbsorbCount = [int]::MaxValue
+    if ($autoAbsorbGate.PSObject.Properties.Name -contains 'max_auto_absorb_count' -and $null -ne $autoAbsorbGate.max_auto_absorb_count) {
+        $maxAutoAbsorbCount = [int]$autoAbsorbGate.max_auto_absorb_count
+    }
+
+    $recommendationLookup = @{}
+    if ($RuntimeInputPacket -and $RuntimeInputPacket.PSObject.Properties.Name -contains 'specialist_recommendations') {
+        foreach ($recommendation in @($RuntimeInputPacket.specialist_recommendations)) {
+            $skillId = [string]$recommendation.skill_id
+            if (-not [string]::IsNullOrWhiteSpace($skillId) -and -not $recommendationLookup.ContainsKey($skillId)) {
+                $recommendationLookup[$skillId] = $recommendation
+            }
+        }
+    }
+
+    $effectiveLookup = @{}
+    foreach ($skillId in @($frozenApprovedSkillIds)) {
+        $effectiveLookup[$skillId] = $true
+    }
+
+    $autoApprovedDispatch = @()
+    $rejectedSuggestions = @()
+    foreach ($suggestion in @($originalLocalSuggestions)) {
+        $skillId = [string]$suggestion.skill_id
+        $rejectionReason = $null
+        $effectiveSuggestion = $suggestion
+
+        if ([string]::IsNullOrWhiteSpace($skillId)) {
+            $rejectionReason = 'missing_skill_id'
+        } elseif ($effectiveLookup.ContainsKey($skillId)) {
+            $rejectionReason = 'already_effective'
+        } elseif ($requireKnownRecommendation -and -not $recommendationLookup.ContainsKey($skillId)) {
+            $rejectionReason = 'not_in_frozen_recommendations'
+        } else {
+            if ($recommendationLookup.ContainsKey($skillId)) {
+                $effectiveSuggestion = $recommendationLookup[$skillId]
+            }
+
+            if ($requireNativeWorkflow -and -not [bool]$effectiveSuggestion.must_preserve_workflow) {
+                $rejectionReason = 'must_preserve_workflow_missing'
+            } elseif ($requireNativeUsageRequired -and -not [bool]$effectiveSuggestion.native_usage_required) {
+                $rejectionReason = 'native_usage_required_missing'
+            } elseif (@($autoApprovedDispatch).Count -ge $maxAutoAbsorbCount) {
+                $rejectionReason = 'max_auto_absorb_count_exceeded'
+            }
+        }
+
+        if ($rejectionReason) {
+            $rejectedSuggestions += [pscustomobject]@{
+                skill_id = if ([string]::IsNullOrWhiteSpace($skillId)) { $null } else { $skillId }
+                reason = $rejectionReason
+                suggestion = $suggestion
+            }
+            continue
+        }
+
+        $autoApprovedDispatch += $effectiveSuggestion
+        $effectiveLookup[$skillId] = $true
+    }
+
+    $residualSuggestions = @($rejectedSuggestions | ForEach-Object { $_.suggestion })
+    $residualSkillIds = @($residualSuggestions | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $effectiveApprovedDispatch = @($frozenApprovedDispatch + $autoApprovedDispatch)
+    $effectiveApprovedSkillIds = @($effectiveApprovedDispatch | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+    $result.effective_approved_dispatch = @($effectiveApprovedDispatch)
+    $result.effective_approved_skill_ids = @($effectiveApprovedSkillIds)
+    $result.auto_approved_dispatch = @($autoApprovedDispatch)
+    $result.auto_approved_skill_ids = @($autoApprovedDispatch | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $result.residual_local_specialist_suggestions = @($residualSuggestions)
+    $result.residual_local_suggestion_skill_ids = @($residualSkillIds)
+    $result.escalation_required = @($residualSuggestions).Count -gt 0 -and (
+        $null -eq $SuggestionContract -or
+        -not ($SuggestionContract.PSObject.Properties.Name -contains 'escalation_required') -or
+        [bool]$SuggestionContract.escalation_required
+    )
+    $result.escalation_status = if ([bool]$result.escalation_required) {
+        'root_approval_required'
+    } elseif (@($autoApprovedDispatch).Count -gt 0) {
+        'root_auto_approved_same_round'
+    } else {
+        'not_required'
+    }
+
+    $result.auto_absorb_gate.status = if (@($autoApprovedDispatch).Count -gt 0 -and @($residualSuggestions).Count -eq 0) {
+        'auto_approved_same_round'
+    } elseif (@($autoApprovedDispatch).Count -gt 0) {
+        'partially_auto_approved_same_round'
+    } elseif (@($originalLocalSuggestions).Count -gt 0) {
+        'rejected_all_candidates'
+    } else {
+        'not_applicable'
+    }
+    $result.auto_absorb_gate.auto_approved_skill_ids = @($result.auto_approved_skill_ids)
+    $result.auto_absorb_gate.rejected_skill_ids = @($rejectedSuggestions | ForEach-Object {
+        if ($_.skill_id) { [string]$_.skill_id }
+    } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $result.auto_absorb_gate.rejected_suggestions = @($rejectedSuggestions)
+
+    $resolutionReceipt = [pscustomobject]@{
+        run_id = if ($RuntimeInputPacket) { [string]$RuntimeInputPacket.run_id } else { $null }
+        governance_scope = [string]$HierarchyState.governance_scope
+        root_run_id = [string]$HierarchyState.root_run_id
+        parent_run_id = if ($null -eq $HierarchyState.parent_run_id) { $null } else { [string]$HierarchyState.parent_run_id }
+        parent_unit_id = if ($null -eq $HierarchyState.parent_unit_id) { $null } else { [string]$HierarchyState.parent_unit_id }
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        approval_owner = [string]$result.approval_owner
+        approval_source = [string]$approvalSource
+        same_round = [bool]$sameRound
+        frozen_approved_skill_ids = @($frozenApprovedSkillIds)
+        original_local_suggestion_skill_ids = @($originalLocalSkillIds)
+        effective_approved_skill_ids = @($effectiveApprovedSkillIds)
+        auto_approved_skill_ids = @($result.auto_approved_skill_ids)
+        residual_local_suggestion_skill_ids = @($residualSkillIds)
+        escalation_required = [bool]$result.escalation_required
+        escalation_status = [string]$result.escalation_status
+        gate_status = [string]$result.auto_absorb_gate.status
+        rejected_suggestions = @($rejectedSuggestions)
+    }
+    $resolutionReceiptPath = Join-Path $SessionRoot 'specialist-dispatch-resolution.json'
+    Write-VibeJsonArtifact -Path $resolutionReceiptPath -Value $resolutionReceipt
+    $result.auto_absorb_gate.receipt_path = $resolutionReceiptPath
+
+    return [pscustomobject]$result
+}
+
 function Get-VibePlanSections {
     param(
         [Parameter(Mandatory)] [string]$PlanPath
@@ -455,24 +715,30 @@ $tokens = @{
 }
 $planShadow = Get-VibePlanDerivedExecutionShadow -PlanPath $planPath -RunId $RunId -SessionRoot $sessionRoot
 $specialistRecommendations = if ($runtimeInputPacket) { @($runtimeInputPacket.specialist_recommendations) } else { @() }
-$approvedDispatch = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { @($runtimeInputPacket.specialist_dispatch.approved_dispatch) } else { @() }
-$localSuggestions = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { @($runtimeInputPacket.specialist_dispatch.local_specialist_suggestions) } else { @() }
+$frozenApprovedDispatch = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { @($runtimeInputPacket.specialist_dispatch.approved_dispatch) } else { @() }
+$frozenLocalSuggestions = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { @($runtimeInputPacket.specialist_dispatch.local_specialist_suggestions) } else { @() }
+$specialistDispatchResolution = Resolve-VibeEffectiveSpecialistDispatch `
+    -SessionRoot $sessionRoot `
+    -HierarchyState $hierarchyState `
+    -RuntimeInputPacket $runtimeInputPacket `
+    -ApprovedDispatch @($frozenApprovedDispatch) `
+    -LocalSuggestions @($frozenLocalSuggestions) `
+    -SuggestionContract $runtime.runtime_input_packet_policy.child_specialist_suggestion_contract
+$approvedDispatch = @($specialistDispatchResolution.effective_approved_dispatch)
+$localSuggestions = @($specialistDispatchResolution.residual_local_specialist_suggestions)
+$autoApprovedDispatch = @($specialistDispatchResolution.auto_approved_dispatch)
 $executionTopologyPath = Get-VibeExecutionTopologyPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
-$executionTopology = if (Test-Path -LiteralPath $executionTopologyPath) {
-    Get-Content -LiteralPath $executionTopologyPath -Raw -Encoding UTF8 | ConvertFrom-Json
-} else {
-    $derivedTopology = New-VibeExecutionTopology `
-        -RunId $RunId `
-        -Grade $grade `
-        -GovernanceScope ([string]$hierarchyState.governance_scope) `
-        -BenchmarkPolicy $policy `
-        -TopologyPolicy $runtime.execution_topology_policy `
-        -ApprovedDispatch @($approvedDispatch)
-    Write-VibeJsonArtifact -Path $executionTopologyPath -Value $derivedTopology
-    $derivedTopology
-}
+$executionTopology = New-VibeExecutionTopology `
+    -RunId $RunId `
+    -Grade $grade `
+    -GovernanceScope ([string]$hierarchyState.governance_scope) `
+    -BenchmarkPolicy $policy `
+    -TopologyPolicy $runtime.execution_topology_policy `
+    -ApprovedDispatch @($approvedDispatch)
+Write-VibeJsonArtifact -Path $executionTopologyPath -Value $executionTopology
+$executionTopologyPath = Get-VibeExecutionTopologyPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
 $specialistSkills = @($approvedDispatch | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
-$escalationRequired = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { [bool]$runtimeInputPacket.specialist_dispatch.escalation_required } else { $false }
+$escalationRequired = [bool]$specialistDispatchResolution.escalation_required
 $escalationPath = $null
 if ([string]$hierarchyState.governance_scope -eq 'child' -and $escalationRequired) {
     $escalation = [pscustomobject]@{
@@ -481,8 +747,8 @@ if ([string]$hierarchyState.governance_scope -eq 'child' -and $escalationRequire
         root_run_id = [string]$hierarchyState.root_run_id
         parent_run_id = if ($null -eq $hierarchyState.parent_run_id) { $null } else { [string]$hierarchyState.parent_run_id }
         parent_unit_id = if ($null -eq $hierarchyState.parent_unit_id) { $null } else { [string]$hierarchyState.parent_unit_id }
-        approval_owner = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { [string]$runtimeInputPacket.specialist_dispatch.approval_owner } else { 'root_vibe' }
-        status = 'root_approval_required'
+        approval_owner = [string]$specialistDispatchResolution.approval_owner
+        status = [string]$specialistDispatchResolution.escalation_status
         requested_specialist_skill_ids = @($localSuggestions | ForEach-Object { [string]$_.skill_id } | Select-Object -Unique)
         local_specialist_suggestions = @($localSuggestions)
         generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -730,6 +996,7 @@ $liveSpecialistUnits = @($executedSpecialistUnits | Where-Object { [bool]$_.live
 $degradedSpecialistUnits = @($executedSpecialistUnits | Where-Object { [bool]$_.degraded })
 $totalSpecialistDispatchOutcomeCount = @($executedSpecialistUnits).Count
 $effectiveSpecialistExecutionStatus = if (@($liveSpecialistUnits).Count -gt 0) { 'live_native_executed' } elseif (@($degradedSpecialistUnits).Count -gt 0) { 'explicitly_degraded' } else { 'none' }
+$specialistDispatchUnitCount = @($approvedDispatch).Count
 $executionManifest = [pscustomobject]@{
     stage = 'plan_execute'
     run_id = $RunId
@@ -785,6 +1052,13 @@ $executionManifest = [pscustomobject]@{
         parallel_execution_windows = @($parallelExecutionWindows)
         serial_execution_order = @($serialExecutionOrder)
         review_mode = [string]$executionTopology.review_mode
+        dispatch_resolution = [pscustomobject]@{
+            source = 'plan_execute_effective_dispatch'
+            frozen_approved_dispatch_count = @($frozenApprovedDispatch).Count
+            effective_approved_dispatch_count = @($approvedDispatch).Count
+            auto_approved_dispatch_count = @($autoApprovedDispatch).Count
+            same_round_auto_absorb_applied = [bool](@($autoApprovedDispatch).Count -gt 0)
+        }
         two_stage_review = [pscustomobject]@{
             enabled = [bool]([string]$executionTopology.review_mode -eq 'two_stage_after_unit')
             review_receipt_count = [int]$reviewReceiptCount
@@ -806,17 +1080,24 @@ $executionManifest = [pscustomobject]@{
         native_usage_required = [bool](@($specialistRecommendations | Where-Object { $_.native_usage_required }).Count -gt 0)
         execution_mode = if (@($approvedDispatch).Count -gt 0) { 'native_bounded_units' } else { [string]$executionTopology.specialist_execution_mode }
         effective_execution_status = $effectiveSpecialistExecutionStatus
-        dispatch_unit_count = [int]$planShadow.payload.specialist_dispatch_unit_count
+        dispatch_unit_count = [int]$specialistDispatchUnitCount
         recommendations = @($specialistRecommendations)
+        frozen_approved_dispatch_count = @($frozenApprovedDispatch).Count
+        frozen_approved_dispatch = @($frozenApprovedDispatch)
         approved_dispatch_count = @($approvedDispatch).Count
         approved_dispatch = @($approvedDispatch)
+        auto_approved_dispatch_count = @($autoApprovedDispatch).Count
+        auto_approved_dispatch = @($autoApprovedDispatch)
         executed_specialist_unit_count = @($liveSpecialistUnits).Count
         executed_specialist_units = @($liveSpecialistUnits)
         degraded_specialist_unit_count = @($degradedSpecialistUnits).Count
         degraded_specialist_units = @($degradedSpecialistUnits)
         specialist_dispatch_outcomes = @($executedSpecialistUnits)
+        original_local_suggestion_count = @($frozenLocalSuggestions).Count
+        original_local_specialist_suggestions = @($frozenLocalSuggestions)
         local_suggestion_count = @($localSuggestions).Count
         local_specialist_suggestions = @($localSuggestions)
+        auto_absorb_gate = $specialistDispatchResolution.auto_absorb_gate
         escalation_required = [bool]$escalationRequired
         escalation_request_path = $escalationPath
     }
@@ -845,11 +1126,14 @@ $proofManifest = [pscustomobject]@{
     proof_class = [string]$proofRegistry.artifact_class_defaults.benchmark_proof_manifest
     promotion_suitable = [string]$proofRegistry.promotion_suitability.runtime
     specialist_recommendation_count = @($specialistRecommendations).Count
-    specialist_dispatch_unit_count = [int]$planShadow.payload.specialist_dispatch_unit_count
+    specialist_dispatch_unit_count = [int]$specialistDispatchUnitCount
     executed_specialist_unit_count = @($liveSpecialistUnits).Count
     degraded_specialist_unit_count = @($degradedSpecialistUnits).Count
     specialist_dispatch_outcome_count = $totalSpecialistDispatchOutcomeCount
     specialist_execution_status = $effectiveSpecialistExecutionStatus
+    auto_approved_specialist_unit_count = @($autoApprovedDispatch).Count
+    residual_local_specialist_suggestion_count = @($localSuggestions).Count
+    specialist_dispatch_resolution_path = if ($specialistDispatchResolution.auto_absorb_gate.receipt_path) { [string]$specialistDispatchResolution.auto_absorb_gate.receipt_path } else { $null }
     delegated_lane_count = [int]$delegatedLaneCount
     review_receipt_count = [int]$reviewReceiptCount
     governance_scope = [string]$hierarchyState.governance_scope
@@ -872,9 +1156,11 @@ $proofLines = @(
     ('- delegated_lane_count: `{0}`' -f $delegatedLaneCount),
     ('- review_receipt_count: `{0}`' -f $reviewReceiptCount),
     ('- specialist_recommendation_count: `{0}`' -f @($specialistRecommendations).Count),
-    ('- specialist_dispatch_unit_count: `{0}`' -f [int]$planShadow.payload.specialist_dispatch_unit_count),
+    ('- specialist_dispatch_unit_count: `{0}`' -f [int]$specialistDispatchUnitCount),
     ('- executed_specialist_unit_count: `{0}`' -f @($liveSpecialistUnits).Count),
     ('- degraded_specialist_unit_count: `{0}`' -f @($degradedSpecialistUnits).Count),
+    ('- auto_approved_specialist_unit_count: `{0}`' -f @($autoApprovedDispatch).Count),
+    ('- residual_local_specialist_suggestion_count: `{0}`' -f @($localSuggestions).Count),
     ('- specialist_execution_status: `{0}`' -f $effectiveSpecialistExecutionStatus),
     ('- execution_manifest: `{0}`' -f $executionManifestPath),
     ('- execution_topology: `{0}`' -f $executionTopologyPath),
@@ -915,15 +1201,17 @@ $receipt = [pscustomobject]@{
     delegated_lane_count = [int]$delegatedLaneCount
     review_receipt_count = [int]$reviewReceiptCount
     specialist_recommendation_count = @($specialistRecommendations).Count
-    specialist_dispatch_unit_count = [int]$planShadow.payload.specialist_dispatch_unit_count
+    specialist_dispatch_unit_count = [int]$specialistDispatchUnitCount
     executed_specialist_unit_count = @($liveSpecialistUnits).Count
     degraded_specialist_unit_count = @($degradedSpecialistUnits).Count
     specialist_dispatch_outcome_count = $totalSpecialistDispatchOutcomeCount
     specialist_execution_status = $effectiveSpecialistExecutionStatus
     specialist_skills = @($specialistSkills)
+    auto_approved_specialist_unit_count = @($autoApprovedDispatch).Count
     local_specialist_suggestion_count = @($localSuggestions).Count
     escalation_required = [bool]$escalationRequired
     escalation_request_path = $escalationPath
+    specialist_dispatch_resolution_path = if ($specialistDispatchResolution.auto_absorb_gate.receipt_path) { [string]$specialistDispatchResolution.auto_absorb_gate.receipt_path } else { $null }
     completion_claim_allowed = [bool]$hierarchyState.allow_completion_claim
     proof_class = [string]$proofRegistry.artifact_class_defaults.execution_manifest
     verification_contract = @(

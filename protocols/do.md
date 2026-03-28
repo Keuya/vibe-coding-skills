@@ -95,7 +95,7 @@ If VCO router output includes:
    - No blanket multi-agent fan-out
 3. Optional delegated units must remain bounded and explicitly planned
    - If subagents are spawned, prompts must end with `$vibe`
-   - Child lane specialist ideas stay advisory until root approval
+   - Child lane specialist ideas stay advisory in the frozen packet; execute may same-round auto-absorb only under root-governed approval logic
 4. Use runtime-neutral state_store to track progress across tasks
 5. Final review with Superpowers verification-before-completion
 

@@ -9,16 +9,72 @@
   "shadow_only": true,
   "required_fields": [
     "run_id",
+    "governance_scope",
+    "hierarchy",
     "task",
     "runtime_mode",
     "internal_grade",
     "canonical_router",
     "route_snapshot",
+    "specialist_recommendations",
+    "specialist_dispatch",
     "overlay_decisions",
     "authority_flags",
     "divergence_shadow",
     "provenance"
   ],
+  "hierarchy_contract": {
+    "default_governance_scope": "root",
+    "child_receipt_only_stages": [
+      "requirement_doc",
+      "xl_plan"
+    ],
+    "root_authority_flags": {
+      "allow_requirement_freeze": true,
+      "allow_plan_freeze": true,
+      "allow_global_dispatch": true,
+      "allow_completion_claim": true
+    },
+    "child_authority_flags": {
+      "allow_requirement_freeze": false,
+      "allow_plan_freeze": false,
+      "allow_global_dispatch": false,
+      "allow_completion_claim": false
+    }
+  },
+  "specialist_dispatch_contract": {
+    "bounded_role": "specialist_assist",
+    "native_usage_required": true,
+    "must_preserve_workflow": true,
+    "required_inputs": [
+      "bounded specialist subtask contract",
+      "frozen requirement context",
+      "relevant source files or domain artifacts"
+    ],
+    "expected_outputs": [
+      "bounded specialist findings or code changes",
+      "verification notes aligned with the specialist skill"
+    ],
+    "verification_expectation": "Preserve the specialist skill's native workflow, boundaries, and validation style."
+  },
+  "child_specialist_suggestion_contract": {
+    "field_name": "local_specialist_suggestions",
+    "escalation_required": true,
+    "approval_owner": "root_vibe",
+    "status": "advisory_until_root_approval",
+    "auto_absorb_gate": {
+      "enabled": true,
+      "same_round": true,
+      "approval_source": "root_vibe_auto_absorb_gate",
+      "required_runtime_skill": "vibe",
+      "require_known_recommendation": true,
+      "require_native_workflow": true,
+      "require_native_usage_required": true,
+      "max_auto_absorb_count": 4,
+      "disable_env": "VGO_DISABLE_CHILD_SPECIALIST_AUTO_ABSORB",
+      "force_escalation_env": "VGO_FORCE_CHILD_SPECIALIST_ESCALATION"
+    }
+  },
   "overlay_fields": [
     "openspec_advice",
     "gsd_overlay_advice",
@@ -42,5 +98,6 @@
     "llm_acceleration_advice",
     "heartbeat_advice"
   ],
+  "specialist_recommendation_limit": 4,
   "bounded_router_task_type_default": "planning"
 }

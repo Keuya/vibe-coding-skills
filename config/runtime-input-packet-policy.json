@@ -61,7 +61,19 @@
     "field_name": "local_specialist_suggestions",
     "escalation_required": true,
     "approval_owner": "root_vibe",
-    "status": "advisory_until_root_approval"
+    "status": "advisory_until_root_approval",
+    "auto_absorb_gate": {
+      "enabled": true,
+      "same_round": true,
+      "approval_source": "root_vibe_auto_absorb_gate",
+      "required_runtime_skill": "vibe",
+      "require_known_recommendation": true,
+      "require_native_workflow": true,
+      "require_native_usage_required": true,
+      "max_auto_absorb_count": 4,
+      "disable_env": "VGO_DISABLE_CHILD_SPECIALIST_AUTO_ABSORB",
+      "force_escalation_env": "VGO_FORCE_CHILD_SPECIALIST_ESCALATION"
+    }
   },
   "overlay_fields": [
     "openspec_advice",

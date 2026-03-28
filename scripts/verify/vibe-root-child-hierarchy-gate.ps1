@@ -62,7 +62,8 @@ foreach ($token in @(
     'allow_completion_claim',
     'specialist_dispatch',
     'advisory_until_root_approval',
-    'escalation_required'
+    'escalation_required',
+    'auto_absorb_gate'
 )) {
     Add-Assertion -Results ([ref]$results) -Condition ($policyText.Contains($token)) -Message ("runtime input policy contains hierarchy token: {0}" -f $token)
 }
