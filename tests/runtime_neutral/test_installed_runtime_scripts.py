@@ -192,6 +192,28 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertTrue((installed_root / "SKILL.md").exists())
         self.assertTrue((self.target_root / "mcp_config.json").exists())
 
+    def test_shell_install_prunes_stale_managed_entries_without_recursive_dir_wipe(self) -> None:
+        self.install_shell_runtime()
+
+        managed_root = self.target_root / "skills" / "vibe"
+        stale_file = managed_root / "config" / "stale.json"
+        stale_dir = managed_root / "docs" / "obsolete-dir"
+        stale_nested_file = stale_dir / "note.md"
+
+        stale_file.parent.mkdir(parents=True, exist_ok=True)
+        stale_dir.mkdir(parents=True, exist_ok=True)
+        stale_file.write_text("stale\n", encoding="utf-8")
+        stale_nested_file.write_text("obsolete\n", encoding="utf-8")
+
+        self.install_shell_runtime()
+
+        self.assertFalse(stale_file.exists())
+        self.assertFalse(stale_nested_file.exists())
+        self.assertFalse(stale_dir.exists())
+
+        install_script = (self.target_root / "skills" / "vibe" / "install.sh").read_text(encoding="utf-8")
+        self.assertNotIn("rm -rf", install_script)
+
     def test_installed_powershell_scripts_work_without_repo_level_adapter_registry(self) -> None:
         if shutil.which("pwsh") is None:
             self.skipTest("pwsh not available")

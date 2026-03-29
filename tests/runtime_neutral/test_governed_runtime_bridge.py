@@ -128,6 +128,17 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             [stage["id"] for stage in contract["stages"]],
         )
 
+        cleanup_policy = json.loads(
+            (REPO_ROOT / "config" / "phase-cleanup-policy.json").read_text(encoding="utf-8")
+        )
+        guardrails = cleanup_policy["destructive_cleanup_guardrails"]
+        self.assertTrue(bool(guardrails["forbid_blind_recursive_wipe"]))
+        self.assertTrue(bool(guardrails["forbid_batch_delete_in_managed_roots"]))
+        self.assertTrue(bool(guardrails["require_explicit_hazard_alert"]))
+        self.assertTrue(bool(guardrails["require_receipt_backed_path_list"]))
+        self.assertIn("docs", list(guardrails["managed_roots"]))
+        self.assertIn("bundled", list(guardrails["managed_roots"]))
+
     def test_invoke_vibe_runtime_produces_six_stage_closure_under_temp_artifact_root(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
         run_id = "pytest-governed-runtime"

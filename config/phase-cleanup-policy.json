@@ -22,6 +22,22 @@
     "attempt_node_zombie_cleanup_if_needed",
     "record_remaining_manual_actions"
   ],
+  "destructive_cleanup_guardrails": {
+    "forbid_blind_recursive_wipe": true,
+    "forbid_batch_delete_in_managed_roots": true,
+    "require_explicit_hazard_alert": true,
+    "require_receipt_backed_path_list": true,
+    "managed_roots": [
+      "config",
+      "docs",
+      "references",
+      "scripts",
+      "bundled",
+      "protocols",
+      "mcp",
+      "third_party"
+    ]
+  },
   "protected_document_policy": {
     "enabled": true,
     "extensions": [

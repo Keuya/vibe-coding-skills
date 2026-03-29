@@ -135,6 +135,8 @@ Rules:
 - runtime-selected skill stays `vibe` for governed entry even when route truth points at a specialist
 - specialist use must preserve native workflow, required inputs, expected outputs, and validation style
 - child-governed lanes inherit root-frozen requirement/plan context and must not open second canonical requirement or plan truth surfaces
+- dangerous bulk deletion and blind recursive wipe commands against managed roots are forbidden by default during governed execution
+- destructive removal must be narrowed to explicit unique paths, surfaced with a standalone hazard alert, and recorded in receipts rather than hidden behind convenience cleanup
 - the run must emit a downstream delivery-acceptance report during closure so process success is not silently relabeled as project-delivery success
 
 ### Stage 6: `phase_cleanup`
@@ -149,6 +151,7 @@ Minimum actions:
 - repo hygiene pass
 - node audit or cleanup
 - cleanup receipt write
+- destructive cleanup, when exceptionally allowed, must remain path-bounded and receipt-backed; no blanket recursive wipe of managed roots
 - delivery-acceptance report write with completion-language allowance or downgrade
 
 ## Protocol Delegation
