@@ -6,6 +6,8 @@
     [ValidateSet("planning", "coding", "review", "debug", "research")]
     [string]$TaskType = "planning",
     [string]$RequestedSkill,
+    [string]$HostId,
+    [string]$TargetRoot,
     [switch]$Probe,
     [string]$ProbeLabel,
     [string]$ProbeOutputDir,
@@ -22,6 +24,7 @@ $routerModules = @(
     "10-observability.ps1",
     "11-route-probe.ps1",
     "12-heartbeat.ps1",
+    "19-custom-admission.ps1",
     "20-routing-rules.ps1",
     "21-capability-interview.ps1",
     "22-intent-contract.ps1",
@@ -403,6 +406,8 @@ $aliasResult = Resolve-Alias -Skill $RequestedSkill -AliasMap $aliasMap
 $requestedCanonical = [string]$aliasResult.canonical
 $promptNormalization = Get-RoutingPromptNormalization -PromptText $Prompt
 $promptLower = [string]$promptNormalization.normalized_lower
+$resolvedTargetRoot = Resolve-CustomAdmissionTargetRoot -TargetRoot $TargetRoot -HostId $HostId
+$customAdmission = Get-CustomAdmissionResult -RepoRoot ([string]$repoRoot) -TargetRoot $resolvedTargetRoot -HostId $HostId -RequestedCanonical $requestedCanonical
 $openSpecAdvice = Get-OpenSpecGovernanceAdvice -PromptLower $promptLower -Grade $Grade -TaskType $TaskType -RequestedCanonical $requestedCanonical -OpenSpecPolicy $openSpecPolicy
 $gsdOverlayAdvice = Get-GsdOverlayAdvice -PromptLower $promptLower -Grade $Grade -TaskType $TaskType -GsdOverlayPolicy $gsdOverlayPolicy
 $promptOverlayAdvice = Get-PromptOverlayAdvice -PromptLower $promptLower -Grade $Grade -TaskType $TaskType -PromptOverlayPolicy $promptOverlayPolicy
@@ -411,6 +416,9 @@ $memoryGovernanceAdvice = Get-MemoryGovernanceAdvice -Grade $Grade -TaskType $Ta
 Add-RouteProbeEvent -Context $probeContext -Stage "router.prepack" -Note "base advice prepared before pack scoring" -Data @{
     alias = $aliasResult
     requested_canonical = $requestedCanonical
+    resolved_target_root = $resolvedTargetRoot
+    custom_admission_status = [string]$customAdmission.status
+    admitted_custom_candidate_count = @($customAdmission.admitted_candidates).Count
     prompt_language_mix = (Get-LanguageMixTag -PromptText $Prompt)
     prompt_normalization = @{
         prefix_detected = [bool]$promptNormalization.prefix_detected
@@ -525,6 +533,7 @@ $packsForScoring = if ($deepDiscoveryFilter -and $deepDiscoveryFilter.route_filt
 } else {
     @($packManifest.packs)
 }
+$packsForScoring = @($packsForScoring) + @($customAdmission.admitted_packs)
 
 $packResults = @()
 foreach ($pack in $packsForScoring) {
@@ -552,6 +561,12 @@ foreach ($pack in $packsForScoring) {
     $selection = Select-PackCandidate -PromptLower $promptLower -Candidates $pack.skill_candidates -TaskType $TaskType -RequestedCanonical $requestedCanonical -SkillKeywordIndex $skillKeywordIndex -RoutingRules $routingRules -Pack $pack -CandidateSelectionConfig $candidateSelectionConfig
     $candidateSignal = ([double]$selection.score * 0.75) + ([double]$selection.top1_top2_gap * 0.25)
     $candidateSignal = [Math]::Round([Math]::Min(1.0, [Math]::Max(0.0, $candidateSignal)), 4)
+    $customMetadata = if ($pack.PSObject.Properties.Name -contains 'custom_admission') { $pack.custom_admission } else { $null }
+    $routeAuthorityEligible = if ($null -ne $customMetadata -and $customMetadata.PSObject.Properties.Name -contains 'route_authority_eligible') {
+        [bool]$customMetadata.route_authority_eligible
+    } else {
+        $true
+    }
 
     $packResults += [pscustomobject]@{
         pack_id = [string]$pack.id
@@ -571,6 +586,8 @@ foreach ($pack in $packsForScoring) {
         candidate_top1_top2_gap = [Math]::Round([double]$selection.top1_top2_gap, 4)
         candidate_signal = $candidateSignal
         candidate_filtered_out_by_task = @($selection.filtered_out_by_task)
+        route_authority_eligible = [bool]$routeAuthorityEligible
+        custom_admission = $customMetadata
     }
 }
 
@@ -578,7 +595,8 @@ $ranked = $packResults | Sort-Object -Property @(
     @{ Expression = "score"; Descending = $true },
     @{ Expression = "pack_id"; Descending = $false }
 )
-$top = $ranked | Select-Object -First 1
+$authorityRanked = @($ranked | Where-Object { $_.route_authority_eligible })
+$top = $authorityRanked | Select-Object -First 1
 $confidence = if ($top) { [double]$top.score } else { 0.0 }
 
 # Soft-migration behavior: explicit legacy/canonical skill request mapped to a pack
@@ -1254,6 +1272,15 @@ $result = [pscustomobject]@{
     heartbeat_advice = $heartbeatAdvice
     heartbeat_status = $heartbeatStatus
     heartbeat_runtime_digest = $heartbeatRuntimeDigest
+    custom_admission = [pscustomobject]@{
+        status = [string]$customAdmission.status
+        target_root = $resolvedTargetRoot
+        manifest_paths = $customAdmission.manifest_paths
+        manifests_present = $customAdmission.manifests_present
+        invalid_entries = @($customAdmission.invalid_entries)
+        dependency_failures = @($customAdmission.dependency_failures)
+        admitted_candidates = @($customAdmission.admitted_candidates)
+    }
     selected = if ($effectiveTop) {
         [pscustomobject]@{
             pack_id = $effectiveTop.pack_id
@@ -1270,7 +1297,12 @@ $result = [pscustomobject]@{
     ranked = @($ranked | Select-Object -First 3)
 }
 
-$confirmSkillOptions = Build-ConfirmSkillOptions -Result $result -ConfirmUiPolicy $confirmUiPolicyResolved -RepoRoot ([string]$repoRoot)
+$confirmSkillOptions = Build-ConfirmSkillOptions `
+    -Result $result `
+    -ConfirmUiPolicy $confirmUiPolicyResolved `
+    -RepoRoot ([string]$repoRoot) `
+    -TargetRoot $resolvedTargetRoot `
+    -HostId $HostId
 if ($confirmSkillOptions) {
     $confirmText = Build-ConfirmUiText -ConfirmSkillOptions $confirmSkillOptions -UnattendedDecision $unattendedDecision -Result $result
     $result | Add-Member -NotePropertyName "confirm_ui" -NotePropertyValue ([pscustomobject]@{
@@ -1348,4 +1380,3 @@ if ($probeArtifact) {
 }
 
 $result | ConvertTo-Json -Depth 12
-

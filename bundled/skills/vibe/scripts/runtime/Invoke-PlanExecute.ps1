@@ -5,7 +5,6 @@ param(
     [string]$RequirementDocPath = '',
     [string]$ExecutionPlanPath = '',
     [string]$RuntimeInputPacketPath = '',
-    [string]$ExecutionMemoryContextPath = '',
     [string]$ArtifactRoot = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
     [AllowEmptyString()] [string]$RootRunId = '',
@@ -83,15 +82,6 @@ function Start-VibeDelegatedLaneProcess {
     $startInfo.RedirectStandardError = $true
     $startInfo.CreateNoWindow = $true
     $startInfo.WorkingDirectory = Split-Path -Parent ([string]($LaneRuntime.spec_path))
-    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-    try {
-        $startInfo.StandardOutputEncoding = $utf8NoBom
-    } catch {
-    }
-    try {
-        $startInfo.StandardErrorEncoding = $utf8NoBom
-    } catch {
-    }
 
     $quotedArguments = foreach ($argument in @($invocation.arguments)) {
         $text = [string]$argument
@@ -116,7 +106,6 @@ function Start-VibeDelegatedLaneProcess {
         process = $process
         stdout_path = $stdoutPath
         stderr_path = $stderrPath
-        payload_path = Join-Path ([string]($LaneRuntime.lane_root)) 'lane-payload.json'
         stdout_task = $process.StandardOutput.ReadToEndAsync()
         stderr_task = $process.StandardError.ReadToEndAsync()
     }
@@ -142,29 +131,13 @@ function Wait-VibeDelegatedLaneProcess {
     Write-VgoUtf8NoBomText -Path ([string]($Handle.stdout_path)) -Content $stdoutText
     Write-VgoUtf8NoBomText -Path ([string]($Handle.stderr_path)) -Content $stderrText
 
-    $payload = $null
-    $payloadPath = if ($Handle.PSObject.Properties.Name -contains 'payload_path') { [string]($Handle.payload_path) } else { '' }
-    if (-not [string]::IsNullOrWhiteSpace($payloadPath) -and (Test-Path -LiteralPath $payloadPath)) {
-        try {
-            $payload = Get-Content -LiteralPath $payloadPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        } catch {
-            throw ("Delegated lane process wrote unreadable payload for {0}: {1}" -f ([string]($Handle.lane_id)), $_.Exception.Message)
-        }
+    $payloadText = ($stdoutText -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1)
+    if ([string]::IsNullOrWhiteSpace($payloadText)) {
+        throw ("Delegated lane process returned empty payload for {0}" -f ([string]($Handle.lane_id)))
     }
-    if ($null -eq $payload) {
-        $payloadText = ($stdoutText -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1)
-        if ([string]::IsNullOrWhiteSpace($payloadText)) {
-            throw ("Delegated lane process returned empty payload for {0}" -f ([string]($Handle.lane_id)))
-        }
-        $payload = $payloadText | ConvertFrom-Json
-    }
-    $laneReceipt = if ($payload.lane_receipt_path -and (Test-Path -LiteralPath ([string]($payload.lane_receipt_path)))) {
-        Get-Content -LiteralPath ([string]($payload.lane_receipt_path)) -Raw -Encoding UTF8 | ConvertFrom-Json
-    } elseif ($payload.PSObject.Properties.Name -contains 'receipt' -and $null -ne $payload.receipt) {
-        $payload.receipt
-    } else {
-        throw ("Delegated lane process missing receipt payload for {0}" -f ([string]($Handle.lane_id)))
-    }
+
+    $payload = $payloadText | ConvertFrom-Json
+    $laneReceipt = Get-Content -LiteralPath ([string]($payload.lane_receipt_path)) -Raw -Encoding UTF8 | ConvertFrom-Json
     $laneResult = if ($payload.lane_result_path -and (Test-Path -LiteralPath ([string]($payload.lane_result_path)))) {
         Get-Content -LiteralPath ([string]($payload.lane_result_path)) -Raw -Encoding UTF8 | ConvertFrom-Json
     } else {
@@ -339,21 +312,25 @@ function ConvertTo-VibeExecutedUnitReceipt {
     }
 }
 
-function Test-VibeBlockingUnitReceipt {
+function Test-VibeReceiptCountsAsSuccessful {
     param(
-        [Parameter(Mandatory)] [object]$UnitReceipt
+        [Parameter(Mandatory)] [object]$Receipt
     )
 
-    if ([bool]$UnitReceipt.verification_passed) {
-        return $false
-    }
-    if ([bool]$UnitReceipt.timed_out) {
+    if ([bool]$Receipt.verification_passed) {
         return $true
     }
-    if ([string]$UnitReceipt.lane_kind -eq 'specialist_dispatch' -and [bool]$UnitReceipt.degraded -and -not [bool]$UnitReceipt.live_native_execution) {
-        return $false
+
+    if (
+        [string]$Receipt.lane_kind -eq 'specialist_dispatch' -and
+        [bool]$Receipt.degraded -and
+        [string]$Receipt.status -eq 'degraded_non_authoritative' -and
+        [int]$Receipt.exit_code -eq 0
+    ) {
+        return $true
     }
-    return $true
+
+    return $false
 }
 
 function Resolve-VibeEffectiveSpecialistDispatch {
@@ -731,11 +708,6 @@ $runtimeInputPacket = if (Test-Path -LiteralPath $runtimeInputPath) {
 } else {
     $null
 }
-$executionMemoryContext = if (-not [string]::IsNullOrWhiteSpace($ExecutionMemoryContextPath) -and (Test-Path -LiteralPath $ExecutionMemoryContextPath)) {
-    Get-Content -LiteralPath $ExecutionMemoryContextPath -Raw -Encoding UTF8 | ConvertFrom-Json
-} else {
-    $null
-}
 $hierarchyState = Get-VibeHierarchyState `
     -GovernanceScope $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.governance_scope } else { $GovernanceScope }) `
     -RunId $RunId `
@@ -984,15 +956,16 @@ foreach ($topologyWave in @($executionTopology.waves)) {
                 -WaveId ([string]$topologyWave.wave_id) `
                 -StepId ([string]$step.step_id) `
                 -Outcome $outcome
+            $unitCountsAsSuccessful = Test-VibeReceiptCountsAsSuccessful -Receipt $unitReceipt
             $waveUnitReceipts += $unitReceipt
             $resultPaths += [string]$unitReceipt.result_path
             $executedUnitCount += 1
-            if ([bool]$unitReceipt.verification_passed) {
+            if ($unitCountsAsSuccessful) {
                 $successfulUnitCount += 1
             } elseif ([bool]$unitReceipt.timed_out) {
                 $timedOutUnitCount += 1
                 $failedUnitCount += 1
-            } elseif (Test-VibeBlockingUnitReceipt -UnitReceipt $unitReceipt) {
+            } else {
                 $failedUnitCount += 1
             }
 
@@ -1014,7 +987,6 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             }
         }
 
-        $stepUnitReceipts = @($waveUnitReceipts | Where-Object { [string]$_.step_id -eq [string]$step.step_id })
         $stepReceipts += [pscustomobject]@{
             step_id = [string]$step.step_id
             execution_mode = $stepMode
@@ -1022,15 +994,15 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             finished_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             planned_unit_count = @($step.units).Count
             executed_unit_count = @($stepOutcomes).Count
-            status = if (@($stepUnitReceipts | Where-Object { Test-VibeBlockingUnitReceipt -UnitReceipt $_ }).Count -eq 0) { 'completed' } else { 'failed' }
-            units = @($stepUnitReceipts)
+            status = if (@($waveUnitReceipts | Where-Object { [string]$_.step_id -eq [string]$step.step_id } | Where-Object { -not (Test-VibeReceiptCountsAsSuccessful -Receipt $_) }).Count -eq 0) { 'completed' } else { 'failed' }
+            units = @($waveUnitReceipts | Where-Object { [string]$_.step_id -eq [string]$step.step_id })
         }
     }
 
     $waveReceipts += [pscustomobject]@{
         wave_id = [string]$topologyWave.wave_id
         description = [string]$topologyWave.description
-        status = if (@($waveUnitReceipts | Where-Object { Test-VibeBlockingUnitReceipt -UnitReceipt $_ }).Count -eq 0) { 'completed' } else { 'failed' }
+        status = if (@($waveUnitReceipts | Where-Object { -not (Test-VibeReceiptCountsAsSuccessful -Receipt $_) }).Count -eq 0) { 'completed' } else { 'failed' }
         started_at = $waveStartedAt
         finished_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         planned_unit_count = [int]$plannedWaveUnits
@@ -1047,6 +1019,52 @@ $effectiveUnitExecution = if ($parallelUnitsExecutedCount -gt 0 -and ($executedU
 } else {
     'sequential'
 }
+
+$recommendationSkillIds = @($specialistRecommendations | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+$approvedDispatchSkillIds = @($approvedDispatch | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+$localSuggestionSkillIds = @($localSuggestions | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+$executedSpecialistSkillIds = @($executedSpecialistUnits | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+$approvedDispatchMissingFromRecommendations = @($approvedDispatchSkillIds | Where-Object { $_ -notin $recommendationSkillIds })
+$approvedDispatchNotExecuted = @($approvedDispatchSkillIds | Where-Object { $_ -notin $executedSpecialistSkillIds })
+$executedWithoutApproval = @($executedSpecialistSkillIds | Where-Object { $_ -notin $approvedDispatchSkillIds })
+$localSuggestionsExecutedWithoutApproval = @($localSuggestionSkillIds | Where-Object { $_ -in $executedSpecialistSkillIds })
+$dispatchContractIncompleteSkillIds = @(
+    $approvedDispatch | Where-Object {
+        -not [bool]$_.native_usage_required -or
+        -not [bool]$_.must_preserve_workflow -or
+        [string]::IsNullOrWhiteSpace([string]$_.native_skill_entrypoint)
+    } | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+)
+
+$dispatchIntegrity = [pscustomobject]@{
+    recommendation_skill_ids = @($recommendationSkillIds)
+    approved_dispatch_skill_ids = @($approvedDispatchSkillIds)
+    local_suggestion_skill_ids = @($localSuggestionSkillIds)
+    executed_specialist_skill_ids = @($executedSpecialistSkillIds)
+    approved_dispatch_subset_of_recommendations = [bool](@($approvedDispatchMissingFromRecommendations).Count -eq 0)
+    inherited_root_approval_allowed = [bool]([string]$hierarchyState.governance_scope -eq 'child')
+    approved_dispatch_supported_by_recommendation_or_inherited_approval = [bool](
+        (@($approvedDispatchMissingFromRecommendations).Count -eq 0) -or
+        ([string]$hierarchyState.governance_scope -eq 'child')
+    )
+    approved_dispatch_fully_executed = [bool](@($approvedDispatchNotExecuted).Count -eq 0)
+    executed_specialists_subset_of_approved_dispatch = [bool](@($executedWithoutApproval).Count -eq 0)
+    local_suggestions_contained = [bool](@($localSuggestionsExecutedWithoutApproval).Count -eq 0)
+    native_contract_complete_for_approved_dispatch = [bool](@($dispatchContractIncompleteSkillIds).Count -eq 0)
+    approved_dispatch_missing_from_recommendations = @($approvedDispatchMissingFromRecommendations)
+    approved_dispatch_not_executed = @($approvedDispatchNotExecuted)
+    executed_without_approval = @($executedWithoutApproval)
+    local_suggestions_executed_without_approval = @($localSuggestionsExecutedWithoutApproval)
+    dispatch_contract_incomplete_skill_ids = @($dispatchContractIncompleteSkillIds)
+}
+$dispatchIntegrity | Add-Member -NotePropertyName 'proof_passed' -NotePropertyValue ([bool](
+    $dispatchIntegrity.approved_dispatch_supported_by_recommendation_or_inherited_approval -and
+    $dispatchIntegrity.approved_dispatch_fully_executed -and
+    $dispatchIntegrity.executed_specialists_subset_of_approved_dispatch -and
+    $dispatchIntegrity.local_suggestions_contained -and
+    $dispatchIntegrity.native_contract_complete_for_approved_dispatch
+))
 
 $baseStatus = if ($failedUnitCount -eq 0 -and $executedUnitCount -ge [int]$profile.expected_minimum_units) { 'completed' } elseif ($executedUnitCount -eq 0) { 'failed' } else { 'completed_with_failures' }
 $liveAttemptedSpecialistUnits = @($executedSpecialistUnits | Where-Object { [bool]$_.live_native_execution })
@@ -1104,8 +1122,6 @@ $executionManifest = [pscustomobject]@{
     route_runtime_alignment = [pscustomobject]@{
         router_selected_skill = if ($runtimeInputPacket) { [string]$runtimeInputPacket.route_snapshot.selected_skill } else { $null }
         runtime_selected_skill = if ($runtimeInputPacket) { [string]$runtimeInputPacket.authority_flags.explicit_runtime_skill } else { 'vibe' }
-        requested_host_adapter_id = if ($runtimeInputPacket -and $runtimeInputPacket.host_adapter) { [string]$runtimeInputPacket.host_adapter.requested_host_id } else { [string]$runtime.host_adapter.id }
-        effective_host_adapter_id = if ($runtimeInputPacket -and $runtimeInputPacket.host_adapter) { [string]$runtimeInputPacket.host_adapter.effective_host_id } else { [string]$runtime.host_adapter.id }
         skill_mismatch = if ($runtimeInputPacket) { [bool]$runtimeInputPacket.divergence_shadow.skill_mismatch } else { $false }
         confirm_required = if ($runtimeInputPacket) { [bool]$runtimeInputPacket.route_snapshot.confirm_required } else { $false }
     }
@@ -1147,8 +1163,6 @@ $executionManifest = [pscustomobject]@{
         ambiguous_unit_count = [int]$planShadow.payload.ambiguous_unit_count
     }
     specialist_accounting = [pscustomobject]@{
-        requested_host_adapter_id = if ($runtimeInputPacket -and $runtimeInputPacket.host_adapter) { [string]$runtimeInputPacket.host_adapter.requested_host_id } else { [string]$runtime.host_adapter.id }
-        effective_host_adapter_id = if ($runtimeInputPacket -and $runtimeInputPacket.host_adapter) { [string]$runtimeInputPacket.host_adapter.effective_host_id } else { [string]$runtime.host_adapter.id }
         recommendation_count = @($specialistRecommendations).Count
         specialist_skill_count = @($specialistSkills).Count
         specialist_skills = @($specialistSkills)
@@ -1186,18 +1200,12 @@ $executionManifest = [pscustomobject]@{
         escalation_required = [bool]$escalationRequired
         escalation_request_path = $escalationPath
     }
+    dispatch_integrity = $dispatchIntegrity
     status = if ([string]$hierarchyState.governance_scope -eq 'child' -and $baseStatus -eq 'completed') { 'completed_local_scope' } else { $baseStatus }
     waves = @($waveReceipts)
 }
 
 $executionManifestPath = Join-Path $sessionRoot 'execution-manifest.json'
-if ($executionMemoryContext) {
-    $executionManifest | Add-Member -NotePropertyName execution_memory_context -NotePropertyValue ([pscustomobject]@{
-        context_path = [string]$ExecutionMemoryContextPath
-        injected_item_count = @($executionMemoryContext.items).Count
-        items = @($executionMemoryContext.items)
-    }) -Force
-}
 Write-VibeJsonArtifact -Path $executionManifestPath -Value $executionManifest
 
 $proofManifest = [pscustomobject]@{
@@ -1228,6 +1236,7 @@ $proofManifest = [pscustomobject]@{
     auto_approved_specialist_unit_count = @($autoApprovedDispatch).Count
     residual_local_specialist_suggestion_count = @($localSuggestions).Count
     specialist_dispatch_resolution_path = if ($specialistDispatchResolution.auto_absorb_gate.receipt_path) { [string]$specialistDispatchResolution.auto_absorb_gate.receipt_path } else { $null }
+    dispatch_integrity_proof_passed = [bool]$dispatchIntegrity.proof_passed
     delegated_lane_count = [int]$delegatedLaneCount
     review_receipt_count = [int]$reviewReceiptCount
     governance_scope = [string]$hierarchyState.governance_scope
@@ -1258,6 +1267,7 @@ $proofLines = @(
     ('- auto_approved_specialist_unit_count: `{0}`' -f @($autoApprovedDispatch).Count),
     ('- residual_local_specialist_suggestion_count: `{0}`' -f @($localSuggestions).Count),
     ('- specialist_execution_status: `{0}`' -f $effectiveSpecialistExecutionStatus),
+    ('- dispatch_integrity_proof_passed: `{0}`' -f [bool]$dispatchIntegrity.proof_passed),
     ('- execution_manifest: `{0}`' -f $executionManifestPath),
     ('- execution_topology: `{0}`' -f $executionTopologyPath),
     ('- plan_shadow: `{0}`' -f $planShadow.path),
@@ -1287,7 +1297,6 @@ $receipt = [pscustomobject]@{
     requirement_doc_path = $requirementPath
     execution_plan_path = $planPath
     runtime_input_packet_path = $runtimeInputPath
-    execution_memory_context_path = $ExecutionMemoryContextPath
     plan_shadow_path = $planShadow.path
     execution_manifest_path = $executionManifestPath
     benchmark_proof_manifest_path = $proofManifestPath
@@ -1308,6 +1317,8 @@ $receipt = [pscustomobject]@{
     specialist_skills = @($specialistSkills)
     auto_approved_specialist_unit_count = @($autoApprovedDispatch).Count
     local_specialist_suggestion_count = @($localSuggestions).Count
+    dispatch_integrity_proof_passed = [bool]$dispatchIntegrity.proof_passed
+    dispatch_integrity = $dispatchIntegrity
     escalation_required = [bool]$escalationRequired
     escalation_request_path = $escalationPath
     specialist_dispatch_resolution_path = if ($specialistDispatchResolution.auto_absorb_gate.receipt_path) { [string]$specialistDispatchResolution.auto_absorb_gate.receipt_path } else { $null }

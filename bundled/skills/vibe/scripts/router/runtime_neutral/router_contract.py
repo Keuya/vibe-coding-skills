@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from runtime_neutral.custom_admission import load_custom_admission
+
 
 @dataclass(frozen=True)
 class RepoContext:
@@ -97,12 +99,34 @@ def resolve_home_directory() -> Path:
     return Path.home().resolve()
 
 
-def resolve_target_root(target_root: str | None = None) -> Path:
+def resolve_host_id(host_id: str | None = None) -> str:
+    resolved = normalize_text(host_id or os.environ.get("VCO_HOST_ID") or "codex")
+    aliases = {
+        "claude": "claude-code",
+    }
+    resolved = aliases.get(resolved, resolved)
+    if resolved not in {"codex", "claude-code", "cursor", "windsurf", "openclaw", "opencode", "generic"}:
+        return "codex"
+    return resolved
+
+
+def resolve_target_root(target_root: str | None = None, host_id: str | None = None) -> Path:
     if target_root:
         return Path(target_root).expanduser().resolve()
-    if os.environ.get("CODEX_HOME"):
-        return Path(os.environ["CODEX_HOME"]).expanduser().resolve()
-    return (resolve_home_directory() / ".codex").resolve()
+    resolved_host_id = resolve_host_id(host_id)
+    env_map = {
+        "codex": ("CODEX_HOME", Path(".codex")),
+        "claude-code": ("CLAUDE_HOME", Path(".claude")),
+        "cursor": ("CURSOR_HOME", Path(".cursor")),
+        "windsurf": ("WINDSURF_HOME", Path(".codeium") / "windsurf"),
+        "openclaw": ("OPENCLAW_HOME", Path(".openclaw")),
+        "opencode": ("OPENCODE_HOME", Path(".config") / "opencode"),
+        "generic": ("", Path(".vibe-skills") / "generic"),
+    }
+    env_name, default_rel = env_map[resolved_host_id]
+    if env_name and os.environ.get(env_name):
+        return Path(os.environ[env_name]).expanduser().resolve()
+    return (resolve_home_directory() / default_rel).resolve()
 
 
 def resolve_requested_canonical(requested_skill: str | None, alias_map: dict[str, Any]) -> str | None:
@@ -263,16 +287,20 @@ def select_pack_candidate(
     }
 
 
-def resolve_skill_md_path(repo: RepoContext, skill: str, target_root: str | None) -> Path | None:
+def resolve_skill_md_path(repo: RepoContext, skill: str, target_root: str | None, host_id: str | None = None) -> Path | None:
     bundled = repo.bundled_skills_root / skill / "SKILL.md"
     if bundled.exists():
         return bundled
-    installed = resolve_target_root(target_root) / "skills" / skill / "SKILL.md"
-    return installed if installed.exists() else None
+    installed_root = resolve_target_root(target_root, host_id)
+    installed = installed_root / "skills" / skill / "SKILL.md"
+    if installed.exists():
+        return installed
+    custom_installed = installed_root / "skills" / "custom" / skill / "SKILL.md"
+    return custom_installed if custom_installed.exists() else None
 
 
-def read_skill_descriptor(repo: RepoContext, skill: str, target_root: str | None) -> dict[str, Any]:
-    path = resolve_skill_md_path(repo, skill, target_root)
+def read_skill_descriptor(repo: RepoContext, skill: str, target_root: str | None, host_id: str | None = None) -> dict[str, Any]:
+    path = resolve_skill_md_path(repo, skill, target_root, host_id)
     description = None
     if path and path.exists():
         lines = path.read_text(encoding="utf-8-sig").splitlines()
@@ -290,7 +318,7 @@ def read_skill_descriptor(repo: RepoContext, skill: str, target_root: str | None
     }
 
 
-def build_confirm_ui(repo: RepoContext, route_result: dict[str, Any], target_root: str | None) -> dict[str, Any] | None:
+def build_confirm_ui(repo: RepoContext, route_result: dict[str, Any], target_root: str | None, host_id: str | None = None) -> dict[str, Any] | None:
     if route_result["route_mode"] != "confirm_required" or not route_result.get("selected"):
         return None
 
@@ -305,7 +333,7 @@ def build_confirm_ui(repo: RepoContext, route_result: dict[str, Any], target_roo
 
     options = []
     for index, row in enumerate(ranking[:5], start=1):
-        descriptor = read_skill_descriptor(repo, row["skill"], target_root)
+        descriptor = read_skill_descriptor(repo, row["skill"], target_root, host_id)
         options.append(
             {
                 "option_id": index,
@@ -403,6 +431,7 @@ def route_prompt(
     task_type: str,
     requested_skill: str | None = None,
     target_root: str | None = None,
+    host_id: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     grade = normalize_text(grade)
@@ -423,6 +452,12 @@ def route_prompt(
     routing_rules = load_json(repo.config_root / "skill-routing-rules.json")
 
     requested_canonical = resolve_requested_canonical(requested_skill, alias_map)
+    resolved_target_root = resolve_target_root(target_root, host_id)
+    custom_admission = load_custom_admission(
+        repo_root=repo.repo_root,
+        target_root=resolved_target_root,
+        requested_canonical=requested_canonical,
+    )
     threshold_values = thresholds_cfg.get("thresholds") or {}
     candidate_selection_cfg = thresholds_cfg.get("candidate_selection") or {}
     min_top_gap = float(threshold_values.get("min_top1_top2_gap", 0.08))
@@ -434,7 +469,8 @@ def route_prompt(
     enforce_confirm_on_legacy_fallback = bool(thresholds_cfg.get("safety", {}).get("enforce_confirm_on_legacy_fallback", False))
 
     pack_results: list[dict[str, Any]] = []
-    for pack in pack_manifest.get("packs") or []:
+    packs: list[dict[str, Any]] = list(pack_manifest.get("packs") or []) + list(custom_admission.get("admitted_packs") or [])
+    for pack in packs:
         grade_allow = [normalize_text(item) for item in (pack.get("grade_allow") or [])]
         task_allow = [normalize_text(item) for item in (pack.get("task_allow") or [])]
         if grade_allow and grade not in grade_allow:
@@ -460,6 +496,10 @@ def route_prompt(
             max(0.0, min(1.0, (0.75 * float(selection["score"])) + (0.25 * float(selection["top1_top2_gap"])))),
             4,
         )
+        custom_metadata = pack.get("custom_admission")
+        route_authority_eligible = True
+        if isinstance(custom_metadata, dict):
+            route_authority_eligible = bool(custom_metadata.get("route_authority_eligible", False))
         pack_results.append(
             {
                 "pack_id": normalize_text(pack.get("id")),
@@ -471,11 +511,14 @@ def route_prompt(
                 "candidate_top1_top2_gap": round(float(selection["top1_top2_gap"]), 4),
                 "candidate_signal": candidate_signal,
                 "candidate_filtered_out_by_task": selection["filtered_out_by_task"],
+                "route_authority_eligible": route_authority_eligible,
+                "custom_admission": custom_metadata,
             }
         )
 
     ranked = sorted(pack_results, key=lambda row: (-row["score"], row["pack_id"]))
-    top = ranked[0] if ranked else None
+    authority_ranked = [row for row in ranked if bool(row.get("route_authority_eligible", True))]
+    top = authority_ranked[0] if authority_ranked else None
     confidence = float(top["score"]) if top else 0.0
     top_gap = float(top["candidate_top1_top2_gap"]) if top else 0.0
     candidate_signal = float(top["candidate_signal"]) if top else 0.0
@@ -573,10 +616,19 @@ def route_prompt(
             "engine": "python",
             "host": "runtime_neutral",
         },
+        "custom_admission": {
+            "status": custom_admission.get("status"),
+            "target_root": custom_admission.get("target_root"),
+            "manifest_paths": custom_admission.get("manifest_paths"),
+            "manifests_present": custom_admission.get("manifests_present"),
+            "invalid_entries": custom_admission.get("invalid_entries"),
+            "dependency_failures": custom_admission.get("dependency_failures"),
+            "admitted_candidates": custom_admission.get("admitted_candidates"),
+        },
     }
     result.update(build_fallback_truth(result, fallback_policy))
 
-    confirm_ui = build_confirm_ui(repo, result, target_root)
+    confirm_ui = build_confirm_ui(repo, result, target_root, host_id)
     if confirm_ui:
         result["confirm_ui"] = confirm_ui
     return result

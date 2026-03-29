@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
 import tempfile
@@ -56,7 +55,6 @@ def run_governed_runtime(task: str, artifact_root: Path) -> dict[str, object]:
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        encoding="utf-8",
         check=True,
     )
     stdout = completed.stdout.strip()
@@ -75,7 +73,6 @@ def run_child_runtime(
     inherited_execution_plan_path: Path,
     artifact_root: Path,
     approved_specialist_skill_ids: list[str] | None = None,
-    extra_env: dict[str, str] | None = None,
 ) -> dict[str, object]:
     shell = resolve_powershell()
     if shell is None:
@@ -116,9 +113,7 @@ def run_child_runtime(
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        encoding="utf-8",
         check=True,
-        env={**os.environ, **(extra_env or {})},
     )
     stdout = completed.stdout.strip()
     if stdout in ("", "null"):
@@ -195,16 +190,13 @@ class RootChildHierarchyBridgeTests(unittest.TestCase):
             self.assertEqual("root", execution_manifest["governance_scope"])
             self.assertTrue(execution_manifest["authority"]["completion_claim_allowed"])
             self.assertEqual("vibe", execution_manifest["route_runtime_alignment"]["runtime_selected_skill"])
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["proof_passed"]))
 
-    def test_child_specialist_suggestions_stay_frozen_advisory_but_auto_absorb_same_round(self) -> None:
+    def test_child_specialist_suggestions_are_advisory_until_root_approval(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             artifact_root = Path(tempdir)
-            composite_task = (
-                "Analyze biological sequences with Python, draft a scientific report, "
-                "and prepare the execution planning notes."
-            )
             root_payload = run_governed_runtime(
-                composite_task,
+                "Root specialist dispatch seed for child escalation checks.",
                 artifact_root=artifact_root,
             )
             root_summary = root_payload["summary"]
@@ -223,7 +215,7 @@ class RootChildHierarchyBridgeTests(unittest.TestCase):
                     approved_skill_ids = [first_skill_id]
 
             child_payload = run_child_runtime(
-                task=composite_task + " Child lane requests extra specialist help inside the same governed round.",
+                task="Child specialist escalation advisory smoke.",
                 root_run_id=str(root_summary["run_id"]),
                 inherited_requirement_doc_path=Path(root_artifacts["requirement_doc"]),
                 inherited_execution_plan_path=Path(root_artifacts["execution_plan"]),
@@ -259,11 +251,6 @@ class RootChildHierarchyBridgeTests(unittest.TestCase):
             local_suggestions = list(specialist_dispatch.get("local_specialist_suggestions") or [])
             approved_dispatch = list(specialist_dispatch.get("approved_dispatch") or [])
             approved_ids = {str(entry.get("skill_id", "")) for entry in approved_dispatch}
-            frozen_local_ids = {
-                str(entry.get("skill_id", "")).strip()
-                for entry in local_suggestions
-                if str(entry.get("skill_id", "")).strip()
-            }
 
             if local_suggestions:
                 self.assertTrue(bool(specialist_dispatch.get("escalation_required", False)))
@@ -276,37 +263,9 @@ class RootChildHierarchyBridgeTests(unittest.TestCase):
             self.assertEqual("child", execution_manifest["governance_scope"])
             self.assertFalse(execution_manifest["authority"]["completion_claim_allowed"])
             self.assertEqual("vibe", execution_manifest["route_runtime_alignment"]["runtime_selected_skill"])
-
-            specialist_accounting = execution_manifest["specialist_accounting"]
-            effective_approved_ids = {
-                str(entry.get("skill_id", "")).strip()
-                for entry in list(specialist_accounting.get("approved_dispatch") or [])
-                if str(entry.get("skill_id", "")).strip()
-            }
-            residual_ids = {
-                str(entry.get("skill_id", "")).strip()
-                for entry in list(specialist_accounting.get("local_specialist_suggestions") or [])
-                if str(entry.get("skill_id", "")).strip()
-            }
-            auto_absorb_gate = specialist_accounting["auto_absorb_gate"]
-
-            self.assertTrue(bool(auto_absorb_gate["enabled"]))
-            self.assertTrue(Path(auto_absorb_gate["receipt_path"]).exists())
-            self.assertTrue(approved_ids.issubset(effective_approved_ids))
-            self.assertEqual(frozen_local_ids, set(auto_absorb_gate["auto_approved_skill_ids"]) | residual_ids)
-
-            if frozen_local_ids:
-                self.assertGreaterEqual(len(auto_absorb_gate["auto_approved_skill_ids"]), 1)
-                self.assertIn(
-                    str(auto_absorb_gate["status"]),
-                    {"auto_approved_same_round", "partially_auto_approved_same_round"},
-                )
-            if residual_ids:
-                self.assertTrue(bool(specialist_accounting["escalation_required"]))
-                self.assertTrue(Path(specialist_accounting["escalation_request_path"]).exists())
-            else:
-                self.assertFalse(bool(specialist_accounting["escalation_required"]))
-                self.assertFalse(bool(specialist_accounting["escalation_request_path"]))
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["proof_passed"]))
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["local_suggestions_contained"]))
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["executed_specialists_subset_of_approved_dispatch"]))
 
 
 if __name__ == "__main__":

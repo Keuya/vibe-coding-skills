@@ -293,7 +293,9 @@ function Read-SkillFrontMatter {
 function Resolve-SkillMdPath {
     param(
         [string]$RepoRoot,
-        [string]$Skill
+        [string]$Skill,
+        [AllowEmptyString()] [string]$TargetRoot = '',
+        [AllowEmptyString()] [string]$HostId = ''
     )
 
     if (-not $Skill) { return $null }
@@ -304,9 +306,12 @@ function Resolve-SkillMdPath {
         if (Test-Path -LiteralPath $bundled) { return $bundled }
     }
 
-    $userRoot = Resolve-VgoInstalledSkillsRoot
+    $userRoot = Resolve-VgoInstalledSkillsRoot -TargetRoot $TargetRoot -HostId $HostId
     $installed = Join-Path $userRoot (Join-Path $skillId "SKILL.md")
     if (Test-Path -LiteralPath $installed) { return $installed }
+
+    $customInstalled = Join-Path $userRoot (Join-Path 'custom' (Join-Path $skillId 'SKILL.md'))
+    if (Test-Path -LiteralPath $customInstalled) { return $customInstalled }
 
     return $null
 }
@@ -314,10 +319,12 @@ function Resolve-SkillMdPath {
 function Get-SkillDescriptor {
     param(
         [string]$RepoRoot,
-        [string]$Skill
+        [string]$Skill,
+        [AllowEmptyString()] [string]$TargetRoot = '',
+        [AllowEmptyString()] [string]$HostId = ''
     )
 
-    $mdPath = Resolve-SkillMdPath -RepoRoot $RepoRoot -Skill $Skill
+    $mdPath = Resolve-SkillMdPath -RepoRoot $RepoRoot -Skill $Skill -TargetRoot $TargetRoot -HostId $HostId
     $frontMatter = if ($mdPath) { Read-SkillFrontMatter -SkillMdPath $mdPath } else { $null }
 
     return [pscustomobject]@{
@@ -333,7 +340,9 @@ function Build-ConfirmSkillOptions {
     param(
         [object]$Result,
         [object]$ConfirmUiPolicy,
-        [string]$RepoRoot
+        [string]$RepoRoot,
+        [AllowEmptyString()] [string]$TargetRoot = '',
+        [AllowEmptyString()] [string]$HostId = ''
     )
 
     $policy = Get-ConfirmUiPolicy -Policy $ConfirmUiPolicy
@@ -369,7 +378,11 @@ function Build-ConfirmSkillOptions {
     foreach ($row in $rows) {
         $idx++
         $skillId = [string]$row.skill
-        $desc = if ($policy.options.include_descriptions) { Get-SkillDescriptor -RepoRoot $RepoRoot -Skill $skillId } else { $null }
+        $desc = if ($policy.options.include_descriptions) {
+            Get-SkillDescriptor -RepoRoot $RepoRoot -Skill $skillId -TargetRoot $TargetRoot -HostId $HostId
+        } else {
+            $null
+        }
 
         $options += [pscustomobject]@{
             option_id = $idx
@@ -434,5 +447,4 @@ function Build-ConfirmUiText {
 
     return ($lines -join "`n")
 }
-
 

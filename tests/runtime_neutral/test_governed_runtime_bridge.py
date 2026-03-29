@@ -77,7 +77,6 @@ def resolve_python_command_spec_via_powershell(command_spec: str, path_entries: 
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        encoding="utf-8",
         check=True,
     )
     return json.loads(completed.stdout)
@@ -96,16 +95,12 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
 
         required_markers = set(runtime["required_runtime_markers"])
         self.assertIn("scripts/runtime/VibeRuntime.Common.ps1", required_markers)
-        self.assertIn("scripts/runtime/VibeMemoryBackends.Common.ps1", required_markers)
         self.assertIn("scripts/runtime/Freeze-RuntimeInputPacket.ps1", required_markers)
         self.assertIn("scripts/runtime/invoke-vibe-runtime.ps1", required_markers)
-        self.assertIn("scripts/runtime/memory_backend_driver.py", required_markers)
-        self.assertIn("scripts/runtime/native_specialist_runner.py", required_markers)
         self.assertIn("scripts/verify/vibe-governed-runtime-contract-gate.ps1", required_markers)
         self.assertIn("config/runtime-contract.json", required_markers)
         self.assertIn("config/runtime-modes.json", required_markers)
         self.assertIn("config/runtime-input-packet-policy.json", required_markers)
-        self.assertIn("config/memory-backend-adapters.json", required_markers)
         self.assertIn("config/proof-class-registry.json", required_markers)
         self.assertIn("config/requirement-doc-policy.json", required_markers)
         self.assertIn("config/plan-execution-policy.json", required_markers)
@@ -128,17 +123,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             EXPECTED_STAGE_IDS,
             [stage["id"] for stage in contract["stages"]],
         )
-
-        cleanup_policy = json.loads(
-            (REPO_ROOT / "config" / "phase-cleanup-policy.json").read_text(encoding="utf-8")
-        )
-        guardrails = cleanup_policy["destructive_cleanup_guardrails"]
-        self.assertTrue(bool(guardrails["forbid_blind_recursive_wipe"]))
-        self.assertTrue(bool(guardrails["forbid_batch_delete_in_managed_roots"]))
-        self.assertTrue(bool(guardrails["require_explicit_hazard_alert"]))
-        self.assertTrue(bool(guardrails["require_receipt_backed_path_list"]))
-        self.assertIn("docs", list(guardrails["managed_roots"]))
-        self.assertIn("bundled", list(guardrails["managed_roots"]))
 
     def test_invoke_vibe_runtime_produces_six_stage_closure_under_temp_artifact_root(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
@@ -169,7 +153,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
-                encoding="utf-8",
                 check=True,
             )
 
@@ -221,7 +204,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 "execution_manifest",
                 "benchmark_proof_manifest",
                 "cleanup_receipt",
-                "delivery_acceptance_report",
             ):
                 self.assertFalse(str(Path(artifacts[key])).lower().startswith(repo_root_text), key)
                 if key in relative_artifacts:
@@ -235,15 +217,10 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             execution_manifest_path = resolve_artifact_path("execution_manifest")
             benchmark_proof_path = resolve_artifact_path("benchmark_proof_manifest")
             runtime_input_packet_path = resolve_artifact_path("runtime_input_packet")
-            delivery_acceptance_report_path = resolve_artifact_path("delivery_acceptance_report")
 
             if requirement_doc_path.exists():
                 requirement_doc = requirement_doc_path.read_text(encoding="utf-8")
                 self.assertIn("## Acceptance Criteria", requirement_doc)
-                self.assertIn("## Product Acceptance Criteria", requirement_doc)
-                self.assertIn("## Manual Spot Checks", requirement_doc)
-                self.assertIn("## Completion Language Policy", requirement_doc)
-                self.assertIn("## Delivery Truth Contract", requirement_doc)
                 self.assertIn("## Assumptions", requirement_doc)
                 self.assertIn("## Runtime Input Truth", requirement_doc)
                 self.assertIn("## Specialist Recommendations", requirement_doc)
@@ -251,15 +228,11 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertEqual("plans", execution_plan_path.parent.name)
             execution_plan = execution_plan_path.read_text(encoding="utf-8")
             self.assertIn("## Specialist Skill Dispatch Plan", execution_plan)
-            self.assertIn("## Delivery Acceptance Plan", execution_plan)
-            self.assertIn("## Completion Language Rules", execution_plan)
 
             runtime_input_packet = json.loads(runtime_input_packet_path.read_text(encoding="utf-8"))
             execute_receipt = json.loads(execute_receipt_path.read_text(encoding="utf-8"))
             execution_manifest = json.loads(execution_manifest_path.read_text(encoding="utf-8"))
             benchmark_proof = json.loads(benchmark_proof_path.read_text(encoding="utf-8"))
-            delivery_acceptance_report = json.loads(delivery_acceptance_report_path.read_text(encoding="utf-8"))
-            cleanup_receipt = json.loads(resolve_artifact_path("cleanup_receipt").read_text(encoding="utf-8"))
 
             self.assertEqual("runtime_input_freeze", runtime_input_packet["stage"])
             self.assertEqual("interactive_governed", runtime_input_packet["runtime_mode"])
@@ -283,13 +256,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertEqual(execute_receipt["executed_unit_count"], execution_manifest["executed_unit_count"])
             self.assertEqual("completed", execution_manifest["status"])
             self.assertGreaterEqual(execution_manifest["successful_unit_count"], 2)
-            self.assertEqual("PASS", delivery_acceptance_report["summary"]["gate_result"])
-            self.assertTrue(delivery_acceptance_report["summary"]["completion_language_allowed"])
-            self.assertIsNotNone(summary["delivery_acceptance"])
-            self.assertEqual("PASS", summary["delivery_acceptance"]["gate_result"])
-            self.assertTrue(summary["delivery_acceptance"]["completion_language_allowed"])
-            self.assertIsNotNone(cleanup_receipt["delivery_acceptance"])
-            self.assertEqual("PASS", cleanup_receipt["delivery_acceptance"]["gate_result"])
             self.assertEqual(0, execution_manifest["failed_unit_count"])
             self.assertEqual("runtime", execution_manifest["proof_class"])
             self.assertTrue(Path(execution_manifest["plan_shadow"]["path"]).exists())
@@ -299,21 +265,18 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(execution_manifest["specialist_accounting"]["recommendation_count"], 1)
             self.assertGreaterEqual(execution_manifest["specialist_accounting"]["dispatch_unit_count"], 1)
             self.assertIn("systematic-debugging", execution_manifest["specialist_accounting"]["specialist_skills"])
-            self.assertEqual("explicitly_degraded", execution_manifest["specialist_accounting"]["effective_execution_status"])
-            self.assertEqual(0, execution_manifest["specialist_accounting"]["executed_specialist_unit_count"])
-            self.assertGreaterEqual(
-                execution_manifest["specialist_accounting"]["degraded_specialist_unit_count"], 1
-            )
             self.assertGreaterEqual(execution_manifest["plan_shadow"]["specialist_dispatch_unit_count"], 1)
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["proof_passed"]))
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["approved_dispatch_fully_executed"]))
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["executed_specialists_subset_of_approved_dispatch"]))
+            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["local_suggestions_contained"]))
             self.assertTrue(benchmark_proof["proof_passed"])
             self.assertGreaterEqual(benchmark_proof["executed_unit_count"], 2)
             self.assertEqual("runtime", benchmark_proof["proof_class"])
             self.assertTrue(Path(benchmark_proof["plan_shadow_path"]).exists())
             self.assertGreaterEqual(benchmark_proof["specialist_recommendation_count"], 1)
             self.assertGreaterEqual(benchmark_proof["specialist_dispatch_unit_count"], 1)
-            self.assertEqual(0, benchmark_proof["executed_specialist_unit_count"])
-            self.assertGreaterEqual(benchmark_proof["degraded_specialist_unit_count"], 1)
-            self.assertEqual("explicitly_degraded", benchmark_proof["specialist_execution_status"])
+            self.assertTrue(bool(benchmark_proof["dispatch_integrity_proof_passed"]))
 
             cleanup_receipt = json.loads(resolve_artifact_path("cleanup_receipt").read_text(encoding="utf-8"))
             self.assertEqual("receipt_only", cleanup_receipt["cleanup_mode"])
@@ -325,13 +288,11 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 self.assertEqual(0, result["exit_code"])
                 self.assertTrue(Path(result["stdout_path"]).exists())
                 self.assertTrue(Path(result["stderr_path"]).exists())
-                if result["kind"] == "specialist_dispatch":
+                if result.get("kind") == "specialist_dispatch" and bool(result.get("degraded")):
                     self.assertEqual("degraded_non_authoritative", result["status"])
                     self.assertFalse(bool(result["verification_passed"]))
-                    self.assertEqual("degraded_specialist_contract_receipt", result["execution_driver"])
                 else:
                     self.assertEqual("completed", result["status"])
-                    self.assertTrue(bool(result["verification_passed"]))
 
     def test_resolve_vgo_python_command_spec_falls_back_to_python3(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

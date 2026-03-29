@@ -66,6 +66,7 @@ $requiredFiles = @(
     'scripts/runtime/Invoke-PlanExecute.ps1',
     'scripts/runtime/Invoke-PhaseCleanup.ps1',
     'scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1',
+    'scripts/verify/vibe-specialist-dispatch-closure-gate.ps1',
     'scripts/verify/vibe-no-silent-fallback-contract-gate.ps1',
     'scripts/verify/vibe-no-self-introduced-fallback-gate.ps1',
     'scripts/verify/vibe-release-truth-consistency-gate.ps1'
@@ -141,6 +142,7 @@ Add-Assertion -Results ([ref]$results) -Condition ($generatedRequirement.Contain
 Add-Assertion -Results ([ref]$results) -Condition ($generatedPlan.Contains('## Specialist Skill Dispatch Plan')) -Message 'runtime smoke execution plan includes specialist dispatch section'
 Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.specialist_accounting.recommendation_count -ge 1) -Message 'runtime smoke execution manifest carries specialist accounting'
 Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.plan_shadow.specialist_dispatch_unit_count -ge 1) -Message 'runtime smoke plan shadow counts specialist dispatch units'
+Add-Assertion -Results ([ref]$results) -Condition ([bool]$executionManifest.dispatch_integrity.proof_passed) -Message 'runtime smoke specialist dispatch integrity proof passes'
 
 $failureCount = @($results | Where-Object { -not $_.passed }).Count
 $gatePassed = ($failureCount -eq 0)

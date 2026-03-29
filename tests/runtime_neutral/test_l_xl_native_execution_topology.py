@@ -98,7 +98,6 @@ def run_runtime(
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        encoding="utf-8",
         check=True,
         env={**os.environ, **(extra_env or {})},
     )

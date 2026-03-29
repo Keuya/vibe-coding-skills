@@ -469,40 +469,6 @@ copy_dir_content() {
   cp -R "${src}/." "${dst}/"
 }
 
-remove_path_entry() {
-  local path="$1"
-  if [[ -L "${path}" || -f "${path}" ]]; then
-    rm -f "${path}"
-    return 0
-  fi
-  if [[ -d "${path}" ]]; then
-    rmdir "${path}"
-  fi
-}
-
-prune_dir_content_individually() {
-  local src="$1"
-  local dst="$2"
-  [[ -d "${src}" && -d "${dst}" ]] || return 0
-
-  local path="" rel="" src_equivalent=""
-  while IFS= read -r -d '' path; do
-    rel="${path#${dst}/}"
-    src_equivalent="${src}/${rel}"
-    if [[ ! -e "${src_equivalent}" ]]; then
-      remove_path_entry "${path}"
-    fi
-  done < <(find "${dst}" -mindepth 1 -depth -print0)
-}
-
-sync_dir_content_individually() {
-  local src="$1"
-  local dst="$2"
-  [[ -d "${src}" ]] || return 0
-  copy_dir_content "${src}" "${dst}"
-  prune_dir_content_individually "${src}" "${dst}"
-}
-
 sync_vibe_canonical_to_target() {
   local governance_path="${SCRIPT_DIR}/config/version-governance.json"
   local canonical_rel='.'
@@ -555,7 +521,8 @@ sync_vibe_canonical_to_target() {
   for rel in "${dirs[@]}"; do
     src="${canonical_root}/${rel}"
     dst="${target_vibe_root}/${rel}"
-    sync_dir_content_individually "${src}" "${dst}"
+    [[ -d "${dst}" ]] && rm -rf "${dst}"
+    copy_dir_content "${src}" "${dst}"
   done
 }
 
