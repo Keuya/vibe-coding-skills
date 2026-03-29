@@ -112,7 +112,7 @@ If your AI supports skills, VibeSkills works. 340+ skills spanning coding, resea
 | **Blind execution**: AI dives in without clarifying requirements — fast but off-target, projects gradually become black boxes. | **🧭 Governed Workflow**: Clarify → Verify → Trace is enforced in a unified process; every step is auditable. |
 | **Conflicting tools**: Lack of coordination between plugins and workflows leads to environment pollution or infinite loops. | **🧩 Global Governance**: 129 contract rules define safety boundaries and fallback mechanisms for long-term stability. |
 | **Messy workspace**: After extended use, repos become cluttered; new Agents miss project details when taking over, causing handoff gaps. | **📁 Semantic Directory Governance**: Fixed-architecture file storage so any new AI conversation instantly understands the project context. |
-| **AI bad habits**: Deletes main files while clearing backups; writes silent fallbacks then confidently claims "it's done". | **🛡️ Built-in Safety Rules**: Batch file deletion is prohibited (one file at a time only); fallback mechanisms must always show explicit warnings. |
+| **AI bad habits**: Deletes main files while clearing backups; writes silent fallbacks then confidently claims "it's done". | **🛡️ Built-in Safety Rules**: Governed execution blocks dangerous bulk deletion and blind recursive wipes by default; fallback mechanisms must always show explicit warnings. |
 | **Manual workflow discipline**: Users must maintain their own AI collaboration process from experience — high learning cost. | **🚦 Framework-guided end-to-end**: Requirements → Plan → Multi-agent execution → Automated test iteration — fully managed. |
 | **Skill dispatch chaos in multi-agent runs**: Hard to assign the right skills to each agent for different tasks. | **🤖 Automatic Skill Dispatch**: Multi-agent workflows automatically assign the corresponding Skills to each Agent's task. |
 
@@ -183,12 +183,6 @@ VibeSkills follows a `Clarify ➔ Plan ➔ Execute ➔ Verify` governed workflow
 - **Architecture Planning**: Skills like `aios-architect` design the implementation path
 - **Execution Layer**: 340+ skills called on demand to complete the actual work
 - **Quality Verification**: Skills like `tdd-guide` and `code-review` ensure delivery quality
-
-> [!TIP]
-> **Built-in CRON support**: Explicitly enable it in your request to let vibe continuously advance tasks on a schedule.
-> ```
-> I want you to continuously push forward XXX task based on cron, completing: XXXX $vibe
-> ```
 
 ---
 
