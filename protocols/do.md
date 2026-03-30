@@ -1,5 +1,22 @@
 # vibe-do Protocol
 
+> **What this protocol does -- plain language overview**
+>
+> This is the execution protocol. It governs how VibeSkills writes code, fixes bugs,
+> and runs tests -- specifically during Stage 5 (`plan_execute`) of the runtime.
+>
+> You do not need to read this to use VibeSkills. It is reference material for advanced
+> users and contributors who want to understand how execution decisions are made.
+>
+> **Key terms used below:**
+> - **M / L / XL grade**: Task complexity level. M = quick task, L = multi-step task, XL = large parallel task.
+> - **Closure-First Contract**: The principle of reaching a working state quickly before expanding scope. Specifically: two probe steps + one verification step early in any task.
+> - **Proxy-goal drift**: When the system optimizes a visible metric instead of the actual goal. Example: making all tests pass by deleting the failing tests, not fixing the code.
+> - **P5 pattern**: "Evidence-Based Communication" -- never say "should work"; always show [Command] -> [Output] -> [Claim].
+> - **V2 pattern**: "Completion Gate" -- identify what to verify, run it, read the output, confirm correctness, then mark complete.
+> - **V7 pattern**: "Learning Capture" -- record what routing decision was made and how effective it was.
+
+
 Protocol for coding, implementation, debugging, and testing tasks.
 
 ## Governed Runtime Position

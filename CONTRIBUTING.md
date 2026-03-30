@@ -8,6 +8,16 @@ mirrors, provenance records, release evidence, and contributor-safe governance
 surfaces. The first job of a contributor is to choose the correct surface
 before making a change.
 
+---
+
+> **TL;DR — Three safe contribution paths for most contributors:**
+>
+> 1. **Add or improve documentation** → work in `docs/**`, `references/**`, or `templates/**`. These are always safe to edit.
+> 2. **Add governance guidance or verification scripts** → work in `scripts/governance/**` or `scripts/verify/**`.
+> 3. **Anything else** → read the zone table and proof matrix before touching any files. If uncertain, open an Issue first.
+
+---
+
 ## Start Here
 
 1. Read the zone table:
@@ -38,7 +48,7 @@ behavior.
 ## Do Not Edit These Surfaces Casually
 
 Do not directly edit these paths unless your change explicitly owns the plan and
-proof burden:
+proof burden (see "When a Plan Is Mandatory" below):
 
 - `install.ps1`
 - `install.sh`
@@ -59,8 +69,11 @@ generated, vendored, or compliance-sensitive content.
 
 ### Docs-only
 
-Use this class when you are changing explanatory docs, reference guides, plans,
-or governance text without changing runtime behavior.
+**What this means**: You are changing explanatory docs, reference guides, plans,
+or governance text. You are not changing how the runtime behaves.
+
+**Examples**: Fixing a typo in `docs/quick-start.md`, adding a new guide under
+`docs/install/`, improving the wording in `references/contributor-zone-decision-table.md`.
 
 Start with:
 
@@ -70,8 +83,12 @@ Start with:
 
 ### Governance or Policy
 
-Use this class when you change public promises, repo rules, gate definitions, or
-machine-readable policy surfaces.
+**What this means**: You are changing a public promise, repo rule, gate
+definition, or machine-readable policy surface. These changes affect how the
+repo self-describes its rules.
+
+**Examples**: Adding a new rule to `conflict-rules.md`, updating the
+contributor zone table to recognize a new file category.
 
 Always read:
 
@@ -81,7 +98,14 @@ Always read:
 
 ### Mirror, Fixture, Provenance, or Compliance
 
-Use this class when you touch:
+**What this means**: You are touching files that are copies or records of
+something that lives elsewhere. The source of truth is not in this repo.
+
+**Examples**: Updating a vendored library under `third_party/**`, refreshing
+a bundled mirror under `bundled/**`.
+
+These changes are never mirror-first. The canonical source must change first,
+then sync and proof must follow. Use this class when you touch:
 
 - `bundled/**`
 - `references/fixtures/**`
@@ -89,22 +113,36 @@ Use this class when you touch:
 - `third_party/**`
 - `vendor/**`
 
-These changes are never mirror-first. The canonical source must change first,
-then sync and proof must follow.
-
 ### Runtime-affecting
 
-Use this class when you touch install flow, routing, protocols, packaged
-behavior, or anything that changes default runtime ownership.
+**What this means**: You are changing something that alters the default behavior
+of the governed runtime — install flow, routing logic, protocol instructions,
+or packaged behavior.
+
+**Examples**: Editing `SKILL.md` to add a new stage, modifying `install.ps1`,
+changing routing logic in `scripts/router/**`.
 
 These changes require a plan before implementation and a stronger proof bundle
-before completion.
+before completion (see below).
 
 ## When a Plan Is Mandatory
 
+> **"Frozen surface"**: A file is "frozen" or "guarded" when it is a direct
+> control point for the runtime — install scripts, routing rules, protocol
+> definitions (`protocols/**`), and the primary skill contract (`SKILL.md`).
+> These are called **Z0 files** (Zone 0 = highest protection level). Editing
+> them without a plan risks breaking the runtime for all users.
+
+> **"Proof bundle"**: Evidence that your change works and doesn't break
+> anything. The minimum is `[Command] → [Output] → [Claim]` — you ran a
+> specific check, here is the output, and here is what it proves. For
+> runtime-affecting changes, the proof bundle is more extensive (see the
+> change-proof-matrix for details).
+
 Write or attach a plan before editing if any of the following are true:
 
-- you are changing a `Z0` frozen control-plane file
+- you are changing a **Z0 frozen control-plane file** (install scripts,
+  routing, protocols, `SKILL.md`)
 - you are changing multiple zones in one task
 - you are changing install, check, router, protocol, or packaging behavior
 - you are changing vendored, mirrored, provenance, or disclosure surfaces
@@ -118,10 +156,12 @@ The current program plan for developer entry is:
 
 Use the proof matrix for the exact path, but the default floor is:
 
-- docs-only changes: `git diff --check` plus link and navigation sanity
-- governance changes: relevant gates plus updated documentation
-- guarded or runtime-sensitive changes: explicit proof bundle with
-  `Command -> Output -> Claim` evidence
+- **docs-only changes**: `git diff --check` plus link and navigation sanity
+  check (do the links still work?)
+- **governance changes**: relevant gates must still pass, plus updated
+  documentation that reflects the policy change
+- **guarded or runtime-sensitive changes**: explicit **proof bundle** with
+  `Command → Output → Claim` evidence for each critical behavior
 
 The matrix is here:
 
@@ -129,10 +169,12 @@ The matrix is here:
 
 ## Stop and Escalate
 
-Stop and escalate instead of guessing if any of these are true:
+Stop working and open an Issue (or comment on an existing one) if any of the
+following are true — do not guess your way through these situations:
 
-- you are about to edit `bundled/**` as if it were the source of truth
-- you are about to hand-edit tracked `outputs/**`
+- you are about to edit `bundled/**` as if it were the source of truth (it is
+  not — the canonical source lives elsewhere)
+- you are about to hand-edit tracked `outputs/**` (these are generated)
 - you cannot identify the canonical source for a mirrored file
 - you are touching `third_party/**` or `vendor/**` without provenance and
   disclosure updates

@@ -82,6 +82,25 @@ If your AI supports skills, VibeSkills works. 340+ skills spanning coding, resea
 - [Installation & Management](#️-installation--skills-management)
 - [Getting Started](#-getting-started)
 
+
+<details>
+<summary><b>🔑 New here? Quick glossary of key terms (click to expand)</b></summary>
+
+<br/>
+
+| Term | Plain-English Meaning |
+|:---|:---|
+| **VibeSkills / VCO** | This project. VCO = Vibe Code Orchestrator — the runtime engine behind the skills. |
+| **Skill** | A focused capability module (e.g., `tdd-guide`, `code-review`). Think of skills as expert assistants the system calls on demand. |
+| **Governed runtime** | When you invoke `/vibe`, the system follows a structured process — clarify → plan → execute → verify — instead of diving in blindly. |
+| **Canonical Router** | The internal logic that decides which skill to activate for your task. Just invoke `/vibe` and let it route automatically. |
+| **M / L / XL grade** | Task complexity level. M = quick focused task, L = multi-step task, XL = large task with parallel work. Automatically selected. |
+| **Frozen requirement** | Once you confirm the plan, it is "frozen" — the system will not silently change scope mid-task. |
+| **Root / Child lane** | In XL tasks, there is a "root" coordinator and "child" worker agents. Prevents conflicting outputs from parallel agents. |
+| **Proof bundle** | Evidence that a task was actually completed correctly — test results, output, verification logs. |
+
+</details>
+
 > [!IMPORTANT]
 > ### 🎯 Core Vision
 >
@@ -219,7 +238,7 @@ After selecting the primary skill, the router also automatically determines the 
 
 > The system automatically selects the level after requirements clarification, before plan execution. Users only need to invoke `/vibe` or `$vibe`.
 >
-> Specialist skills are executed as bounded native units only when approved in the frozen plan. They are phase-bound to planning, execution, deliverable, or verification work so expert help is useful without competing with runtime governance. Child-lane specialist suggestions stay advisory until root approval.
+> When the system calls a specialist skill internally (like `tdd-guide` or `code-review`), it is always scoped to a specific phase — they assist without taking over the overall coordination. In XL tasks with multiple agents, worker agents (child lanes) can suggest specialist help, but the coordinator (root) approves it before execution.
 >
 > You can also express an explicit preference:
 > ```text
@@ -546,7 +565,7 @@ _You know what this is now. All it takes from here is one prompt:_
 
 <br/>
 
-> 💡 **Recommended practice**: If you want every subsequent turn to be explicitly governed by the VibeSkills runtime, keep appending `$vibe` or `/vibe` in each turn. If you don't include the invocation syntax in a turn, that turn should not be treated as "explicitly locked in vibe runtime".
+> 💡 **Tip**: To keep every message within the VibeSkills governed workflow, append `$vibe` or `/vibe` to each of your messages. A message without the invocation syntax is treated as a regular request outside the governed runtime.
 
 **Currently supported platforms**: `codex` (most complete governed path) · `claude-code` · `cursor` · `windsurf` (supported install-and-use path with runtime-adapter integration) · `openclaw` (preview runtime-core path) · `opencode` (preview adapter path)
 
