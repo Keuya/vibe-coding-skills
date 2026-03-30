@@ -14,8 +14,8 @@
   ],
   "settings_surface": {
     "path": "~/.config/opencode/opencode.json",
-    "managed_by_repo": true,
-    "notes": "The repository now installs skills, commands, agents, host-closure metadata, and a minimal vibeskills-managed opencode.json surface while preserving existing values."
+    "managed_by_repo": false,
+    "notes": "The repository installs skills, commands, agents, host-closure metadata, and an opencode.json.example scaffold; the real opencode.json stays host-managed."
   },
   "host_managed_surfaces": [
     "final permission policy",
@@ -29,7 +29,7 @@
     "fs.write": "expected",
     "shell.exec": "expected",
     "mcp.client": "supported-with-constraints",
-    "settings.materialize": "preview-managed",
+    "settings.materialize": "host-managed-example-only",
     "plugin.provision": "manual-host-managed",
     "agent.spawn": "expected",
     "route.provider_call": "supported-with-constraints",

@@ -132,9 +132,21 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         target_root = self.root / "opencode-root"
         self.install_host("opencode", target_root)
         settings_path = target_root / "opencode.json"
-        settings = json.loads(settings_path.read_text(encoding="utf-8"))
-        settings["user.keep"] = True
-        settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+        settings_path.write_text(
+            json.dumps(
+                {
+                    "vibeskills": {
+                        "host_id": "opencode",
+                        "managed": True,
+                        "commands_root": str((target_root / "commands").resolve()),
+                    },
+                    "user.keep": True,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         sentinel = target_root / "commands" / "user.md"
         sentinel.write_text("user\n", encoding="utf-8")
 
@@ -143,6 +155,7 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         self.assertFalse((target_root / ".vibeskills").exists())
         self.assertFalse((target_root / "command" / "vibe.md").exists())
         self.assertFalse((target_root / "agents" / "vibe-plan.md").exists())
+        self.assertFalse((target_root / "opencode.json.example").exists())
         self.assertTrue(sentinel.exists())
         if settings_path.exists():
             remaining = json.loads(settings_path.read_text(encoding="utf-8"))

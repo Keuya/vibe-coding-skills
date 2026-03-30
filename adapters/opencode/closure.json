@@ -10,8 +10,7 @@
     "OpenCode agent wrappers under agents/** and agent/**",
     "OpenCode preview config example under opencode.json.example",
     ".vibeskills/host-closure.json",
-    ".vibeskills/bin/**",
-    "opencode.json managed vibeskills stanza"
+    ".vibeskills/bin/**"
   ],
   "host_state_written": [
     "skills/**",
@@ -21,8 +20,7 @@
     "agent/**",
     "opencode.json.example",
     ".vibeskills/host-closure.json",
-    ".vibeskills/bin/**",
-    "opencode.json managed vibeskills stanza"
+    ".vibeskills/bin/**"
   ],
   "host_managed_boundaries": [
     "final opencode.json ownership",
@@ -43,9 +41,7 @@
       ".vibeskills/host-closure.json",
       ".vibeskills/bin/**"
     ],
-    "shared_json_targets": [
-      "opencode.json managed vibeskills stanza"
-    ],
+    "shared_json_targets": [],
     "legacy_compatibility": [
       ".vibeskills/host-closure.json",
       ".vibeskills/bin/**"
@@ -58,8 +54,7 @@
       "agent/**",
       "opencode.json.example",
       ".vibeskills/host-closure.json",
-      ".vibeskills/bin/**",
-      "opencode.json managed vibeskills stanza"
+      ".vibeskills/bin/**"
     ],
     "documentation_reference": "docs/uninstall-governance.md"
   },

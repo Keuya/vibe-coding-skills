@@ -130,6 +130,114 @@ function Merge-JsonObject {
     $merged | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
+function Test-VgoPathInsideTargetRoot {
+    param(
+        [object]$Value,
+        [string]$TargetRoot
+    )
+
+    if ($Value -isnot [string] -or [string]::IsNullOrWhiteSpace($Value)) {
+        return $false
+    }
+
+    try {
+        $candidatePath = if ([System.IO.Path]::IsPathRooted($Value)) {
+            [System.IO.Path]::GetFullPath($Value)
+        } else {
+            [System.IO.Path]::GetFullPath((Join-Path $TargetRoot $Value))
+        }
+        $rootPath = [System.IO.Path]::GetFullPath($TargetRoot)
+        $relative = [System.IO.Path]::GetRelativePath($rootPath, $candidatePath)
+        if ([string]::IsNullOrWhiteSpace($relative) -or $relative -eq '.') {
+            return $true
+        }
+        return -not ($relative -eq '..' -or $relative.StartsWith("..$([System.IO.Path]::DirectorySeparatorChar)"))
+    } catch {
+        return $false
+    }
+}
+
+function Test-VgoOwnedLegacyOpenCodeNode {
+    param(
+        [object]$Node,
+        [string]$TargetRoot
+    )
+
+    if ($Node -isnot [hashtable]) {
+        return $false
+    }
+
+    $hostId = [string]$Node['host_id']
+    if (-not [string]::IsNullOrWhiteSpace($hostId) -and $hostId.ToLowerInvariant() -ne 'opencode') {
+        return $false
+    }
+    if ([bool]$Node['managed']) {
+        return $true
+    }
+
+    foreach ($key in @('commands_root', 'command_root_compat', 'agents_root', 'agent_root_compat', 'specialist_wrapper')) {
+        if (Test-VgoPathInsideTargetRoot -Value $Node[$key] -TargetRoot $TargetRoot) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Repair-VgoLegacyOpenCodeConfig {
+    param([string]$TargetRoot)
+
+    $settingsPath = Join-Path $TargetRoot 'opencode.json'
+    $receipt = [ordered]@{
+        path = [System.IO.Path]::GetFullPath($settingsPath)
+        status = 'not-present'
+    }
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+        return [pscustomobject]$receipt
+    }
+
+    try {
+        $payload = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+    } catch {
+        $receipt.status = 'parse-failed'
+        return [pscustomobject]$receipt
+    }
+
+    if ($payload -isnot [hashtable]) {
+        $receipt.status = 'non-object'
+        return [pscustomobject]$receipt
+    }
+
+    if (-not $payload.ContainsKey('vibeskills')) {
+        $receipt.status = 'already-clean'
+        return [pscustomobject]$receipt
+    }
+
+    $node = $payload['vibeskills']
+    if (-not (Test-VgoOwnedLegacyOpenCodeNode -Node $node -TargetRoot $TargetRoot)) {
+        $receipt.status = 'foreign-node-preserved'
+        return [pscustomobject]$receipt
+    }
+
+    $nextPayload = [ordered]@{}
+    foreach ($key in $payload.Keys) {
+        if ($key -ne 'vibeskills') {
+            $nextPayload[$key] = $payload[$key]
+        }
+    }
+
+    if ($nextPayload.Count -eq 0) {
+        Remove-Item -LiteralPath $settingsPath -Force
+        $receipt.status = 'removed-owned-node-and-deleted-empty-file'
+        return [pscustomobject]$receipt
+    }
+
+    $nextPayload | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
+    $receipt.status = 'removed-owned-node'
+    $receipt.preserved_keys = @($nextPayload.Keys | Sort-Object)
+    return [pscustomobject]$receipt
+}
+
 function Get-VgoHostBridgeCommandEnvName {
     param([string]$HostId)
 
@@ -295,20 +403,6 @@ function Set-VgoManagedHostSettings {
                 host_id = $HostId
                 managed = $true
                 commands_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'commands'))
-                specialist_wrapper = [string]$WrapperInfo.launcher_path
-            }
-        }
-        $materialized.Add([System.IO.Path]::GetFullPath($settingsPath)) | Out-Null
-    } elseif ($HostId -eq 'opencode') {
-        $settingsPath = Join-Path $TargetRoot 'opencode.json'
-        Merge-JsonObject -Path $settingsPath -Patch @{
-            vibeskills = @{
-                host_id = $HostId
-                managed = $true
-                commands_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'commands'))
-                command_root_compat = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'command'))
-                agents_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'agents'))
-                agent_root_compat = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'agent'))
                 specialist_wrapper = [string]$WrapperInfo.launcher_path
             }
         }
@@ -686,11 +780,13 @@ function Install-RuntimeCoreModePayload {
 
 $adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 $result = Install-RuntimeCorePayload -Adapter $adapter
+$legacyOpenCodeConfigCleanup = $null
 switch ([string]$adapter.install_mode) {
     'governed' { Install-GovernedCodexPayload }
     'preview-guidance' {
         if ([string]$adapter.id -eq 'opencode') {
             Install-OpenCodeGuidancePayload
+            $legacyOpenCodeConfigCleanup = Repair-VgoLegacyOpenCodeConfig -TargetRoot $TargetRoot
         } elseif ([string]$adapter.id -eq 'claude-code' -or [string]$adapter.id -eq 'cursor') {
             Install-ClaudeGuidancePayload
         } else {
@@ -717,6 +813,7 @@ if ($requireClosedReadyEffective -and [string]$closureReceipt.data.host_closure_
     host_closure_path = [string]$closureReceipt.path
     host_closure_state = [string]$closureReceipt.data.host_closure_state
     settings_materialized = @($closureReceipt.data.settings_materialized)
+    legacy_opencode_config_cleanup = $legacyOpenCodeConfigCleanup
     specialist_wrapper_ready = [bool]$closureReceipt.data.specialist_wrapper.ready
     require_closed_ready_requested = [bool]$RequireClosedReady
     require_closed_ready_effective = $requireClosedReadyEffective

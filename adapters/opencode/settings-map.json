@@ -18,7 +18,7 @@
     "provider.*": "host-managed provider credentials and endpoint bindings"
   },
   "notes": [
-    "The repository now writes a minimal vibeskills-managed opencode.json surface while preserving any existing values.",
+    "The repository does not write the real opencode.json; OpenCode keeps that surface host-managed.",
     "Preview install writes markdown wrapper files into OpenCode command/agent roots and keeps the example opencode.json scaffold for reference.",
     "Both plural and singular command/agent subdirectories are mirrored during preview installation for compatibility with current doc/runtime drift."
   ]

@@ -471,6 +471,78 @@ def merge_json_object(path: Path, patch: dict):
     write_json_file(path, merged)
 
 
+def path_points_inside_target_root(value: object, target_root: Path) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    candidate = Path(value.strip()).expanduser()
+    if not candidate.is_absolute():
+        candidate = target_root / candidate
+    try:
+        candidate.resolve(strict=False).relative_to(target_root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def is_owned_legacy_opencode_vibeskills_node(node: object, target_root: Path) -> bool:
+    if not isinstance(node, dict):
+        return False
+    host_id = str(node.get("host_id") or "").strip().lower()
+    if host_id and host_id != "opencode":
+        return False
+    if bool(node.get("managed", False)):
+        return True
+    for key in (
+        "commands_root",
+        "command_root_compat",
+        "agents_root",
+        "agent_root_compat",
+        "specialist_wrapper",
+    ):
+        if path_points_inside_target_root(node.get(key), target_root):
+            return True
+    return False
+
+
+def sanitize_legacy_opencode_config(target_root: Path) -> dict[str, object]:
+    settings_path = target_root / "opencode.json"
+    receipt: dict[str, object] = {
+        "path": str(settings_path.resolve()),
+        "status": "not-present",
+    }
+    if not settings_path.exists():
+        return receipt
+
+    try:
+        payload = json.loads(settings_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        receipt["status"] = "parse-failed"
+        return receipt
+
+    if not isinstance(payload, dict):
+        receipt["status"] = "non-object"
+        return receipt
+
+    vibeskills_node = payload.get("vibeskills")
+    if vibeskills_node is None:
+        receipt["status"] = "already-clean"
+        return receipt
+    if not is_owned_legacy_opencode_vibeskills_node(vibeskills_node, target_root):
+        receipt["status"] = "foreign-node-preserved"
+        return receipt
+
+    next_payload = dict(payload)
+    del next_payload["vibeskills"]
+    if next_payload:
+        write_json_file(settings_path, next_payload)
+        receipt["status"] = "removed-owned-node"
+        receipt["preserved_keys"] = sorted(next_payload.keys())
+    else:
+        settings_path.unlink()
+        receipt["status"] = "removed-owned-node-and-deleted-empty-file"
+    return receipt
+
+
 def materialize_host_settings(target_root: Path, adapter: dict, wrapper_info: dict):
     host_id = adapter["id"]
     materialized = []
@@ -483,25 +555,6 @@ def materialize_host_settings(target_root: Path, adapter: dict, wrapper_info: di
                     "host_id": host_id,
                     "managed": True,
                     "commands_root": str((target_root / "commands").resolve()),
-                    "specialist_wrapper": wrapper_info["launcher_path"],
-                }
-            },
-        )
-        materialized.append(str(settings_path.resolve()))
-        record_managed_json(settings_path)
-        track_created_path(settings_path)
-    elif host_id == "opencode":
-        settings_path = target_root / "opencode.json"
-        merge_json_object(
-            settings_path,
-            {
-                "vibeskills": {
-                    "host_id": host_id,
-                    "managed": True,
-                    "commands_root": str((target_root / "commands").resolve()),
-                    "command_root_compat": str((target_root / "command").resolve()),
-                    "agents_root": str((target_root / "agents").resolve()),
-                    "agent_root_compat": str((target_root / "agent").resolve()),
                     "specialist_wrapper": wrapper_info["launcher_path"],
                 }
             },
@@ -841,11 +894,13 @@ def main():
     adapter = resolve_adapter(repo_root, args.host)
     external_used = install_runtime_core(repo_root, target_root, args.profile, args.allow_external_skill_fallback)
     mode = adapter["install_mode"]
+    legacy_opencode_config_cleanup = None
     if mode == "governed":
         install_codex_payload(repo_root, target_root)
     elif mode == "preview-guidance":
         if adapter["id"] == "opencode":
             install_opencode_guidance_payload(repo_root, target_root)
+            legacy_opencode_config_cleanup = sanitize_legacy_opencode_config(target_root)
         elif adapter["id"] in {"claude-code", "cursor"}:
             install_claude_guidance_payload(repo_root, target_root)
         else:
@@ -885,6 +940,7 @@ def main():
             "host_closure_path": str(closure_path),
             "host_closure_state": closure["host_closure_state"],
             "settings_materialized": closure["settings_materialized"],
+            "legacy_opencode_config_cleanup": legacy_opencode_config_cleanup,
             "specialist_wrapper_ready": bool(closure["specialist_wrapper"]["ready"]),
             "require_closed_ready_requested": bool(args.require_closed_ready),
             "require_closed_ready_effective": require_closed_ready_effective,

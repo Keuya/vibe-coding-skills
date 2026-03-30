@@ -12,7 +12,7 @@
 - Vibe-Skills skill content
 - OpenCode command wrappers
 - OpenCode agent wrappers
-- an example `opencode.json` scaffold
+- an `opencode.json.example` scaffold
 
 ## What Still Stays Host-Local
 
@@ -68,6 +68,8 @@ The install writes:
 - `agent/*.md`
 - `opencode.json.example`
 
+The install does not create or modify the real `opencode.json`. If you need to change native OpenCode settings, keep doing that on the host side.
+
 Plural and singular command/agent directories are both materialized because the current OpenCode docs treat plural directories as the primary layout while still supporting singular names for backwards compatibility.
 
 ## How To Use
@@ -108,7 +110,12 @@ python3 ./scripts/verify/runtime_neutral/opencode_preview_smoke.py --repo-root .
 The committed smoke verifier has been validated on local OpenCode CLI `1.2.27` and confirms that:
 
 - `opencode debug paths` resolves the isolated OpenCode root correctly
-- `opencode debug skill` detects the installed `vibe` skill
+- `opencode debug config` still parses successfully after install
 - `opencode debug agent vibe-plan` detects the installed agent
+
+Additional note:
+
+- `opencode debug skill` can emit a truncated oversized skill dump when many skills are installed, so it is currently kept as a telemetry/warning surface instead of a hard startup-recovery gate
+- startup recovery is judged primarily through `debug config` and `debug agent`, because those directly validate config parsing and agent loading
 
 If you need the deeper adapter contract and proof details, continue with `dist/*`, `adapters/*`, and `docs/universalization/*`.
