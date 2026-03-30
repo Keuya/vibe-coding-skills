@@ -7,7 +7,7 @@
   "runtime_role": "contract-layer",
   "summary": "Host-agnostic contracts and schemas that stabilize skill metadata without claiming a governed runtime on any host.",
   "source_release": {
-    "version": "2.3.54",
+    "version": "2.3.55",
     "updated": "2026-03-30"
   },
   "truth_sources": [

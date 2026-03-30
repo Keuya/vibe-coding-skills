@@ -1,5 +1,14 @@
 # VCO Changelog
 
+## v2.3.55 (2026-03-30)
+
+- Promoted the unified owned-only uninstall surface and aligned supported hosts around explicit skill-only / sidecar-first activation, so install and uninstall touch only Vibe-managed content in the normal path.
+- Fixed the OpenCode startup regression by preserving compatibility with pre-existing OpenCode config surfaces instead of writing managed state into locations that could stop the host from booting.
+- Split built-in intent advice from optional vector diff embeddings under explicit `VCO_INTENT_ADVICE_*` and `VCO_VECTOR_DIFF_*` key families, without backfilling legacy `OPENAI_*` names.
+- Hardened macOS shell bootstrap compatibility by removing Bash 4-only assumptions from active entrypoints and by enforcing a clear Python 3.10+ prerequisite before helper dispatch.
+- Detailed release notes: `docs/releases/v2.3.55.md`.
+
+
 ## v2.3.54 (2026-03-30)
 
 - Closed the release-surface truth gap by making `scripts/governance/release-cut.ps1` the authoritative path for version governance, changelog / ledger writes, release README updates, dist manifest `source_release` alignment, and bundled / nested bundled sync during release apply.

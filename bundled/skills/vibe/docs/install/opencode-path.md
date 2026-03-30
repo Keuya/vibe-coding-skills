@@ -10,8 +10,9 @@
 
 - 仓库分发内容
 - Vibe-Skills 技能内容
-- OpenCode 命令包装器
-- OpenCode agent 包装器
+- `.vibeskills/host-settings.json`
+- `.vibeskills/host-closure.json`
+- `.vibeskills/bin/*-specialist-wrapper.*`
 - `opencode.json.example` 示例配置
 
 ## 仍由宿主本地完成
@@ -62,17 +63,14 @@ PowerShell 对应参数为 `-TargetRoot .\.opencode`。
 当前安装会写入：
 
 - `skills/**`
-- `commands/*.md`
-- `command/*.md`
-- `agents/*.md`
-- `agent/*.md`
+- `.vibeskills/host-settings.json`
+- `.vibeskills/host-closure.json`
+- `.vibeskills/install-ledger.json`
+- `.vibeskills/bin/*-specialist-wrapper.*`
 - `opencode.json.example`
 
 当前安装不会创建新的真实 `opencode.json`，也不会接管它。
-如果安装时发现旧版本 Vibe 曾错误写入顶层 `vibeskills` 节点，安装器只会移除这个 Vibe 自己写入的节点，并保留用户已有的 `$schema`、`mcp` 与其他宿主配置。
 如果你需要调整 OpenCode 原生配置，请继续在宿主侧自行维护真实 `opencode.json`。
-
-当前会同时写入 plural 和 singular 的 command/agent 目录，因为 OpenCode 官方配置文档以 plural 目录为主，同时说明 singular 目录仍保留向后兼容支持。
 
 ## 使用方式
 
@@ -81,6 +79,8 @@ PowerShell 对应参数为 `-TargetRoot .\.opencode`。
 - `/vibe`
 - `/vibe-implement`
 - `/vibe-review`
+
+这些入口走的是宿主原生 skill 调用；未显式调用 Vibe 时，sidecar 配置会保持静默，不会主动接管 OpenCode 原生配置。
 
 也可以直接在对话里显式要求：
 

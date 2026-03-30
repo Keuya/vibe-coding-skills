@@ -29,9 +29,9 @@
       ],
       "offline_state": "heuristic-only",
       "offline_contract": {
-        "abstain_reason": "missing_openai_api_key",
+        "abstain_reason": "missing_intent_advice_api_key",
         "required_env_any": [
-          "OPENAI_API_KEY"
+          "VCO_INTENT_ADVICE_API_KEY"
         ],
         "no_network_without_credentials": true
       },

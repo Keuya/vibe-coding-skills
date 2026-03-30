@@ -1,5 +1,24 @@
 # vibe-team Protocol
 
+> **What this protocol does -- plain language overview**
+>
+> This is the multi-agent orchestration protocol. It governs how VibeSkills
+> coordinates multiple AI agents working on large (XL-grade) tasks.
+>
+> You do not need to read this to use VibeSkills. It is reference material for
+> contributors and advanced users building on VibeSkills or investigating how
+> large tasks are coordinated internally.
+>
+> **Key terms used below:**
+> - **Root/Child lane**: One coordinator (root lane) and multiple workers (child lanes). Only root makes the final completion claim for the whole task.
+> - **Wave-sequential execution**: Large tasks are split into sequential "waves." Within a wave, independent sub-tasks may run in parallel.
+> - **Scatter-gather**: Fan-out (assign task variants to multiple agents in parallel) then fan-in (collect all results and synthesize one output).
+> - **Specialist dispatch**: Using a specific skill (e.g. `tdd-guide`, `code-review`) for a bounded sub-task. Must be approved by root in the frozen plan before execution.
+> - **Dialectic mode**: A structured design analysis where two groups of agents argue different perspectives, then a coordinator synthesizes the best ideas from both.
+> - **ruflo**: An optional memory and workflow orchestration component for vector memory, session persistence, and formal consensus.
+> - **spawn_agent / send_input / wait / close_agent**: Internal XL orchestration API calls. Users do not call these directly.
+
+
 Protocol for XL-grade multi-agent tasks requiring coordination.
 
 ## Governed Runtime Position
@@ -494,7 +513,7 @@ Limitations vs XL: no intra-group dialogue (only 1 agent per perspective), no Ph
 
 ## Wave19-30 Specialist Roles
 
-在 XL 多智能体执行中，Wave19-30 新增以下“治理型角色”，它们提供建议与验证，不接管 VCO 总编排：
+在 XL 多智能体执行中，Wave19-30 新增以下"治理型角色"，它们提供建议与验证，不接管 VCO 总编排：
 
 - **Memory Contract Steward**：检查 Memory Runtime v2、`mem0`、`Letta` 是否越权。
 - **Prompt Intelligence Steward**：检查 prompt cards / risk checklist 是否只停留在 advisory 层。

@@ -23,45 +23,55 @@
 
 不要把密钥贴到聊天里。
 
-## 推荐路径 1：OpenAI-compatible
+## 内置 intent advice 与 vector diff 配置
 
-这是当前最常见、也最推荐的 AI 治理 online 配置路径。
+内置 AI 治理在 `/vibe` 执行时需要两类配置：
+- 主路径（intent advice）：用于 `advice` 请求和各类问答/confirm screen，必须配置凭据、模型、可选 base URL。
+- 增强路径（vector diff embeddings）：用于 diff 选取，属于可选降级能力，缺失时 diff 仍然回退为普通文本片段。
 
-### 推荐键名
+### intent advice keys（必须）
 
 ```json
 {
   "env": {
-    "OPENAI_API_KEY": "<local-api-key>",
-    "OPENAI_BASE_URL": "https://api.openai.com/v1",
-    "VCO_RUCNLPIR_MODEL": "gpt-5.4-high"
+    "VCO_INTENT_ADVICE_API_KEY": "<local-api-key>",
+    "VCO_INTENT_ADVICE_BASE_URL": "https://api.openai.com/v1",
+    "VCO_INTENT_ADVICE_MODEL": "gpt-5.4-high"
   }
 }
 ```
 
-说明：
+- `VCO_INTENT_ADVICE_API_KEY`：主授权凭据，缺失时 advice 无法启动，快速检查会标记 `missing_credentials`。
+- `VCO_INTENT_ADVICE_BASE_URL`：可选用户网关，默认使用 policy 或 provider 默认地址。
+- `VCO_INTENT_ADVICE_MODEL`：用于 `provider.model` 替代原 `VCO_RUCNLPIR_MODEL` 的语义。
 
-- `OPENAI_API_KEY`：必需
-- `OPENAI_BASE_URL` 或 `OPENAI_API_BASE`：可选；不填时按 provider 默认值或策略配置处理
-- `VCO_RUCNLPIR_MODEL`：推荐模型键名
+### vector diff embeddings keys（可选）
+
+```json
+{
+  "env": {
+    "VCO_VECTOR_DIFF_API_KEY": "<local-embedding-key>",
+    "VCO_VECTOR_DIFF_BASE_URL": "https://api.openai.com/v1",
+    "VCO_VECTOR_DIFF_MODEL": "text-embedding-3-small"
+  }
+}
+```
+
+- vector diff 仅在 `config/llm-acceleration-policy.json` 的 `context.vector_diff.enabled` 为 `true` 且上述凭据齐全时才会调用。
+- 缺失 `VCO_VECTOR_DIFF_API_KEY`/`VCO_VECTOR_DIFF_MODEL` 时，diff 模块会发出 `vector_diff_missing_credentials` 警告，但不会阻断 advice。
+- 该路径默认不会回退到旧的 `OPENAI_API_KEY` / `OPENAI_BASE_URL`，用户需要显式维护新的键名。
 
 ## 当前公共口径
 
-安装后做本地配置与快速检查时，当前公共安装口径统一使用：
-
-- `OPENAI_API_KEY`
-- 可选 `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-- `VCO_RUCNLPIR_MODEL`
+当前推荐的配置方式不再依赖旧 `OPENAI_*` 键名，统一以 `VCO_INTENT_ADVICE_*` 打头；vector diff 也使用独立的 `VCO_VECTOR_DIFF_*` 键。旧的 `OPENAI_API_KEY` 不再自动回填，必须自己迁移到新键名。
 
 ## 内置治理层的 provider 边界
 
-当前内置 AI 治理层只支持 OpenAI-compatible 接入。
+内置 AI 治理依然以 OpenAI-compatible 协议为主：
 
-这表示：
-
-- advice 在线调用按 OpenAI-compatible Responses / Chat Completions / Embeddings 语义工作
-- 安装说明、bootstrap 和快速检查不再给出 Ark-compatible 作为内置并行入口
-- 如果你要走别的 provider 形态，不属于当前内置治理层的标准支持面
+- advice 链路使用 `responses`/`chat_completions`，并从 `VCO_INTENT_ADVICE_*` 读取凭据。
+- diff 链路仍按 OpenAI-compatible embeddings 接口工作，但只在所有新键就绪时触发。
+- 其他 provider 形态可以通过策略文件（`config/llm-acceleration-policy.json`）指定 `provider.base_url`/`provider.model`，但本地凭据仍建议放在两个 VCO_* 键里。
 
 ## 高级路径：策略文件里直接指定 provider
 
@@ -73,7 +83,7 @@
 这种情况下：
 
 - base URL / model 可以来自策略文件
-- 本地凭据仍建议放在 `OPENAI_API_KEY`
+- 本地凭据仍建议放在 `VCO_INTENT_ADVICE_API_KEY`
 
 ## 不同宿主通常放哪里
 
@@ -137,20 +147,31 @@ python3 ./scripts/verify/runtime_neutral/router_ai_connectivity_probe.py --targe
 ## 结果怎么看
 
 - `ok`：AI 治理 advice 已连通
-- `missing_credentials`：缺本地密钥，优先补 `OPENAI_API_KEY`
-- `missing_model`：缺模型名，优先补 `VCO_RUCNLPIR_MODEL`
-- `missing_base_url`：需要补 provider base URL，或在策略文件里补 `provider.base_url`
+- `missing_credentials`：缺本地密钥，优先补 `VCO_INTENT_ADVICE_API_KEY`
+- `missing_model`：缺模型名，优先补 `VCO_INTENT_ADVICE_MODEL`
+- `missing_base_url`：需要补 `VCO_INTENT_ADVICE_BASE_URL` 或在策略文件里补 `provider.base_url`
 - `provider_rejected_request`：密钥、模型名或 endpoint 兼容性有问题
 - `provider_unreachable`：网络、DNS、base URL 可达性或超时有问题
 - `prefix_required`：当前策略要求在 `/vibe` 显式作用域下再检查 advice
 
+## 安装后如果要卸载
+
+当你需要回滚当前安装时，使用仓库根目录下的 `uninstall.ps1` 或 `uninstall.sh`：
+
+- Windows：
+  - `pwsh -NoProfile -File .\uninstall.ps1 --host <host> --target-root "<目标宿主根目录>"`
+- Linux / macOS：
+  - `bash ./uninstall.sh --host <host> --target-root "<目标宿主根目录>"`
+
+这两个卸载入口与 `install.*` 参数对称，默认直接执行，但遵守 [`../uninstall-governance.md`](../uninstall-governance.md) 里的 ledger-first、owned-only 契约：只删除 install ledger、host closure 或保守 legacy 规则能够证明属于 Vibe 的内容；共享配置文件里只移除 `vibeskills` 受管节点。
+
 ## 最短实践结论
 
-如果你只想最快补齐常见 OpenAI-compatible 在线能力：
+如果你只想最快补齐内置 AI 治理能力：
 
-1. 在本地 `settings.json` 的 `env`，或本地环境变量里配置 `OPENAI_API_KEY`
-2. 如有自定义网关，再补 `OPENAI_BASE_URL` 或 `OPENAI_API_BASE`
-3. 配置 `VCO_RUCNLPIR_MODEL`
+1. 在本地 `settings.json` 的 `env`，或本地环境变量里配置 `VCO_INTENT_ADVICE_API_KEY`
+2. 如有自定义网关，再补 `VCO_INTENT_ADVICE_BASE_URL`
+3. 配置 `VCO_INTENT_ADVICE_MODEL`
 4. 跑一次快速检查
 
-这样就够了。
+向量 diff 可选：如果需要更好的 diff 体验，再添加 `VCO_VECTOR_DIFF_API_KEY`/`VCO_VECTOR_DIFF_MODEL`（base URL 同样可选）。

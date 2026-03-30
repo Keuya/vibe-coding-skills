@@ -29,6 +29,13 @@ OPTIONAL_WORKFLOW = [
     "receiving-code-review",
     "verification-before-completion",
 ]
+SKILL_ONLY_ACTIVATION_HOSTS = {
+    "claude-code",
+    "cursor",
+    "windsurf",
+    "openclaw",
+    "opencode",
+}
 HOST_BRIDGE_COMMAND_CANDIDATES = {
     "claude-code": ["claude", "claude-code"],
     "cursor": ["cursor-agent", "cursor"],
@@ -118,6 +125,10 @@ def write_json(data):
 def write_json_file(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def uses_skill_only_activation(host_id: str) -> bool:
+    return (host_id or "").strip().lower() in SKILL_ONLY_ACTIVATION_HOSTS
 
 
 def is_relative_to(path: Path, base: Path) -> bool:
@@ -546,35 +557,34 @@ def sanitize_legacy_opencode_config(target_root: Path) -> dict[str, object]:
 def materialize_host_settings(target_root: Path, adapter: dict, wrapper_info: dict):
     host_id = adapter["id"]
     materialized = []
-    if host_id in {"cursor", "claude-code"}:
-        settings_path = target_root / "settings.json"
-        merge_json_object(
-            settings_path,
-            {
-                "vibeskills": {
-                    "host_id": host_id,
-                    "managed": True,
-                    "commands_root": str((target_root / "commands").resolve()),
-                    "specialist_wrapper": wrapper_info["launcher_path"],
-                }
-            },
-        )
-        materialized.append(str(settings_path.resolve()))
-        record_managed_json(settings_path)
-        track_created_path(settings_path)
-    elif host_id in {"openclaw", "windsurf"}:
+    if uses_skill_only_activation(host_id):
         settings_path = target_root / ".vibeskills" / "host-settings.json"
-        write_json_file(
-            settings_path,
-            {
-                "host_id": host_id,
-                "managed": True,
-                "commands_root": str((target_root / "commands").resolve()),
-                "workflow_root": str((target_root / "global_workflows").resolve()),
-                "mcp_config": str((target_root / "mcp_config.json").resolve()),
-                "specialist_wrapper": wrapper_info["launcher_path"],
+        host_settings = {
+            "schema_version": 1,
+            "host_id": host_id,
+            "managed": True,
+            "skills_root": str((target_root / "skills").resolve()),
+            "runtime_skill_entry": str((target_root / "skills" / "vibe" / "SKILL.md").resolve()),
+            "explicit_vibe_skill_invocation": ["$vibe", "/vibe"],
+            "specialist_wrapper": {
+                "launcher_path": wrapper_info["launcher_path"],
+                "script_path": wrapper_info["script_path"],
+                "ready": wrapper_info["ready"],
             },
-        )
+        }
+        commands_root = target_root / "commands"
+        agents_root = target_root / "agents"
+        workflow_root = target_root / "global_workflows"
+        mcp_config = target_root / "mcp_config.json"
+        if commands_root.exists():
+            host_settings["commands_root"] = str(commands_root.resolve())
+        if agents_root.exists():
+            host_settings["agents_root"] = str(agents_root.resolve())
+        if workflow_root.exists():
+            host_settings["workflow_root"] = str(workflow_root.resolve())
+        if mcp_config.exists():
+            host_settings["mcp_config"] = str(mcp_config.resolve())
+        write_json_file(settings_path, host_settings)
         materialized.append(str(settings_path.resolve()))
         record_managed_json(settings_path)
         track_created_path(settings_path)
@@ -594,6 +604,8 @@ def materialize_host_closure(repo_root: Path, target_root: Path, adapter: dict):
         "platform": detect_platform_tag(),
         "target_root": str(target_root.resolve()),
         "install_mode": adapter["install_mode"],
+        "skills_root": str((target_root / "skills").resolve()),
+        "runtime_skill_entry": str((target_root / "skills" / "vibe" / "SKILL.md").resolve()),
         "commands_root": str(commands_root.resolve()),
         "global_workflows_root": str((target_root / "global_workflows").resolve()),
         "mcp_config_path": str((target_root / "mcp_config.json").resolve()),
@@ -748,13 +760,22 @@ def ensure_skill_present(target_root: Path, name: str, required: bool, allow_fal
         missing.add(name)
 
 
-def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow_fallback: bool):
+def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow_fallback: bool, adapter: dict):
     packaging = load_json(repo_root / "config" / "runtime-core-packaging.json")
     governance = load_json(repo_root / "config" / "version-governance.json")
-    for rel in packaging["directories"]:
+    include_command_surfaces = not uses_skill_only_activation(adapter["id"])
+    runtime_directories = [
+        rel for rel in packaging["directories"]
+        if include_command_surfaces or rel != "commands"
+    ]
+    for rel in runtime_directories:
         (target_root / rel).mkdir(parents=True, exist_ok=True)
         track_created_path(target_root / rel)
-    for entry in packaging["copy_directories"]:
+    copy_directories = [
+        entry for entry in packaging["copy_directories"]
+        if include_command_surfaces or entry["target"] != "commands"
+    ]
+    for entry in copy_directories:
         copy_tree(repo_root / entry["source"], target_root / entry["target"])
         if entry["target"] == "skills":
             for skill_dir in (target_root / "skills").iterdir():
@@ -846,22 +867,13 @@ def install_claude_guidance_payload(repo_root: Path, target_root: Path):
 
 
 def install_opencode_guidance_payload(repo_root: Path, target_root: Path):
-    commands_root = repo_root / "config" / "opencode" / "commands"
-    agents_root = repo_root / "config" / "opencode" / "agents"
     example_config = repo_root / "config" / "opencode" / "opencode.json.example"
-
-    copy_tree(commands_root, target_root / "commands")
-    track_created_path(target_root / "commands")
-    copy_tree(commands_root, target_root / "command")
-    track_created_path(target_root / "command")
-    copy_tree(agents_root, target_root / "agents")
-    track_created_path(target_root / "agents")
-    copy_tree(agents_root, target_root / "agent")
-    track_created_path(target_root / "agent")
     if example_config.exists():
         copy_file(example_config, target_root / "opencode.json.example")
 
-def install_runtime_core_mode_payload(repo_root: Path, target_root: Path):
+def install_runtime_core_mode_payload(repo_root: Path, target_root: Path, adapter: dict):
+    if uses_skill_only_activation(adapter["id"]):
+        return
     commands_root = repo_root / "commands"
     if commands_root.exists():
         copy_tree(commands_root, target_root / "global_workflows")
@@ -892,7 +904,7 @@ def main():
     target_root.mkdir(parents=True, exist_ok=True)
     track_created_path(target_root)
     adapter = resolve_adapter(repo_root, args.host)
-    external_used = install_runtime_core(repo_root, target_root, args.profile, args.allow_external_skill_fallback)
+    external_used = install_runtime_core(repo_root, target_root, args.profile, args.allow_external_skill_fallback, adapter)
     mode = adapter["install_mode"]
     legacy_opencode_config_cleanup = None
     if mode == "governed":
@@ -900,13 +912,12 @@ def main():
     elif mode == "preview-guidance":
         if adapter["id"] == "opencode":
             install_opencode_guidance_payload(repo_root, target_root)
-            legacy_opencode_config_cleanup = sanitize_legacy_opencode_config(target_root)
         elif adapter["id"] in {"claude-code", "cursor"}:
             install_claude_guidance_payload(repo_root, target_root)
         else:
             raise SystemExit(f"Unsupported preview-guidance adapter id: {adapter['id']}")
     elif mode == "runtime-core":
-        install_runtime_core_mode_payload(repo_root, target_root)
+        install_runtime_core_mode_payload(repo_root, target_root, adapter)
     else:
         raise SystemExit(f"Unsupported adapter install mode: {mode}")
 

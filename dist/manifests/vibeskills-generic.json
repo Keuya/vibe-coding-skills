@@ -7,7 +7,7 @@
   "runtime_role": "contract-consumer",
   "summary": "Generic hosts may consume canonical contracts and a repo-provided runtime-core payload in a neutral target root, but the repository still makes no host closure claim.",
   "source_release": {
-    "version": "2.3.54",
+    "version": "2.3.55",
     "updated": "2026-03-30"
   },
   "truth_sources": [

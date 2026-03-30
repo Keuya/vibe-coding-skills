@@ -122,11 +122,10 @@ Baseline online provider access does not automatically mean the governance AI on
 
 For the common governance-advice online path, the user should configure locally:
 
-- OpenAI-compatible:
-  - `OPENAI_API_KEY`
-  - optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
-
+- `VCO_INTENT_ADVICE_API_KEY`
+- optional `VCO_INTENT_ADVICE_BASE_URL`
+- `VCO_INTENT_ADVICE_MODEL`
+- `VCO_VECTOR_DIFF_API_KEY` / `VCO_VECTOR_DIFF_BASE_URL` / `VCO_VECTOR_DIFF_MODEL` when vector diff embeddings are desired
 
 Without those values, the environment may be described only as "basic online available" or "local install complete", not as "governance AI online ready".
 

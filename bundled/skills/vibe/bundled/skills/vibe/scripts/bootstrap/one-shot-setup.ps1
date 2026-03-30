@@ -6,8 +6,10 @@ param(
     [switch]$SkipExternalInstall,
     [switch]$StrictOffline,
     [switch]$SyncUserEnv,
-    [string]$OpenAIBaseUrl = '',
-    [string]$OpenAIApiKey = ''
+    [Alias('OpenAIBaseUrl')]
+    [string]$IntentAdviceBaseUrl = '',
+    [Alias('OpenAIApiKey')]
+    [string]$IntentAdviceApiKey = ''
 )
 
 Set-StrictMode -Version Latest
@@ -140,21 +142,21 @@ Write-Host '[1/5] Installing adapter payload...' -ForegroundColor Yellow
 
 switch ([string]$Adapter.bootstrap_mode) {
     'governed' {
-        $existingOpenAiKey = Get-ExistingSettingEnvValue -CodexRoot $TargetRoot -Name 'OPENAI_API_KEY'
-        $hasOpenAiSeed = (Test-NonEmptyString -Value $OpenAIApiKey) -or (Test-NonEmptyString -Value $env:OPENAI_API_KEY)
-        if ($hasOpenAiSeed) {
-            Write-Host '[2/5] Seeding OPENAI settings into target settings.json...' -ForegroundColor Yellow
-            $openAiArgs = @{ CodexRoot = $TargetRoot }
-            if (Test-NonEmptyString -Value $OpenAIBaseUrl) { $openAiArgs.BaseUrl = $OpenAIBaseUrl }
-            if (Test-NonEmptyString -Value $OpenAIApiKey) { $openAiArgs.ApiKey = $OpenAIApiKey }
-            & $persistOpenAiPath @openAiArgs
-        } elseif (Test-NonEmptyString -Value $existingOpenAiKey) {
-            Write-Host '[2/5] OPENAI settings already exist in target settings.json; keeping current value.' -ForegroundColor DarkGray
+        $existingIntentAdviceKey = Get-ExistingSettingEnvValue -CodexRoot $TargetRoot -Name 'VCO_INTENT_ADVICE_API_KEY'
+        $hasIntentAdviceSeed = (Test-NonEmptyString -Value $IntentAdviceApiKey) -or (Test-NonEmptyString -Value $env:VCO_INTENT_ADVICE_API_KEY)
+        if ($hasIntentAdviceSeed) {
+            Write-Host '[2/5] Seeding intent advice settings into target settings.json...' -ForegroundColor Yellow
+            $intentAdviceArgs = @{ CodexRoot = $TargetRoot }
+            if (Test-NonEmptyString -Value $IntentAdviceBaseUrl) { $intentAdviceArgs.BaseUrl = $IntentAdviceBaseUrl }
+            if (Test-NonEmptyString -Value $IntentAdviceApiKey) { $intentAdviceArgs.ApiKey = $IntentAdviceApiKey }
+            & $persistOpenAiPath @intentAdviceArgs
+        } elseif (Test-NonEmptyString -Value $existingIntentAdviceKey) {
+            Write-Host '[2/5] Intent advice settings already exist in target settings.json; keeping current value.' -ForegroundColor DarkGray
         } else {
-            Write-Warning 'OPENAI_API_KEY not provided and not present in the current environment. Full online readiness will remain pending.'
+            Write-Warning 'VCO_INTENT_ADVICE_API_KEY not provided and not present in the current environment. Built-in intent advice readiness will remain pending.'
         }
 
-        Write-Host '[3/5] Built-in AI governance now supports only OpenAI-compatible provider wiring; no secondary provider seeding is performed.' -ForegroundColor DarkGray
+        Write-Host '[3/5] Built-in AI governance now uses separated functional keys: intent advice uses VCO_INTENT_ADVICE_* and vector diff embeddings use VCO_VECTOR_DIFF_*.' -ForegroundColor DarkGray
 
         if ($SyncUserEnv) {
             Write-Host '[4/5] Syncing configured settings.json env values into the user environment...' -ForegroundColor Yellow
@@ -175,13 +177,13 @@ switch ([string]$Adapter.bootstrap_mode) {
             Write-Host ("[2/5] Host-specific scaffold is currently unavailable for '{0}'." -f $HostId) -ForegroundColor Yellow
         }
         Write-Host '[3/5] No hook files or extra preview settings were installed into the target root.' -ForegroundColor DarkGray
-        Write-Host ("[4/5] Provider settings remain host-managed for '{0}'. Built-in AI governance now supports only OpenAI-compatible wiring: configure OPENAI_API_KEY, optional OPENAI_BASE_URL/OPENAI_API_BASE, and VCO_RUCNLPIR_MODEL in the real host settings surface or local environment variables. Do not paste API keys into chat." -f $HostId) -ForegroundColor DarkGray
+        Write-Host ("[4/5] Provider settings remain host-managed for '{0}'. Configure built-in intent advice with VCO_INTENT_ADVICE_API_KEY / VCO_INTENT_ADVICE_BASE_URL / VCO_INTENT_ADVICE_MODEL, and configure vector diff embeddings separately with VCO_VECTOR_DIFF_API_KEY / VCO_VECTOR_DIFF_BASE_URL / VCO_VECTOR_DIFF_MODEL. Do not paste API keys into chat." -f $HostId) -ForegroundColor DarkGray
         Write-Host '[5/5] Running supported-path health check...' -ForegroundColor Yellow
         & $checkPath -Profile $Profile -HostId $HostId -TargetRoot $TargetRoot -Deep
     }
     'runtime-core' {
         Write-Host '[2/5] Runtime-adapter path does not materialize host settings.' -ForegroundColor DarkGray
-        Write-Host '[3/5] Runtime-adapter path does not seed provider settings. Built-in AI governance now supports only OpenAI-compatible wiring: configure OPENAI_API_KEY, optional OPENAI_BASE_URL/OPENAI_API_BASE, and VCO_RUCNLPIR_MODEL in local settings or local environment variables. Do not paste secrets into chat.' -ForegroundColor DarkGray
+        Write-Host '[3/5] Runtime-adapter path does not seed provider settings. Configure built-in intent advice with VCO_INTENT_ADVICE_API_KEY / VCO_INTENT_ADVICE_BASE_URL / VCO_INTENT_ADVICE_MODEL, and configure vector diff embeddings separately with VCO_VECTOR_DIFF_API_KEY / VCO_VECTOR_DIFF_BASE_URL / VCO_VECTOR_DIFF_MODEL. Do not paste secrets into chat.' -ForegroundColor DarkGray
         Write-Host '[4/5] User environment sync skipped for the runtime-adapter path.' -ForegroundColor DarkGray
         Write-Host '[5/5] Running runtime-adapter health check...' -ForegroundColor Yellow
         & $checkPath -Profile $Profile -HostId $HostId -TargetRoot $TargetRoot -Deep

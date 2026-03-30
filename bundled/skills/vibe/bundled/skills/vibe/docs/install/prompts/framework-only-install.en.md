@@ -22,7 +22,8 @@ Rules:
 5. For host wording, default roots, and truth-first boundaries, follow `docs/install/minimal-path.en.md` and `docs/install/installation-rules.en.md` instead of restating a second version here.
 6. Never ask me to paste secrets, URLs, or model names into chat.
 7. If I later want AI-governance online capability, you must recommend the real key names first:
-   - OpenAI-compatible: `OPENAI_API_KEY`, optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`, plus `VCO_RUCNLPIR_MODEL`
+   - built-in intent advice: `VCO_INTENT_ADVICE_API_KEY`, optional `VCO_INTENT_ADVICE_BASE_URL`, plus `VCO_INTENT_ADVICE_MODEL`
+   - optional vector diff embeddings: `VCO_VECTOR_DIFF_API_KEY`, optional `VCO_VECTOR_DIFF_BASE_URL`, plus `VCO_VECTOR_DIFF_MODEL`
    - the built-in AI governance layer supports OpenAI-compatible integration only
 8. Remind me that this gives me the governance foundation first, not the full default workflow-core experience.
 9. After installation, proactively give me one quick check command for “is AI governance configured?”:

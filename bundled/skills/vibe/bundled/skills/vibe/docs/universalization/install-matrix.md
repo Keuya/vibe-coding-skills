@@ -22,7 +22,7 @@ It does **not** promise that all host dependencies can be installed in one shot.
 | `host-windsurf` | `install.* --host windsurf` | `check.* --host windsurf` | runtime-core-preview | documented host root with shared runtime-core payload only |
 | `host-openclaw` | `install.* --host openclaw` | `check.* --host openclaw` | runtime-core-preview | documented host root with shared runtime-core payload only |
 | `generic` | `install.* --host generic` | `check.* --host generic` | runtime-core-only | neutral target root only |
-| `host-opencode` | `install.* --host opencode` | `check.* --host opencode` | preview-scaffold | writes skills + command/agent wrappers + example config into OpenCode roots, but does not own the real `opencode.json` |
+| `host-opencode` | `install.* --host opencode` | `check.* --host opencode` | preview-scaffold | writes skills + `.vibeskills/*` sidecars + example config into OpenCode roots, but does not own the real `opencode.json` |
 | `core` | none | none | none | contracts only |
 
 ## Host-Managed Boundaries
@@ -45,3 +45,11 @@ Even when the repo can install something, these surfaces may still remain host-m
 
 - `docs/universalization/host-capability-matrix.md`
 - `docs/universalization/official-runtime-baseline.md`
+
+## Uninstall Lane
+
+| Lane | Uninstall Entry | Closure Level | Notes |
+| --- | --- | --- | --- |
+| `owned-only` | `uninstall.ps1`, `uninstall.sh` | owned-only | Only removes paths recorded by the install ledger (`.vibeskills/install-ledger.json`), host closure manifests, or the surfaces documented per host in [`docs/uninstall-governance.md`](../uninstall-governance.md). |
+
+The uninstall lane deliberately avoids touching host-managed credentials, plugins, or login state even when the host root is known.

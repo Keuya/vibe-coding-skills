@@ -1,5 +1,21 @@
 # vibe-review Protocol
 
+> **What this protocol does -- plain language overview**
+>
+> This is the quality review protocol. It governs how VibeSkills reviews code,
+> runs security checks, and validates work before marking it complete.
+>
+> You do not need to read this to use VibeSkills. It is reference material for
+> contributors and advanced users who want to understand quality gates.
+>
+> **Key terms used below:**
+> - **M / L / XL grade**: Review depth scales with task complexity. M = quick automated review, L = two-stage thorough review, XL = multi-agent parallel review.
+> - **Anti-proxy-goal-drift lens**: A review checklist ensuring the change actually achieved its stated goal, not just visible metrics (test counts, line counts, etc.).
+> - **report_only_warning**: A finding that must be recorded but does not by itself block a merge.
+> - **specialization_confirmed**: The change is correctly scoped as a specific solution -- it should not be described as a general fix for all similar cases.
+> - **completion_language_corrected**: The code may be fine, but the claim of completion needs to be reduced to match the actual evidence and scope.
+
+
 Protocol for code review, security audit, and quality assurance tasks.
 
 ## Scope

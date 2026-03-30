@@ -31,16 +31,16 @@
 
 如果目标是 `windsurf`，还要额外注意：
 
-- 如需对齐脚本安装结果，把 `commands/` 同步到 `global_workflows/`
-- 如目标目录缺少 `mcp_config.json`，可由 `mcp/servers.template.json` 复制得到
+- 如需与当前脚本安装结果严格对齐，优先重新运行 `install.* --host windsurf`
+- 当前公开合同下，宿主侧 sidecar 以 `.vibeskills/host-settings.json` 与 `.vibeskills/host-closure.json` 为准，而不是 `mcp_config.json` / `global_workflows/`
 
 如果目标是 `opencode`，请改用 OpenCode 预览载荷：
 
 - `skills/`
-- `commands/*.md`
-- `command/*.md`
-- `agents/*.md`
-- `agent/*.md`
+- `.vibeskills/host-settings.json`
+- `.vibeskills/host-closure.json`
+- `.vibeskills/install-ledger.json`
+- `.vibeskills/bin/*-specialist-wrapper.*`
 - `opencode.json.example`
 
 并结合 [`opencode-path.md`](./opencode-path.md) 处理 preview adapter 的后续步骤。
@@ -50,18 +50,19 @@
 ### Codex
 
 - 维护 `~/.codex/settings.json`
-- 如需 AI 治理 advice 的常见 OpenAI-compatible 在线路径，优先配置：
-  - `OPENAI_API_KEY`
-  - 可选 `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
+- 如需 AI 治理 advice 的常见配置路径，优先配置：
+  - `VCO_INTENT_ADVICE_API_KEY`
+  - 可选 `VCO_INTENT_ADVICE_BASE_URL`
+  - `VCO_INTENT_ADVICE_MODEL`
+- 向量 diff（可选）：`VCO_VECTOR_DIFF_API_KEY` + 可选 `VCO_VECTOR_DIFF_BASE_URL` + `VCO_VECTOR_DIFF_MODEL`
 
 ### Claude Code
 
 - 维护 `~/.claude/settings.json`
-- 如需 AI 治理 advice 的常见 OpenAI-compatible 在线路径，优先补：
-  - `OPENAI_API_KEY`
-  - 可选 `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
+- 如需 AI 治理 advice 的常见配置路径，优先补：
+  - `VCO_INTENT_ADVICE_API_KEY`
+  - 可选 `VCO_INTENT_ADVICE_BASE_URL`
+  - `VCO_INTENT_ADVICE_MODEL`
 
 ### Cursor
 
@@ -70,7 +71,7 @@
 
 ### Windsurf
 
-- 确认 `~/.codeium/windsurf` 下的 `mcp_config.json` 与 `global_workflows/`
+- 确认 `~/.codeium/windsurf` 下的 `.vibeskills/host-settings.json` 与 `.vibeskills/host-closure.json`
 - 宿主侧本地配置仍需在 Windsurf 内完成
 
 ### OpenClaw

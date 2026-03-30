@@ -20,7 +20,10 @@
   "provider": {
     "type": "openai",
     "model": "",
+    "model_env": "VCO_INTENT_ADVICE_MODEL",
     "base_url": "",
+    "base_url_env_candidates": ["VCO_INTENT_ADVICE_BASE_URL"],
+    "api_key_env": "VCO_INTENT_ADVICE_API_KEY",
     "timeout_ms": 12000,
     "max_output_tokens": 1600,
     "temperature": 0.15,
@@ -69,12 +72,14 @@
     "max_diff_chars": 6000,
     "vector_diff": {
       "enabled": true,
-      "embedding_model": "text-embedding-3-small",
+      "embedding_model": "",
+      "embedding_model_env": "VCO_VECTOR_DIFF_MODEL",
       "embedding_provider": {
         "type": "openai-compatible",
         "base_url": "",
+        "base_url_env_candidates": ["VCO_VECTOR_DIFF_BASE_URL"],
         "endpoint_path": "",
-        "api_key_env": "OPENAI_API_KEY",
+        "api_key_env": "VCO_VECTOR_DIFF_API_KEY",
         "timeout_ms": 6000
       },
       "min_diff_chars_for_vector": 6000,
@@ -98,7 +103,6 @@
     "max_live_apply_rate": 1.0
   }
 }
-
 
 
 

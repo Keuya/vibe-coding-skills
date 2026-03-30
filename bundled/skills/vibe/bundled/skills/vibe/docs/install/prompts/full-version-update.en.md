@@ -25,7 +25,8 @@ Rules:
    - Linux / macOS: `bash ./install.sh --host opencode --profile full` and `bash ./check.sh --host opencode --profile full`
 7. Never ask me to paste secrets, URLs, or model names into chat.
 8. If I later want AI-governance online capability, you must recommend the real key names first:
-   - OpenAI-compatible: `OPENAI_API_KEY`, optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`, plus `VCO_RUCNLPIR_MODEL`
+   - built-in intent advice: `VCO_INTENT_ADVICE_API_KEY`, optional `VCO_INTENT_ADVICE_BASE_URL`, plus `VCO_INTENT_ADVICE_MODEL`
+   - optional vector diff embeddings: `VCO_VECTOR_DIFF_API_KEY`, optional `VCO_VECTOR_DIFF_BASE_URL`, plus `VCO_VECTOR_DIFF_MODEL`
    - the built-in AI governance layer supports OpenAI-compatible integration only
 9. End with a truth-first report covering host, public version, real profile, commands executed, whether custom governance still exists, and what still needs manual work.
 ```

@@ -116,8 +116,10 @@ def write_artifacts(repo_root: Path, artifact: dict[str, Any], output_directory:
         "",
         "## Settings",
         "",
-        f"- `OPENAI_API_KEY`: `{artifact['settings']['openai_api_key_state']}` via `{artifact['settings']['openai_api_key_source']}`",
-        f"- `VCO_RUCNLPIR_MODEL`: `{artifact['settings']['vco_rucnlpir_model_state']}` via `{artifact['settings']['vco_rucnlpir_model_source']}`",
+        f"- `VCO_INTENT_ADVICE_API_KEY`: `{artifact['settings']['intent_advice_api_key_state']}` via `{artifact['settings']['intent_advice_api_key_source']}`",
+        f"- `VCO_INTENT_ADVICE_MODEL`: `{artifact['settings']['intent_advice_model_state']}` via `{artifact['settings']['intent_advice_model_source']}`",
+        f"- `VCO_VECTOR_DIFF_API_KEY`: `{artifact['settings']['vector_diff_api_key_state']}` via `{artifact['settings']['vector_diff_api_key_source']}`",
+        f"- `VCO_VECTOR_DIFF_MODEL`: `{artifact['settings']['vector_diff_model_state']}` via `{artifact['settings']['vector_diff_model_source']}`",
         "",
     ]
     if artifact["plugins"]:
@@ -333,13 +335,17 @@ def evaluate(repo_root: Path, target_root: Path) -> dict[str, Any]:
 
     if not settings_path.exists():
         blocking_issues.append("settings.json is missing in target root.")
-    openai_api_key_state, openai_api_key_source = resolved_setting_state(settings, "OPENAI_API_KEY")
-    governance_model_state, governance_model_source = resolved_setting_state(settings, "VCO_RUCNLPIR_MODEL")
+    intent_advice_api_key_state, intent_advice_api_key_source = resolved_setting_state(settings, "VCO_INTENT_ADVICE_API_KEY")
+    intent_advice_model_state, intent_advice_model_source = resolved_setting_state(settings, "VCO_INTENT_ADVICE_MODEL")
+    vector_diff_api_key_state, vector_diff_api_key_source = resolved_setting_state(settings, "VCO_VECTOR_DIFF_API_KEY")
+    vector_diff_model_state, vector_diff_model_source = resolved_setting_state(settings, "VCO_VECTOR_DIFF_MODEL")
 
-    if openai_api_key_state != "configured":
-        manual_actions.append("OPENAI_API_KEY must be configured for full online Codex usage.")
-    if governance_model_state != "configured":
-        manual_actions.append("VCO_RUCNLPIR_MODEL must be configured for built-in governance advice readiness.")
+    if intent_advice_api_key_state != "configured":
+        manual_actions.append("VCO_INTENT_ADVICE_API_KEY must be configured for built-in intent advice readiness.")
+    if intent_advice_model_state != "configured":
+        manual_actions.append("VCO_INTENT_ADVICE_MODEL must be configured for built-in intent advice readiness.")
+    if vector_diff_api_key_state != "configured" or vector_diff_model_state != "configured":
+        warnings.append("Vector diff embeddings are not fully configured; large-diff retrieval will degrade gracefully.")
     if not active_mcp_path.exists():
         manual_actions.append("MCP active profile has not been materialized yet (servers.active.json missing).")
     for plugin in plugins:
@@ -369,11 +375,16 @@ def evaluate(repo_root: Path, target_root: Path) -> dict[str, Any]:
         "settings": {
             "path": str(settings_path),
             "exists": settings_path.exists(),
-            "openai_api_key_state": openai_api_key_state,
-            "openai_api_key_source": openai_api_key_source,
-            "openai_base_url_state": setting_state(settings, "OPENAI_BASE_URL"),
-            "vco_rucnlpir_model_state": governance_model_state,
-            "vco_rucnlpir_model_source": governance_model_source,
+            "intent_advice_api_key_state": intent_advice_api_key_state,
+            "intent_advice_api_key_source": intent_advice_api_key_source,
+            "intent_advice_base_url_state": setting_state(settings, "VCO_INTENT_ADVICE_BASE_URL"),
+            "intent_advice_model_state": intent_advice_model_state,
+            "intent_advice_model_source": intent_advice_model_source,
+            "vector_diff_api_key_state": vector_diff_api_key_state,
+            "vector_diff_api_key_source": vector_diff_api_key_source,
+            "vector_diff_base_url_state": setting_state(settings, "VCO_VECTOR_DIFF_BASE_URL"),
+            "vector_diff_model_state": vector_diff_model_state,
+            "vector_diff_model_source": vector_diff_model_source,
         },
         "plugins": plugins,
         "external_tools": external_tools,

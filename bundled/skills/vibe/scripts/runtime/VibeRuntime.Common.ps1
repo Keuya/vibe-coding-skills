@@ -178,6 +178,22 @@ function New-VibeRuntimeHostAdapterProjection {
         -EffectivePropertyName 'id' `
         -FallbackHostId $FallbackHostId
 
+    $hostSettingsPath = $null
+    if ($Runtime -and (Test-VibeObjectHasProperty -InputObject $Runtime -PropertyName 'host_settings')) {
+        $hostSettings = $Runtime.host_settings
+        if ($null -ne $hostSettings -and (Test-VibeObjectHasProperty -InputObject $hostSettings -PropertyName 'path') -and -not [string]::IsNullOrWhiteSpace($hostSettings.path)) {
+            $hostSettingsPath = [string]$hostSettings.path
+        }
+    }
+
+    $hostClosurePath = $null
+    if ($Runtime -and (Test-VibeObjectHasProperty -InputObject $Runtime -PropertyName 'host_closure')) {
+        $hostClosure = $Runtime.host_closure
+        if ($null -ne $hostClosure -and (Test-VibeObjectHasProperty -InputObject $hostClosure -PropertyName 'path') -and -not [string]::IsNullOrWhiteSpace($hostClosure.path)) {
+            $hostClosurePath = [string]$hostClosure.path
+        }
+    }
+
     return [pscustomobject]@{
         requested_id = $identity.requested_id
         id = $identity.id
@@ -188,7 +204,8 @@ function New-VibeRuntimeHostAdapterProjection {
         check_mode = if ($Runtime.host_adapter -and (Test-VibeObjectHasProperty -InputObject $Runtime.host_adapter -PropertyName 'check_mode')) { [string]$Runtime.host_adapter.check_mode } else { $null }
         bootstrap_mode = if ($Runtime.host_adapter -and (Test-VibeObjectHasProperty -InputObject $Runtime.host_adapter -PropertyName 'bootstrap_mode')) { [string]$Runtime.host_adapter.bootstrap_mode } else { $null }
         target_root = if ([string]::IsNullOrWhiteSpace($TargetRoot)) { $null } else { [string]$TargetRoot }
-        closure_path = if ($Runtime.host_closure) { [string]$Runtime.host_closure.path } else { $null }
+        host_settings_path = $hostSettingsPath
+        closure_path = $hostClosurePath
     }
 }
 
@@ -218,6 +235,34 @@ function New-VibeRouteRuntimeAlignmentProjection {
         confirm_required = if ($null -ne $RuntimeInputPacket) { [bool]$RuntimeInputPacket.route_snapshot.confirm_required } else { $false }
         requested_host_adapter_id = $hostAdapterIdentity.requested_host_id
         effective_host_adapter_id = $hostAdapterIdentity.effective_host_id
+    }
+}
+
+function Get-VibeHostSettingsRecord {
+    param(
+        [Parameter(Mandatory)] [object]$HostAdapter
+    )
+
+    $targetRoot = Resolve-VibeHostTargetRoot -HostAdapter $HostAdapter
+    if ([string]::IsNullOrWhiteSpace($targetRoot)) {
+        return $null
+    }
+
+    $settingsPath = Join-Path $targetRoot '.vibeskills\host-settings.json'
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        return $null
+    }
+
+    return [pscustomobject]@{
+        target_root = $targetRoot
+        path = $settingsPath
+        data = $settings
     }
 }
 
@@ -262,6 +307,7 @@ function Get-VibeRuntimeContext {
         repo_root = $repoRoot
         governance_context = $governanceContext
         host_adapter = $hostAdapter
+        host_settings = Get-VibeHostSettingsRecord -HostAdapter $hostAdapter
         host_closure = Get-VibeHostClosureRecord -HostAdapter $hostAdapter
         runtime_contract = Get-Content -LiteralPath (Join-Path $repoRoot 'config\runtime-contract.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         runtime_modes = Get-Content -LiteralPath (Join-Path $repoRoot 'config\runtime-modes.json') -Raw -Encoding UTF8 | ConvertFrom-Json

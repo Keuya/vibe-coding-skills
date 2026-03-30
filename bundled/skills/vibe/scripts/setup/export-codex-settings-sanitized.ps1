@@ -34,7 +34,7 @@ function Redact-EnvValue {
   if (-not $Key) { return $Value }
   $k = $Key.ToUpperInvariant()
 
-  if ($k -eq "OPENAI_API_KEY") { return "<REQUIRED>" }
+  if ($k -in @("VCO_INTENT_ADVICE_API_KEY", "VCO_VECTOR_DIFF_API_KEY")) { return "<REQUIRED>" }
 
   # Conservative generic redaction (avoid leaking unexpected credentials)
   if ($k -match "(_KEY|TOKEN|SECRET|PASSWORD|PASSWD)$") {

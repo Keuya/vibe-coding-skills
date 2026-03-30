@@ -14,10 +14,15 @@
 
 - 不保证宿主侧插件已启用
 - 不保证 plugin-backed MCP 已注册/授权
-- 不保证 `OPENAI_API_KEY` 等 provider secrets 已准备好
-- 不把 Linux/macOS 的 bash 可运行偷换成 “与 Windows 完全等价”
+- 不保证 `VCO_INTENT_ADVICE_API_KEY` 等 VCO_* 凭据（含可选 `VCO_VECTOR_DIFF_*`）已准备好
 
 ## Host / 平台先决判断
+
+在 Linux / macOS 的 shell 路径上，先决条件补充如下：
+
+- `bash` 入口按 **macOS 自带 Bash 3.2** 兼容维护
+- `python3` / `python` 需要满足 **Python 3.10+**
+- 如果你从 `zsh` 里启动，问题通常不是 `zsh`，而是实际解析到的 `bash` 或 `python3` 太老
 
 ### 最强参考 lane（Codex）
 
@@ -58,6 +63,8 @@ bash ./check.sh
 ```
 
 > 提示：如果你希望 Linux 的 doctor/gate 更接近权威路径，请额外安装 `pwsh`，否则一些 PowerShell 治理 gate 可能只能跳过并输出明确 warning（这是预期的降级，而不是失败伪装）。
+
+> macOS 提示：如果命令在进入安装逻辑前就报 Python 兼容性错误，请先确保 `python3 --version` 至少是 `3.10`。这和可选外部 runtime 的独立 venv 不是一回事。
 
 ## 验收标准（truth-first）
 

@@ -94,13 +94,13 @@ bash ./check.sh --host windsurf --profile full --deep
 
 - shared runtime payload
 - `~/.codeium/windsurf` 下的 runtime-core 预览安装结果
-- 按需物化 `mcp_config.json`
-- 按需物化 `global_workflows/`
+- `.vibeskills/host-settings.json` 与 `.vibeskills/host-closure.json`
+- 只在显式调用 Vibe skill 时生效的 skill-only activation 路径
 
 你不会得到：
 
 - full closure
-- 宿主侧本地配置的自动代管
+- 宿主侧本地配置文件的自动代管
 
 ## OpenClaw
 
@@ -113,6 +113,7 @@ bash ./check.sh --host openclaw --profile full --deep
 
 - shared runtime payload
 - OpenClaw runtime-core 预览安装路径，默认目标根目录为 `OPENCLAW_HOME` 或 `~/.openclaw`
+- `.vibeskills/host-settings.json` 与 `.vibeskills/host-closure.json`
 - attach / copy / bundle 三路径口径：
   - attach：把已有 `OPENCLAW_HOME`（或 `~/.openclaw`）作为目标根目录进行接入与校验
   - copy：通过 install/check 入口把 runtime-core payload 复制到目标根目录
@@ -135,8 +136,8 @@ bash ./check.sh --host opencode
 你会得到：
 
 - runtime-core payload
-- VibeSkills skill payload
-- OpenCode command / agent wrappers
+- Vibe-Skills skill payload
+- `.vibeskills/host-settings.json` 与 `.vibeskills/host-closure.json`
 - `opencode.json.example`
 
 你不会得到：

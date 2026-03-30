@@ -52,7 +52,7 @@ Other agents should not currently be described as having a supported install pat
 
 - supported install-and-use path
 - default root is `~/.codeium/windsurf`
-- the repo currently owns only shared install content plus optional materialization of `mcp_config.json` and `global_workflows/`
+- the repo currently owns only shared install content plus sidecar state such as `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - Windsurf-native local settings remain managed on the Windsurf side
 
 ## OpenClaw
@@ -66,7 +66,7 @@ Other agents should not currently be described as having a supported install pat
 
 - supported install-and-use path
 - default target root is `OPENCODE_HOME` or `~/.config/opencode`
-- direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
+- direct install/check writes skills, `.vibeskills/*` sidecars, and `opencode.json.example`
 - the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain managed on the OpenCode side
 
 ## Recommended Community Wording

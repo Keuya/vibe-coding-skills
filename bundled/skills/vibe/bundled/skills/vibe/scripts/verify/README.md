@@ -89,6 +89,7 @@ pwsh -NoProfile -File .\..\governance\phase-end-cleanup.ps1 -WriteArtifacts -Inc
 - **Memory / Prompt / Overlay Governance**：memory、prompt、retrieval、data-scale、framework-interop、quality-debt、system-design、CUDA overlay family。
 - **Plane Governance**：browserops、desktopops、docling、document、connector、discovery family。
 - **Capability / Upstream / Release**：capability、role-pack、upstream value ops、promotion、release、observability family；upstream/distribution governance 新增 `vibe-third-party-disclosure-parity-gate.ps1`、`vibe-upstream-lock-coverage-gate.ps1`、`vibe-origin-provenance-gate.ps1`。
+- **Uninstall Integrity**：`vibe-uninstall-coherence-gate.ps1`；验证 owned-only uninstaller入口、install ledger contract、docs 不宣称 host rollback。
 
 详见：`gate-family-index.md`
 **Managed Runtime / Process Hygiene**: `vibe-node-zombie-gate.ps1` validates VCO-managed Node ownership, stale-process classification, and report-only cleanup safety boundaries.

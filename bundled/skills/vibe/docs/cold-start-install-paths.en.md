@@ -89,13 +89,13 @@ What you get:
 
 - shared runtime payload
 - a runtime-core preview install under `~/.codeium/windsurf`
-- optional `mcp_config.json` materialization
-- optional `global_workflows/` materialization
+- `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
+- a skills-only activation path that stays dormant until Vibe is explicitly invoked
 
 What you do not get:
 
 - full closure
-- automatic takeover of host-local configuration
+- automatic takeover of host-local config files
 
 ## OpenClaw
 
@@ -108,6 +108,7 @@ What you get:
 
 - shared runtime payload
 - an OpenClaw runtime-core preview install path, with default target root from `OPENCLAW_HOME` or `~/.openclaw`
+- `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - explicit attach / copy / bundle path semantics:
   - attach: connect and validate an existing `OPENCLAW_HOME` (or `~/.openclaw`) target root
   - copy: use install/check entrypoints to copy runtime-core payload into the target root
@@ -130,8 +131,8 @@ bash ./check.sh --host opencode
 What you get:
 
 - runtime-core payload
-- VibeSkills skill payload
-- OpenCode command / agent wrappers
+- Vibe-Skills skill payload
+- `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - `opencode.json.example`
 
 What you do not get:

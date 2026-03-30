@@ -500,23 +500,16 @@ function Invoke-AdapterSpecificChecks {
   }
   if ([string]$Adapter.check_mode -eq 'preview-guidance') {
     if ([string]$Adapter.id -eq 'opencode') {
-      Warn-Note -Message 'opencode preview keeps the real opencode.json host-managed; only skills, commands, agents, and an example config scaffold are verified'
-    } elseif ([string]$Adapter.id -eq 'cursor') {
-      Write-Host '[INFO] cursor preview now materializes managed commands, host-closure state, and a minimal settings surface; deeper host-native workflow remains preview-scoped' -ForegroundColor Cyan
+      Write-Host '[INFO] opencode preview now runs as skills-only activation; the real opencode.json stays untouched and sidecar state is verified' -ForegroundColor Cyan
     } else {
-      Write-Host ("[INFO] {0} preview hook/settings scaffold remains intentionally unavailable while the author works through compatibility issues; this is a current product boundary, not an install failure" -f $Adapter.id) -ForegroundColor Cyan
+      Write-Host ("[INFO] {0} preview now runs as skills-only activation; host-native config files stay untouched and sidecar state is verified" -f $Adapter.id) -ForegroundColor Cyan
     }
   }
   if ([string]$Adapter.check_mode -eq 'runtime-core') {
-    $commandsRoot = Join-Path $RepoRoot 'commands'
-    if (Test-Path -LiteralPath $commandsRoot) {
-      Check-Path -Label "global workflows" -Path (Join-Path $TargetRoot 'global_workflows')
-    }
-
-    $mcpTemplatePath = Join-Path $RepoRoot 'mcp\servers.template.json'
-    if (Test-Path -LiteralPath $mcpTemplatePath) {
-      Check-Path -Label "mcp_config.json" -Path (Join-Path $TargetRoot 'mcp_config.json')
-    }
+    Write-Host ("[INFO] {0} runtime-core now verifies skill-native activation and sidecar state only; host-native workflow/config files are intentionally absent" -f $Adapter.id) -ForegroundColor Cyan
+  }
+  if ([string]$Adapter.id -in @('claude-code', 'cursor', 'windsurf', 'openclaw', 'opencode')) {
+    Check-Path -Label "host settings sidecar" -Path (Join-Path $TargetRoot '.vibeskills\host-settings.json')
   }
   if ([string]$Adapter.check_mode -eq 'governed') {
     Check-Path -Label "plugins manifest" -Path (Join-Path $TargetRoot 'config\plugins-manifest.codex.json')

@@ -17,6 +17,13 @@ from typing import Any, Callable
 
 TransportFn = Callable[[dict[str, Any]], dict[str, Any]]
 
+INTENT_ADVICE_API_KEY_ENV = "VCO_INTENT_ADVICE_API_KEY"
+INTENT_ADVICE_BASE_URL_ENV = "VCO_INTENT_ADVICE_BASE_URL"
+INTENT_ADVICE_MODEL_ENV = "VCO_INTENT_ADVICE_MODEL"
+VECTOR_DIFF_API_KEY_ENV = "VCO_VECTOR_DIFF_API_KEY"
+VECTOR_DIFF_BASE_URL_ENV = "VCO_VECTOR_DIFF_BASE_URL"
+VECTOR_DIFF_MODEL_ENV = "VCO_VECTOR_DIFF_MODEL"
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -259,12 +266,20 @@ class ProbeContext:
     route_mode: str = "legacy_fallback"
 
 
-def provider_credential_env(provider_type: str) -> str:
-    return "OPENAI_API_KEY"
+def provider_credential_env(provider_type: str, provider_cfg: dict[str, Any] | None = None) -> str:
+    if isinstance(provider_cfg, dict):
+        configured = non_empty(provider_cfg.get("api_key_env"))
+        if configured:
+            return configured
+    return INTENT_ADVICE_API_KEY_ENV
 
 
-def advice_model_candidates(provider_type: str) -> list[str]:
-    return ["VCO_RUCNLPIR_MODEL"]
+def advice_model_candidates(provider_type: str, provider_cfg: dict[str, Any] | None = None) -> list[str]:
+    if isinstance(provider_cfg, dict):
+        configured = non_empty(provider_cfg.get("model_env"))
+        if configured:
+            return [configured]
+    return [INTENT_ADVICE_MODEL_ENV]
 
 
 def resolve_advice_base_url(provider_type: str, provider_cfg: dict[str, Any], settings_values: dict[str, str]) -> str | None:
@@ -272,10 +287,14 @@ def resolve_advice_base_url(provider_type: str, provider_cfg: dict[str, Any], se
     if configured:
         return configured
 
+    env_candidates = provider_cfg.get("base_url_env_candidates") if isinstance(provider_cfg, dict) else None
+    base_url_names = [str(item) for item in env_candidates] if isinstance(env_candidates, list) and env_candidates else [
+        INTENT_ADVICE_BASE_URL_ENV
+    ]
     normalized = provider_type.strip().lower()
     if normalized in {"openai", "openai-compatible", "mock"}:
-        return resolve_first_value(["OPENAI_BASE_URL", "OPENAI_API_BASE"], settings_values) or "https://api.openai.com/v1"
-    return resolve_first_value(["OPENAI_BASE_URL", "OPENAI_API_BASE"], settings_values)
+        return resolve_first_value(base_url_names, settings_values) or "https://api.openai.com/v1"
+    return resolve_first_value(base_url_names, settings_values)
 
 
 def classify_scope(policy: dict[str, Any], context: ProbeContext) -> dict[str, Any]:
@@ -422,18 +441,18 @@ def probe_advice_connectivity(
     provider_type = str(provider_cfg.get("type") or "openai")
     provider_type_normalized = provider_type.lower()
 
-    model = non_empty(provider_cfg.get("model")) or resolve_first_value(advice_model_candidates(provider_type), settings_values)
+    model = non_empty(provider_cfg.get("model")) or resolve_first_value(advice_model_candidates(provider_type, provider_cfg), settings_values)
     if not model and provider_type_normalized != "mock":
         return {
             "status": "missing_model",
             "provider_type": provider_type,
             "model": None,
-            "credential_env": provider_credential_env(provider_type),
+            "credential_env": provider_credential_env(provider_type, provider_cfg),
             "credential_state": "unknown",
             "attempts": [],
         }
 
-    credential_env = provider_credential_env(provider_type)
+    credential_env = provider_credential_env(provider_type, provider_cfg)
     api_key = resolve_env_value(credential_env, settings_values)
     if provider_type_normalized != "mock" and not api_key:
         offline_reason = None
@@ -443,13 +462,13 @@ def probe_advice_connectivity(
                 if not isinstance(provider_entry, dict):
                     continue
                 provider_id = str(provider_entry.get("id") or "")
-                if "openai" in provider_id and credential_env == "OPENAI_API_KEY":
+                if "openai" in provider_id and credential_env == INTENT_ADVICE_API_KEY_ENV:
                     contract = provider_entry.get("offline_contract")
                     if isinstance(contract, dict):
                         offline_reason = non_empty(contract.get("abstain_reason"))
                     break
         if not offline_reason:
-            offline_reason = "missing_openai_api_key"
+            offline_reason = "missing_intent_advice_api_key"
         return {
             "status": "missing_credentials",
             "provider_type": provider_type,
@@ -585,9 +604,13 @@ def resolve_vector_base_url(provider_type: str, provider_cfg: dict[str, Any], se
     configured = non_empty(provider_cfg.get("base_url"))
     if configured:
         return configured
+    env_candidates = provider_cfg.get("base_url_env_candidates") if isinstance(provider_cfg, dict) else None
+    base_url_names = [str(item) for item in env_candidates] if isinstance(env_candidates, list) and env_candidates else [
+        VECTOR_DIFF_BASE_URL_ENV
+    ]
     normalized = provider_type.strip().lower()
     if normalized in {"openai", "openai-compatible"}:
-        return resolve_first_value(["OPENAI_BASE_URL", "OPENAI_API_BASE"], settings_values) or "https://api.openai.com/v1"
+        return resolve_first_value(base_url_names, settings_values) or "https://api.openai.com/v1"
     return None
 
 
@@ -604,7 +627,10 @@ def probe_vector_diff(
     if not isinstance(vector_cfg, dict) or not bool(vector_cfg.get("enabled", False)):
         return {"status": "vector_diff_not_configured", "availability_state": "not_configured", "attempts": []}
 
-    model = non_empty(vector_cfg.get("embedding_model"))
+    model = non_empty(vector_cfg.get("embedding_model")) or resolve_first_value(
+        [non_empty(vector_cfg.get("embedding_model_env")) or VECTOR_DIFF_MODEL_ENV],
+        settings_values,
+    )
     provider = vector_cfg.get("embedding_provider")
     provider_cfg = provider if isinstance(provider, dict) else {}
     provider_type = str(provider_cfg.get("type") or "openai")
@@ -616,7 +642,7 @@ def probe_vector_diff(
             "attempts": [],
         }
 
-    credential_env = non_empty(provider_cfg.get("api_key_env")) or provider_credential_env(provider_type)
+    credential_env = non_empty(provider_cfg.get("api_key_env")) or VECTOR_DIFF_API_KEY_ENV
     api_key = resolve_env_value(credential_env, settings_values)
     if not api_key:
         return {
@@ -728,12 +754,12 @@ def next_step_for_advice(status: str, advice: dict[str, Any]) -> str | None:
     if status == "scope_not_applicable":
         return "Use an allowed grade/task/route_mode for this policy to test advice connectivity."
     if status == "missing_credentials":
-        env_name = advice.get("credential_env") or "OPENAI_API_KEY"
+        env_name = advice.get("credential_env") or INTENT_ADVICE_API_KEY_ENV
         return f"Configure `{env_name}` in local settings env or process environment."
     if status == "missing_model":
-        return "Set `provider.model` in `config/llm-acceleration-policy.json` or configure `VCO_RUCNLPIR_MODEL` locally."
+        return "Set `provider.model` in `config/llm-acceleration-policy.json` or configure `VCO_INTENT_ADVICE_MODEL` locally."
     if status == "missing_base_url":
-        return "Set `provider.base_url` in policy or configure `OPENAI_BASE_URL` / `OPENAI_API_BASE` locally."
+        return "Set `provider.base_url` in policy or configure `VCO_INTENT_ADVICE_BASE_URL` locally."
     if status == "provider_unreachable":
         return "Check base_url reachability, DNS, network egress, and provider timeout."
     if status == "provider_rejected_request":
@@ -745,9 +771,9 @@ def next_step_for_advice(status: str, advice: dict[str, Any]) -> str | None:
 
 def next_step_for_vector(status: str, vector: dict[str, Any]) -> str | None:
     if status == "vector_diff_not_configured":
-        return "If needed, enable `context.vector_diff` and set `embedding_model` plus provider config."
+        return "If needed, enable `context.vector_diff` and set `embedding_model` or `VCO_VECTOR_DIFF_MODEL` plus vector provider config."
     if status == "vector_diff_missing_credentials":
-        env_name = vector.get("credential_env") or "OPENAI_API_KEY"
+        env_name = vector.get("credential_env") or VECTOR_DIFF_API_KEY_ENV
         return f"Configure `{env_name}` for vector_diff embeddings probe."
     if status == "vector_diff_provider_unreachable":
         return "Check embeddings provider base_url/network reachability."

@@ -37,12 +37,24 @@ If the user names a version outside the public version surface, say so directly 
 - Linux / macOS use `bash`
 - Windows use `pwsh`
 
+Additional contract:
+
+- the Linux / macOS shell entrypoints must stay runnable on the macOS system Bash 3.2 baseline; do not reintroduce Bash 4+ builtins such as `mapfile`
+- those shell entrypoints now validate **Python 3.10+** before dispatching into adapter, doctor, or bootstrap helper scripts
+- when a user launches from macOS `zsh`, the real compatibility boundary is the resolved `bash` and `python3` binaries, not `zsh` itself
+
 ## Rule 6: Map public version names to real script profiles
 
 - `Full Version + Customizable Governance` -> `full`
 - `Framework Only + Customizable Governance` -> `minimal`
 
 Do not keep pretending the framework version is `framework-only`; the current scripts actually accept `minimal` / `full`.
+
+## Rule 6.5: Separate bootstrap prerequisites from optional external runtimes
+
+- the base prerequisite for `install.sh` / `check.sh` / `scripts/bootstrap/one-shot-setup.sh` is a repo-owned **Python 3.10+** floor
+- external runtimes such as `ruc-nlpir` may still need their own isolated venv, but that is not the same thing as the bootstrap prerequisite floor
+- do not describe an optional upstream/runtime preference for 3.11 as if the whole public installer were 3.11-only
 
 ## Rule 7: Describe Codex as the default recommended path
 
@@ -51,11 +63,12 @@ If the user chooses `codex`:
 - run `--host codex`
 - describe it as the default recommended path today
 - explain that hook installation is currently frozen because of compatibility issues; that is not an install failure
-- if the common OpenAI-compatible governance-advice path is needed, point the user to local configuration for:
-  - `OPENAI_API_KEY`
-  - optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
-- the built-in AI governance layer now supports OpenAI-compatible integration only
+- if the common governance-advice path is needed, point the user to local configuration for:
+  - `VCO_INTENT_ADVICE_API_KEY`
+  - optional `VCO_INTENT_ADVICE_BASE_URL`
+  - `VCO_INTENT_ADVICE_MODEL`
+  - `VCO_VECTOR_DIFF_API_KEY` (optional vector diff embeddings that degrade gracefully)
+- the built-in AI governance layer now reads the advice credentials strictly from `VCO_INTENT_ADVICE_*`
 - never imply that baseline host online access automatically means governance-AI online readiness
 
 ## Rule 8: Describe Claude Code as a supported install-and-use path
@@ -84,7 +97,7 @@ If the user chooses `windsurf`:
 - run `--host windsurf`
 - state clearly that it has a supported install-and-use path
 - the default host root is `~/.codeium/windsurf`
-- the repo currently owns only shared install content plus optional materialization of `mcp_config.json` and `global_workflows/`
+- the repo currently owns only shared install content plus sidecar state such as `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - make it clear that Windsurf-local settings still need to be managed on the Windsurf side
 
 ## Rule 11: Describe OpenClaw as a supported install-and-use path
@@ -104,7 +117,7 @@ If the user chooses `opencode`:
 - run `--host opencode`
 - state clearly that it has a supported install-and-use path
 - the default target root is `OPENCODE_HOME`, otherwise `~/.config/opencode`
-- direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
+- direct install/check writes skills, `.vibeskills/*` sidecars, and `opencode.json.example`
 - do not claim ownership of the real `opencode.json`
 - keep provider credentials, plugin installation, and MCP trust on the host-managed side
 
@@ -112,10 +125,10 @@ If the user chooses `opencode`:
 
 When explaining AI-governance advice connectivity, prefer:
 
-- OpenAI-compatible:
-  - `OPENAI_API_KEY`
-  - optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
+- `VCO_INTENT_ADVICE_API_KEY`
+- optional `VCO_INTENT_ADVICE_BASE_URL`
+- `VCO_INTENT_ADVICE_MODEL`
+- mention `VCO_VECTOR_DIFF_*` if vector embeddings are configured, and note that missing vector diff keys do not block the advice path because it degrades gracefully
 
 
 ## Rule 14: Never ask users to paste secrets into chat

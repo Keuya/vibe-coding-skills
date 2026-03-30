@@ -7,7 +7,7 @@
   "runtime_role": "official-runtime-adapter",
   "summary": "Windsurf may consume the shared runtime-core payload through a documented host root, but this repository does not claim host-native governed closure for it.",
   "source_release": {
-    "version": "2.3.54",
+    "version": "2.3.55",
     "updated": "2026-03-30"
   },
   "truth_sources": [

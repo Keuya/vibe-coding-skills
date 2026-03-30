@@ -12,6 +12,8 @@ TARGET_ROOT=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADAPTER_RESOLVER="${SCRIPT_DIR}/scripts/common/resolve_vgo_adapter.py"
 ADAPTER_INSTALLER="${SCRIPT_DIR}/scripts/install/install_vgo_adapter.py"
+PYTHON_MIN_MAJOR=3
+PYTHON_MIN_MINOR=10
 
 if [[ ! -f "${ADAPTER_RESOLVER}" ]]; then
   echo "[FAIL] Missing adapter resolver: ${ADAPTER_RESOLVER}" >&2
@@ -21,6 +23,67 @@ if [[ ! -f "${ADAPTER_INSTALLER}" ]]; then
   echo "[FAIL] Missing adapter installer: ${ADAPTER_INSTALLER}" >&2
   exit 1
 fi
+
+python_version_of() {
+  local candidate="$1"
+  "${candidate}" - <<'PY'
+import sys
+print(f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")
+PY
+}
+
+python_meets_minimum() {
+  local candidate="$1"
+  local version major minor patch
+  version="$(python_version_of "${candidate}" 2>/dev/null || true)"
+  [[ -n "${version}" ]] || return 1
+  IFS='.' read -r major minor patch <<EOF
+${version}
+EOF
+  [[ -n "${major}" && -n "${minor}" ]] || return 1
+  if (( major > PYTHON_MIN_MAJOR )); then
+    return 0
+  fi
+  if (( major == PYTHON_MIN_MAJOR && minor >= PYTHON_MIN_MINOR )); then
+    return 0
+  fi
+  return 1
+}
+
+pick_supported_python() {
+  local candidate resolved=""
+  for candidate in python3 python; do
+    if ! resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      continue
+    fi
+    if [[ -n "${resolved}" ]] && python_meets_minimum "${resolved}"; then
+      printf '%s' "${resolved}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+print_python_requirement_error() {
+  local context="$1"
+  local candidate resolved version found_any="false"
+  echo "[FAIL] ${context} requires Python ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR}+." >&2
+  for candidate in python3 python; do
+    if resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      found_any="true"
+      version="$(python_version_of "${resolved}" 2>/dev/null || echo unknown)"
+      echo "[FAIL] Detected ${candidate} -> ${resolved} (${version})" >&2
+    fi
+  done
+  if [[ "${found_any}" != "true" ]]; then
+    echo "[FAIL] No usable python3/python executable was found in PATH." >&2
+  fi
+  if [[ "$(uname -s 2>/dev/null)" == "Darwin" ]]; then
+    echo "[FAIL] macOS often provides zsh plus an old/missing system Python. Install a modern Python 3.10+ and ensure 'python3 --version' reports >= ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR} before rerunning." >&2
+  else
+    echo "[FAIL] Install a modern Python 3.10+ and ensure 'python3 --version' reports >= ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR} before rerunning." >&2
+  fi
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,15 +100,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 pick_python_for_adapter() {
-  if command -v python3 >/dev/null 2>&1; then
-    echo "python3"
-    return 0
-  fi
-  if command -v python >/dev/null 2>&1; then
-    echo "python"
-    return 0
-  fi
-  return 1
+  pick_supported_python
 }
 
 adapter_query_for_host() {
@@ -54,7 +109,7 @@ adapter_query_for_host() {
   local python_bin=""
   python_bin="$(pick_python_for_adapter || true)"
   if [[ -z "${python_bin}" ]]; then
-    echo "[FAIL] Python is required for adapter-driven host resolution metadata." >&2
+    print_python_requirement_error "Adapter-driven host resolution metadata"
     exit 1
   fi
   "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${SCRIPT_DIR}" --host "${host_id}" --property "${property}"
@@ -384,15 +439,7 @@ json_query_scalar() {
 }
 
 pick_python() {
-  if command -v python3 >/dev/null 2>&1; then
-    echo "python3"
-    return 0
-  fi
-  if command -v python >/dev/null 2>&1; then
-    echo "python"
-    return 0
-  fi
-  return 1
+  pick_supported_python
 }
 
 pick_powershell() {
@@ -447,7 +494,7 @@ adapter_query() {
   local python_bin=""
   python_bin="$(pick_python || true)"
   if [[ -z "${python_bin}" ]]; then
-    echo "[FAIL] Python is required for adapter-driven installation metadata." >&2
+    print_python_requirement_error "Adapter-driven installation metadata"
     exit 1
   fi
   "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${SCRIPT_DIR}" --host "${HOST_ID}" --property "${property}"
@@ -565,8 +612,12 @@ sync_vibe_canonical_to_target() {
       canonical_rel="${configured_canonical_rel}"
     fi
 
-    mapfile -t files < <(json_query_lines 'packaging.mirror.files' 2>/dev/null)
-    mapfile -t dirs < <(json_query_lines 'packaging.mirror.directories' 2>/dev/null)
+    while IFS= read -r line; do
+      files+=("${line}")
+    done < <(json_query_lines 'packaging.mirror.files' 2>/dev/null || true)
+    while IFS= read -r line; do
+      dirs+=("${line}")
+    done < <(json_query_lines 'packaging.mirror.directories' 2>/dev/null || true)
   else
     echo "[WARN] Missing version governance config: ${governance_path}; using safe fallback mirror scope."
   fi
@@ -687,7 +738,7 @@ TARGET_VIBE_REL="$(json_query_scalar 'runtime.installed_runtime.target_relpath' 
 
 PYTHON_BIN_FOR_ADAPTER="$(pick_python || true)"
 if [[ -z "${PYTHON_BIN_FOR_ADAPTER}" ]]; then
-  echo "[FAIL] Python is required for adapter-driven installation." >&2
+  print_python_requirement_error "Adapter-driven installation"
   exit 1
 fi
 ADAPTER_INSTALL_JSON="$("${PYTHON_BIN_FOR_ADAPTER}" "${ADAPTER_INSTALLER}" \
@@ -698,7 +749,9 @@ ADAPTER_INSTALL_JSON="$("${PYTHON_BIN_FOR_ADAPTER}" "${ADAPTER_INSTALLER}" \
   $([[ "${REQUIRE_CLOSED_READY}" == "true" ]] && printf '%s' '--require-closed-ready') \
   $([[ "${ALLOW_EXTERNAL_SKILL_FALLBACK}" == "true" ]] && printf '%s' '--allow-external-skill-fallback'))"
 if [[ -n "${ADAPTER_INSTALL_JSON}" ]]; then
-  mapfile -t EXTERNAL_FALLBACK_USED < <(printf '%s\n' "${ADAPTER_INSTALL_JSON}" | "${PYTHON_BIN_FOR_ADAPTER}" -c 'import json,sys; data=json.load(sys.stdin); [print(x) for x in data.get("external_fallback_used", [])]')
+  while IFS= read -r line; do
+    EXTERNAL_FALLBACK_USED+=("${line}")
+  done < <(printf '%s\n' "${ADAPTER_INSTALL_JSON}" | "${PYTHON_BIN_FOR_ADAPTER}" -c 'import json,sys; data=json.load(sys.stdin); [print(x) for x in data.get("external_fallback_used", [])]')
 fi
 
 sanitize_installed_runtime_skill_entrypoints

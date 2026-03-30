@@ -44,24 +44,32 @@
   - [`custom-workflow-onboarding.md`](./custom-workflow-onboarding.md)
   - [`custom-skill-governance-rules.md`](./custom-skill-governance-rules.md)
 
+## 如果安装后要卸载
+
+安装的对称入口是仓库根目录下的 `uninstall.ps1` / `uninstall.sh`。它们与 `install.*` 使用同一组 `--host`、`--target-root`、`--profile` 参数，默认直接执行卸载，但只会清理 Vibe 自己安装或写入的内容。
+
+- 完整规则见 [`../uninstall-governance.md`](../uninstall-governance.md)
+- 如果你只想先看计划删除什么，可以加 `--preview`
+- 它不会默认回滚宿主登录态、provider 凭证、插件状态或你自己维护的配置
+
 ## 关于补充配置
 
 - 基础安装完成后即可直接使用
 - 如果你还想补在线 provider、MCP、宿主本地 settings 或插件联动，这些都属于增强建议，不是基础安装的前置门槛
 - 各宿主哪些内容仍由宿主侧本地维护，会在对应提示词和参考文档中如实说明
 
-## 安装后如果要补 AI 治理在线配置，只按 OpenAI-compatible 这组键名
+## 安装后如果要补 AI 治理在线配置，按 VCO_* 键名
 
-常见 OpenAI-compatible 路径：
+常见配置路径：
 
-- `OPENAI_API_KEY`
-- 可选：`OPENAI_BASE_URL` 或 `OPENAI_API_BASE`
-- `VCO_RUCNLPIR_MODEL`
+- intent advice：`VCO_INTENT_ADVICE_API_KEY` + 可选 `VCO_INTENT_ADVICE_BASE_URL` + `VCO_INTENT_ADVICE_MODEL`
+- vector diff embeddings（非必需）：`VCO_VECTOR_DIFF_API_KEY` + 可选 `VCO_VECTOR_DIFF_BASE_URL` + `VCO_VECTOR_DIFF_MODEL`
 
 补充说明：
 
-- 内置 AI 治理层当前只支持 OpenAI-compatible 接入
-- 当前安装说明不再把 `VCO_AI_PROVIDER_URL` / `VCO_AI_PROVIDER_API_KEY` 当成默认主路径
+- 主路径（intent advice）必须有，否则 `vibe` 中的 advice 会报 `missing_credentials` / `missing_model`。
+- vector diff 是降级能力，缺失时 diff 会直接返回普通文本片段，能继续使用主路径。
+- 旧 `OPENAI_*` 不再自动回填；如果你仍手动维护，那也是手动映射到 `VCO_*` 才能被 runtime 读取。
 - 详细说明见 [`configuration-guide.md`](./configuration-guide.md)
 
 ## 安装后快速检查 AI 治理是否已配置好

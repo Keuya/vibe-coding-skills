@@ -23,57 +23,62 @@ So:
 
 Do not paste secrets into chat.
 
-## Recommended path 1: OpenAI-compatible
+## Built-in intent advice configuration
 
-This is the common and recommended path for AI-governance online advice.
+The governance runtime now drives intent advice exclusively from the `VCO_INTENT_ADVICE_*` keys. This is the public, supported path that the quick check and routers read before making any outbound request.
 
-### Recommended keys
+### Required keys
 
 ```json
 {
   "env": {
-    "OPENAI_API_KEY": "<local-api-key>",
-    "OPENAI_BASE_URL": "https://api.openai.com/v1",
-    "VCO_RUCNLPIR_MODEL": "gpt-5.4-high"
+    "VCO_INTENT_ADVICE_API_KEY": "<local-api-key>",
+    "VCO_INTENT_ADVICE_BASE_URL": "https://api.openai.com/v1",
+    "VCO_INTENT_ADVICE_MODEL": "gpt-5.4-high"
   }
 }
 ```
 
 Notes:
 
-- `OPENAI_API_KEY`: required
-- `OPENAI_BASE_URL` or `OPENAI_API_BASE`: optional; if omitted, the runtime falls back to provider defaults or policy config
-- `VCO_RUCNLPIR_MODEL`: recommended model key
+- `VCO_INTENT_ADVICE_API_KEY`: required for all built-in advice routes
+- `VCO_INTENT_ADVICE_BASE_URL`: optional; when absent, the policy/provider config dictates the default
+- `VCO_INTENT_ADVICE_MODEL`: required unless overridden in `config/llm-acceleration-policy.json`
+- Legacy `OPENAI_*` keys are no longer used as automatic fallbacks for intent advice; they can remain side-by-side but the runtime will not backfill them.
 
-## Current public path
+## Optional vector diff embeddings configuration
 
-For local follow-up and quick-check readiness, the public install path now standardizes on:
+Vector diff embeddings are an auxiliary capability that improves diff summarization but should never block intent advice. Configure them independently using the `VCO_VECTOR_DIFF_*` keys.
 
-- `OPENAI_API_KEY`
-- optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-- `VCO_RUCNLPIR_MODEL`
+### Optional keys
 
-## Built-in governance provider boundary
+```json
+{
+  "env": {
+    "VCO_VECTOR_DIFF_API_KEY": "<embedding-key>",
+    "VCO_VECTOR_DIFF_BASE_URL": "https://api.openai.com/v1",
+    "VCO_VECTOR_DIFF_MODEL": "text-embedding-ada-002"
+  }
+}
+```
 
-The built-in AI governance layer now supports OpenAI-compatible integration only.
+Notes:
 
-That means:
+- Vector diff reads these keys only when enabled in `config/llm-acceleration-policy.json`.`context.vector_diff`
+- If embeddings are missing, vector diff degrades gracefully (vector_diff_status becomes `vector_diff_missing_credentials` or `vector_diff_not_configured`) but the advice path still runs.
+- The vector diff keys are independent; you can point them at a different provider without affecting the intent advice configuration.
 
-- advice calls follow OpenAI-compatible Responses / Chat Completions / Embeddings semantics
-- install docs, bootstrap, and quick-check guidance no longer present Ark-compatible as a parallel built-in lane
-- other provider shapes are outside the standard built-in governance support surface
+## Advanced path: policy-managed provider settings
 
-## Advanced path: provider config in policy
-
-If you already maintain provider config in the repo policy, you can keep using:
+If you already maintain provider details in the strategy files, continue to specify:
 
 - `config/llm-acceleration-policy.json` -> `provider.base_url`
 - `config/llm-acceleration-policy.json` -> `provider.model`
 
 In that setup:
 
-- base URL and model can come from policy
-- local credentials should still use `OPENAI_API_KEY`
+- base URL and model can still come from policy overrides
+- the local credentials for that provider must sit under `VCO_INTENT_ADVICE_*`
 
 ## Where this usually goes per host
 
@@ -137,20 +142,24 @@ Common default roots:
 ## How to read the result
 
 - `ok`: AI-governance advice is online
-- `missing_credentials`: local credentials are missing; usually add `OPENAI_API_KEY`
-- `missing_model`: the model is missing; usually add `VCO_RUCNLPIR_MODEL`
+- `missing_credentials`: built-in intent-advice credentials are missing; usually add `VCO_INTENT_ADVICE_API_KEY`
+- `missing_model`: the intent-advice model is missing; usually add `VCO_INTENT_ADVICE_MODEL`
 - `missing_base_url`: add the provider base URL locally, or define `provider.base_url` in policy
 - `provider_rejected_request`: key, model id, or endpoint compatibility is wrong
 - `provider_unreachable`: network, DNS, base-url reachability, or timeout is failing
 - `prefix_required`: the current policy only evaluates advice in explicit `/vibe` scope
 
+## Owned-only uninstall cleanup
+
+When you need to reverse an install, run `pwsh -NoProfile -File ..\..\uninstall.ps1 --host <host> --target-root <root>` or, on Linux/macOS, `bash ./uninstall.sh ...`. The uninstallers honor the ledger-first contract described in [`docs/uninstall-governance.md`](../uninstall-governance.md) and will only delete Vibe-managed surfaces recorded in the install ledger, closure manifest, or documented legacy payloads.
+
 ## Short practical conclusion
 
-If you want the fastest path for a common OpenAI-compatible setup:
+If you want the fastest path for the normal built-in intent-advice setup:
 
-1. configure `OPENAI_API_KEY` locally
-2. add `OPENAI_BASE_URL` or `OPENAI_API_BASE` only when you use a custom gateway
-3. configure `VCO_RUCNLPIR_MODEL`
+1. configure `VCO_INTENT_ADVICE_API_KEY` locally
+2. add `VCO_INTENT_ADVICE_BASE_URL` only when you use a custom gateway
+3. configure `VCO_INTENT_ADVICE_MODEL`
 4. run the quick check
 
-That is enough for the normal install-time path.
+Vector diff embeddings stay optional. Configure `VCO_VECTOR_DIFF_API_KEY` / `VCO_VECTOR_DIFF_BASE_URL` / `VCO_VECTOR_DIFF_MODEL` only when you want large-diff semantic retrieval.

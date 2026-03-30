@@ -8,6 +8,11 @@
 
 - [`one-click-install-release-copy.md`](./one-click-install-release-copy.md)：唯一公开安装入口；先选宿主、动作和版本，再复制对应提示词
 
+### 公开卸载入口
+
+- [`../../uninstall.ps1`](../../uninstall.ps1) / [`../../uninstall.sh`](../../uninstall.sh)：安装完成后的对称卸载入口；参数与 `install.*` 对齐，默认直接执行，但只会按 install ledger、host closure 和保守 legacy surface 删除 Vibe 自己管理的内容
+- [`../uninstall-governance.md`](../uninstall-governance.md)：卸载契约说明；明确 shared JSON 只删 `vibeskills` 受管节点，不回滚宿主登录态、provider 凭证或插件状态
+
 ### 参考说明
 
 - [`recommended-full-path.md`](./recommended-full-path.md)：多宿主安装命令参考

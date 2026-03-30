@@ -3,18 +3,27 @@
 $script:OpenAiDefaultBaseUrl = "https://api.openai.com/v1"
 
 function Get-OpenAiBaseUrl {
-    param([string]$Override)
+    param(
+        [string]$Override,
+        [string[]]$EnvCandidates = @("VCO_INTENT_ADVICE_BASE_URL")
+    )
 
     if ($Override) { return $Override.TrimEnd("/") }
-    if ($env:OPENAI_BASE_URL) { return ([string]$env:OPENAI_BASE_URL).TrimEnd("/") }
-    if ($env:OPENAI_API_BASE) { return ([string]$env:OPENAI_API_BASE).TrimEnd("/") }
+    foreach ($candidate in @($EnvCandidates)) {
+        if (-not $candidate) { continue }
+        $value = [Environment]::GetEnvironmentVariable([string]$candidate)
+        if ($value) { return ([string]$value).TrimEnd("/") }
+    }
     return $script:OpenAiDefaultBaseUrl
 }
 
 function Get-OpenAiV1BaseUrl {
-    param([string]$Override)
+    param(
+        [string]$Override,
+        [string[]]$EnvCandidates = @("VCO_INTENT_ADVICE_BASE_URL")
+    )
 
-    $base = Get-OpenAiBaseUrl -Override $Override
+    $base = Get-OpenAiBaseUrl -Override $Override -EnvCandidates $EnvCandidates
     if (-not $base) { return $base }
 
     $trim = ([string]$base).TrimEnd("/")
@@ -23,25 +32,38 @@ function Get-OpenAiV1BaseUrl {
 }
 
 function Get-OpenAiApiKey {
-    if ($env:OPENAI_API_KEY) { return [string]$env:OPENAI_API_KEY }
+    param([string]$EnvName = "VCO_INTENT_ADVICE_API_KEY")
+    if ($EnvName) {
+        $value = [Environment]::GetEnvironmentVariable([string]$EnvName)
+        if ($value) { return [string]$value }
+    }
     return $null
 }
 
 function Get-OpenAiResponsesEndpoint {
-    param([string]$BaseUrl)
-    $base = Get-OpenAiV1BaseUrl -Override $BaseUrl
+    param(
+        [string]$BaseUrl,
+        [string[]]$BaseUrlEnvCandidates = @("VCO_INTENT_ADVICE_BASE_URL")
+    )
+    $base = Get-OpenAiV1BaseUrl -Override $BaseUrl -EnvCandidates $BaseUrlEnvCandidates
     return ("{0}/responses" -f $base)
 }
 
 function Get-OpenAiChatCompletionsEndpoint {
-    param([string]$BaseUrl)
-    $base = Get-OpenAiV1BaseUrl -Override $BaseUrl
+    param(
+        [string]$BaseUrl,
+        [string[]]$BaseUrlEnvCandidates = @("VCO_INTENT_ADVICE_BASE_URL")
+    )
+    $base = Get-OpenAiV1BaseUrl -Override $BaseUrl -EnvCandidates $BaseUrlEnvCandidates
     return ("{0}/chat/completions" -f $base)
 }
 
 function Get-OpenAiEmbeddingsEndpoint {
-    param([string]$BaseUrl)
-    $base = Get-OpenAiV1BaseUrl -Override $BaseUrl
+    param(
+        [string]$BaseUrl,
+        [string[]]$BaseUrlEnvCandidates = @("VCO_VECTOR_DIFF_BASE_URL")
+    )
+    $base = Get-OpenAiV1BaseUrl -Override $BaseUrl -EnvCandidates $BaseUrlEnvCandidates
     return ("{0}/embeddings" -f $base)
 }
 
@@ -175,16 +197,18 @@ function Invoke-OpenAiResponsesCreate {
         [double]$TopP = 1.0,
         [int]$TimeoutMs = 2500,
         [string]$ApiKey,
+        [string]$ApiKeyEnv = "VCO_INTENT_ADVICE_API_KEY",
         [string]$BaseUrl,
+        [string[]]$BaseUrlEnvCandidates = @("VCO_INTENT_ADVICE_BASE_URL"),
         [switch]$Store
     )
 
-    $resolvedApiKey = if ($ApiKey) { $ApiKey } else { Get-OpenAiApiKey }
+    $resolvedApiKey = if ($ApiKey) { $ApiKey } else { Get-OpenAiApiKey -EnvName $ApiKeyEnv }
     if (-not $resolvedApiKey) {
         return [pscustomobject]@{
             ok = $false
             abstained = $true
-            reason = "missing_openai_api_key"
+            reason = "missing_intent_advice_api_key"
             status_code = $null
             latency_ms = 0
             output_text = $null
@@ -193,7 +217,7 @@ function Invoke-OpenAiResponsesCreate {
         }
     }
 
-    $endpoint = Get-OpenAiResponsesEndpoint -BaseUrl $BaseUrl
+    $endpoint = Get-OpenAiResponsesEndpoint -BaseUrl $BaseUrl -BaseUrlEnvCandidates $BaseUrlEnvCandidates
     $timeoutSec = [Math]::Max(1, [int][Math]::Ceiling([double]$TimeoutMs / 1000.0))
 
     $body = [ordered]@{
@@ -285,15 +309,17 @@ function Invoke-OpenAiChatCompletionsCreate {
         [double]$TopP = 1.0,
         [int]$TimeoutMs = 2500,
         [string]$ApiKey,
-        [string]$BaseUrl
+        [string]$ApiKeyEnv = "VCO_INTENT_ADVICE_API_KEY",
+        [string]$BaseUrl,
+        [string[]]$BaseUrlEnvCandidates = @("VCO_INTENT_ADVICE_BASE_URL")
     )
 
-    $resolvedApiKey = if ($ApiKey) { $ApiKey } else { Get-OpenAiApiKey }
+    $resolvedApiKey = if ($ApiKey) { $ApiKey } else { Get-OpenAiApiKey -EnvName $ApiKeyEnv }
     if (-not $resolvedApiKey) {
         return [pscustomobject]@{
             ok = $false
             abstained = $true
-            reason = "missing_openai_api_key"
+            reason = "missing_intent_advice_api_key"
             status_code = $null
             latency_ms = 0
             output_text = $null
@@ -302,7 +328,7 @@ function Invoke-OpenAiChatCompletionsCreate {
         }
     }
 
-    $endpoint = Get-OpenAiChatCompletionsEndpoint -BaseUrl $BaseUrl
+    $endpoint = Get-OpenAiChatCompletionsEndpoint -BaseUrl $BaseUrl -BaseUrlEnvCandidates $BaseUrlEnvCandidates
     $timeoutSec = [Math]::Max(1, [int][Math]::Ceiling([double]$TimeoutMs / 1000.0))
 
     $body = [ordered]@{
@@ -371,15 +397,17 @@ function Invoke-OpenAiEmbeddingsCreate {
         [object]$InputItems,
         [int]$TimeoutMs = 2500,
         [string]$ApiKey,
-        [string]$BaseUrl
+        [string]$ApiKeyEnv = "VCO_VECTOR_DIFF_API_KEY",
+        [string]$BaseUrl,
+        [string[]]$BaseUrlEnvCandidates = @("VCO_VECTOR_DIFF_BASE_URL")
     )
 
-    $resolvedApiKey = if ($ApiKey) { $ApiKey } else { Get-OpenAiApiKey }
+    $resolvedApiKey = if ($ApiKey) { $ApiKey } else { Get-OpenAiApiKey -EnvName $ApiKeyEnv }
     if (-not $resolvedApiKey) {
         return [pscustomobject]@{
             ok = $false
             abstained = $true
-            reason = "missing_openai_api_key"
+            reason = "missing_vector_diff_api_key"
             status_code = $null
             latency_ms = 0
             vectors = @()
@@ -388,7 +416,7 @@ function Invoke-OpenAiEmbeddingsCreate {
         }
     }
 
-    $endpoint = Get-OpenAiEmbeddingsEndpoint -BaseUrl $BaseUrl
+    $endpoint = Get-OpenAiEmbeddingsEndpoint -BaseUrl $BaseUrl -BaseUrlEnvCandidates $BaseUrlEnvCandidates
     $timeoutSec = [Math]::Max(1, [int][Math]::Ceiling([double]$TimeoutMs / 1000.0))
 
     $body = [ordered]@{

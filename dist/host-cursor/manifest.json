@@ -5,7 +5,7 @@
   "host_id": "cursor",
   "stability": "preview",
   "source_release": {
-    "version": "2.3.54",
+    "version": "2.3.55",
     "updated": "2026-03-30"
   },
   "summary": "Cursor host adapter preview. The repository can expose runtime-core payload and preview health checks, but does not claim full governed closure yet.",

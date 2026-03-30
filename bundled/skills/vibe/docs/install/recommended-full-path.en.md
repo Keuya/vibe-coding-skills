@@ -9,6 +9,12 @@
 
 This document summarizes the install commands and default roots for the six supported hosts.
 
+Public Linux / macOS prerequisites:
+
+- the shell entrypoints are maintained against the macOS system Bash 3.2 baseline
+- `python3` / `python` must satisfy **Python 3.10+**
+- launching from `zsh` is not the actual problem; the real compatibility boundary is the resolved `bash` / `python3` version
+
 ## Supported Hosts and Install Styles
 
 | Host | Install style | Default root | Notes |
@@ -121,17 +127,18 @@ git checkout vX.Y.Z
 ### Codex
 
 - hooks remain frozen; that is not an install failure
-- for the common OpenAI-compatible governance-advice path, prefer:
-  - `OPENAI_API_KEY`
-  - optional `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
+- for the built-in governance-advice path, prefer:
+  - `VCO_INTENT_ADVICE_API_KEY`
+  - optional `VCO_INTENT_ADVICE_BASE_URL`
+  - `VCO_INTENT_ADVICE_MODEL`
+  - `VCO_VECTOR_DIFF_API_KEY` / `VCO_VECTOR_DIFF_BASE_URL` / `VCO_VECTOR_DIFF_MODEL` (optional embeddings that degrade gracefully)
 
 ### Claude Code
 
 - this host has a supported install-and-use path
 - it does not overwrite the real `~/.claude/settings.json`
 - hooks remain frozen; that is not an install failure
-- for the common OpenAI-compatible governance-advice path, prefer `OPENAI_API_KEY` + optional base URL + `VCO_RUCNLPIR_MODEL`
+- for the built-in governance-advice path, prefer `VCO_INTENT_ADVICE_API_KEY` + optional `VCO_INTENT_ADVICE_BASE_URL` + `VCO_INTENT_ADVICE_MODEL`; configure `VCO_VECTOR_DIFF_*` only when you also want vector-diff embeddings
 
 ### Cursor
 
@@ -142,7 +149,7 @@ git checkout vX.Y.Z
 ### Windsurf
 
 - the default root is `~/.codeium/windsurf`
-- the repo currently owns only shared runtime payload plus optional materialization of `mcp_config.json` and `global_workflows/`
+- the repo currently owns only shared runtime payload plus sidecar state such as `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - Windsurf-native local settings remain managed on the Windsurf side
 
 ### OpenClaw
@@ -154,6 +161,6 @@ git checkout vX.Y.Z
 ### OpenCode
 
 - the default target root is `OPENCODE_HOME`, otherwise `~/.config/opencode`
-- direct install/check writes skills, command/agent wrappers, and `opencode.json.example`
+- direct install/check writes skills, `.vibeskills/*` sidecars, and `opencode.json.example`
 - the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain host-managed
 - use `--target-root ./.opencode` when you want project-local isolation

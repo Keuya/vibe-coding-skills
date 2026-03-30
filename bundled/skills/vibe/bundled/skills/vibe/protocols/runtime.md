@@ -1,5 +1,31 @@
 # vibe-runtime Protocol
 
+> **What this protocol does -- plain language overview**
+>
+> Every time you invoke `/vibe` or `$vibe`, the system runs this 6-stage process.
+> You do not need to read this document to use VibeSkills -- it is reference material
+> for contributors and advanced users who want to understand the runtime internals.
+>
+> **The 6 stages in plain terms:**
+>
+> | Stage | Internal name | What happens |
+> |:---:|:---|:---|
+> | 1 | `skeleton_check` | Check what is already in your repo before starting |
+> | 2 | `deep_interview` | Clarify what you actually want (ask questions or infer) |
+> | 3 | `requirement_doc` | Lock the agreed requirements into a document |
+> | 4 | `xl_plan` | Write the execution plan |
+> | 5 | `plan_execute` | Execute the plan |
+> | 6 | `phase_cleanup` | Clean up temp artifacts and produce a final report |
+>
+> **Key terms used below:**
+> - **Canonical router**: The internal logic that picks which skill handles your task.
+> - **Root/Child lane**: In multi-agent tasks, "root" is the coordinator; "child" lanes are workers. Only root makes final completion claims.
+> - **Frozen requirement/plan**: Once you approve the requirements or plan, they are locked -- the system will not silently change scope.
+> - **Proof bundle**: Evidence that a task was actually completed -- test results, output logs, verification commands.
+> - **benchmark_autonomous**: A legacy mode name, now normalized to the same interactive-governed mode.
+> - **Silent fallback**: Quietly switching to a degraded path without telling the user -- this is explicitly forbidden.
+
+
 Governed runtime contract for `vibe`.
 
 This protocol defines the user-facing runtime path that all host syntaxes share.

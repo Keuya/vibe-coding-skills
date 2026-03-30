@@ -7,7 +7,7 @@
   "runtime_role": "host-adapter-preview",
   "summary": "Cursor exposes preview adapter entrypoints and truthful readiness boundaries, but this repository does not claim governed or host-native closure for it.",
   "source_release": {
-    "version": "2.3.54",
+    "version": "2.3.55",
     "updated": "2026-03-30"
   },
   "truth_sources": [

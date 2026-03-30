@@ -7,7 +7,7 @@
   "runtime_role": "host-adapter-preview",
   "summary": "Claude Code may consume VibeSkills contracts and guidance, but this repository does not currently provide a governed install/check closure lane equivalent to the Codex official runtime.",
   "source_release": {
-    "version": "2.3.54",
+    "version": "2.3.55",
     "updated": "2026-03-30"
   },
   "truth_sources": [

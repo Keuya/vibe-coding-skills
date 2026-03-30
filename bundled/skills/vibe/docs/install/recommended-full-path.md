@@ -9,6 +9,12 @@
 
 这份文档汇总六个支持宿主对应的安装命令与默认根目录。
 
+Linux / macOS 公共前置条件：
+
+- shell 入口按 **macOS 自带 Bash 3.2** 兼容维护
+- `python3` / `python` 需要满足 **Python 3.10+**
+- 从 `zsh` 启动不是问题本身；真正关键是解析到的 `bash` / `python3` 版本
+
 ## 支持宿主与安装方式
 
 | 宿主 | 安装方式 | 默认根目录 | 说明 |
@@ -121,28 +127,30 @@ git checkout vX.Y.Z
 ### Codex
 
 - hook 当前冻结；这不是安装失败
-- AI 治理 advice 的常见 OpenAI-compatible 在线路径，优先使用：
-  - `OPENAI_API_KEY`
-  - 可选 `OPENAI_BASE_URL` / `OPENAI_API_BASE`
-  - `VCO_RUCNLPIR_MODEL`
+- AI 治理 advice 的常见配置路径，优先使用：
+  - `VCO_INTENT_ADVICE_API_KEY`
+  - 可选 `VCO_INTENT_ADVICE_BASE_URL`
+  - `VCO_INTENT_ADVICE_MODEL`
+- 向量 diff（可选）：添加 `VCO_VECTOR_DIFF_API_KEY`/`VCO_VECTOR_DIFF_MODEL`（base URL 同样可选），缺失时 diff 会退化为文本片段
 
 ### Claude Code
 
 - 当前提供支持的安装与使用路径
 - 不覆盖真实 `~/.claude/settings.json`
 - hook 当前冻结；这不是安装失败
-- 如需 AI 治理 advice 的常见 OpenAI-compatible 在线路径，优先使用 `OPENAI_API_KEY` + 可选 base URL + `VCO_RUCNLPIR_MODEL`
+- 如需 AI 治理 advice 的常见配套路径，优先使用 `VCO_INTENT_ADVICE_API_KEY` + 可选 `VCO_INTENT_ADVICE_BASE_URL` + `VCO_INTENT_ADVICE_MODEL`
 
 ### Cursor
 
 - 当前提供支持的安装与使用路径
 - 不覆盖真实 `~/.cursor/settings.json`
 - Cursor 的宿主原生设置与扩展面仍按 Cursor 自身方式管理
+- AI 治理 advice 使用 `VCO_INTENT_ADVICE_*` 及可选 `VCO_VECTOR_DIFF_*`，旧 `OPENAI_*` 不再自动回填
 
 ### Windsurf
 
 - 默认根目录是 `~/.codeium/windsurf`
-- repo 当前只负责 shared runtime payload，以及按需物化 `mcp_config.json` 与 `global_workflows/`
+- repo 当前只负责 shared runtime payload，以及 `.vibeskills/host-settings.json` / `.vibeskills/host-closure.json` 这类 sidecar 状态
 - Windsurf 宿主自身的本地设置仍按 Windsurf 自身方式管理
 
 ### OpenClaw
@@ -154,6 +162,6 @@ git checkout vX.Y.Z
 ### OpenCode
 
 - 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`
-- direct install/check 会写入 skills、command/agent wrappers 与 `opencode.json.example`
+- direct install/check 会写入 skills、`.vibeskills/*` sidecar 与 `opencode.json.example`
 - 真实 `opencode.json`、provider 凭据、plugin 安装和 MCP 信任仍按宿主自身方式管理
 - 如需项目内隔离安装，使用 `--target-root ./.opencode`

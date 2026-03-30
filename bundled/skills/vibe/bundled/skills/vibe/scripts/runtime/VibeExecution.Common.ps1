@@ -283,6 +283,20 @@ function Resolve-VibeBridgeExecutable {
         }
     }
 
+    if ([string]::IsNullOrWhiteSpace($resolvedCommandPath) -and $null -ne $Runtime -and $Runtime.PSObject.Properties.Name -contains 'host_settings' -and $null -ne $Runtime.host_settings) {
+        $hostSettings = $Runtime.host_settings
+        if ($hostSettings.PSObject.Properties.Name -contains 'data' -and $null -ne $hostSettings.data) {
+            $specialistWrapper = if ($hostSettings.data.PSObject.Properties.Name -contains 'specialist_wrapper') { $hostSettings.data.specialist_wrapper } else { $null }
+            if ($null -ne $specialistWrapper) {
+                $ready = if ($specialistWrapper.PSObject.Properties.Name -contains 'ready') { [bool]$specialistWrapper.ready } else { $false }
+                $launcherPath = if ($specialistWrapper.PSObject.Properties.Name -contains 'launcher_path') { [string]$specialistWrapper.launcher_path } else { '' }
+                if ($ready -and -not [string]::IsNullOrWhiteSpace($launcherPath) -and (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
+                    $resolvedCommandPath = [System.IO.Path]::GetFullPath($launcherPath)
+                }
+            }
+        }
+    }
+
     if ([string]::IsNullOrWhiteSpace($resolvedCommandPath) -and $null -ne $Runtime -and $Runtime.PSObject.Properties.Name -contains 'host_closure' -and $null -ne $Runtime.host_closure) {
         $hostClosure = $Runtime.host_closure
         if ($hostClosure.PSObject.Properties.Name -contains 'data' -and $null -ne $hostClosure.data) {

@@ -33,9 +33,9 @@
   "llm": {
     "base_url_default": "https://your-openai-compatible-endpoint/v1",
     "model_default": "your-model-id",
-    "api_key_env": "OPENAI_API_KEY",
-    "base_url_env_candidates": ["OPENAI_BASE_URL", "OPENAI_API_BASE"],
-    "model_env": "VCO_RUCNLPIR_MODEL",
+    "api_key_env": "VCO_INTENT_ADVICE_API_KEY",
+    "base_url_env_candidates": ["VCO_INTENT_ADVICE_BASE_URL"],
+    "model_env": "VCO_INTENT_ADVICE_MODEL",
     "request_timeout_seconds": 120
   },
   "web": {
@@ -62,4 +62,3 @@
     "reminder": "不要把 key 写入任何 JSON/脚本/日志；请用环境变量注入。"
   }
 }
-

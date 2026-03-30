@@ -1,5 +1,22 @@
 # vibe-think Protocol
 
+> **What this protocol does -- plain language overview**
+>
+> This is the planning and analysis protocol. It governs how VibeSkills clarifies
+> requirements, designs architecture, and writes execution plans -- primarily during
+> Stages 2-4 of the runtime.
+>
+> You do not need to read this to use VibeSkills. It is reference material for those
+> who want to understand how the system thinks before it acts.
+>
+> **Key terms used below:**
+> - **Phase A / Phase B**: Internal protocol phases. Phase A = pre-execution analysis (classify the task); Phase B = planning and design execution (write the plan).
+> - **Proxy-goal drift**: When the system optimizes a visible metric instead of the actual goal. Planning is the cheapest place to prevent this.
+> - **GSD-Lite Preflight Hook**: An optional planning enhancement that adds a brownfield context snapshot and assumption verification step before writing the plan.
+> - **Brownfield context**: An existing codebase that already has its own architecture and conventions -- as opposed to a blank-slate new project.
+> - **Dialectic mode**: A structured multi-perspective design analysis: two groups of agents argue different viewpoints, then a coordinator synthesizes the best ideas from both.
+
+
 Pre-routing analysis and post-routing planning/design/research protocol.
 
 ## Governed Runtime Position

@@ -25,8 +25,11 @@ function Get-LlmAccelerationPolicyDefaults {
         }
         provider = [pscustomobject]@{
             type = "openai" # openai|mock
-            model = "your-model-id"
+            model = ""
+            model_env = "VCO_INTENT_ADVICE_MODEL"
             base_url = ""
+            base_url_env_candidates = @("VCO_INTENT_ADVICE_BASE_URL")
+            api_key_env = "VCO_INTENT_ADVICE_API_KEY"
             timeout_ms = 2500
             max_output_tokens = 900
             temperature = 0.2
@@ -75,12 +78,14 @@ function Get-LlmAccelerationPolicyDefaults {
             max_diff_chars = 9000
             vector_diff = [pscustomobject]@{
                 enabled = $false
-                embedding_model = "text-embedding-3-small"
+                embedding_model = ""
+                embedding_model_env = "VCO_VECTOR_DIFF_MODEL"
                 embedding_provider = [pscustomobject]@{
                     type = "openai" # openai|openai-compatible
                     base_url = ""
+                    base_url_env_candidates = @("VCO_VECTOR_DIFF_BASE_URL")
                     endpoint_path = ""
-                    api_key_env = ""
+                    api_key_env = "VCO_VECTOR_DIFF_API_KEY"
                     timeout_ms = 6000
                 }
                 min_diff_chars_for_vector = 6000
@@ -104,6 +109,20 @@ function Get-LlmAccelerationPolicyDefaults {
             max_live_apply_rate = 1.0
         }
     }
+}
+
+function Get-VcoFirstNonEmptyEnvValue {
+    param([string[]]$Names)
+
+    foreach ($name in @($Names)) {
+        if (-not $name) { continue }
+        $value = [Environment]::GetEnvironmentVariable([string]$name)
+        if (-not [string]::IsNullOrWhiteSpace([string]$value)) {
+            return [string]$value
+        }
+    }
+
+    return $null
 }
 
 function Get-LlmAccelerationPolicy {
@@ -147,8 +166,19 @@ function Get-LlmAccelerationPolicy {
         }
         provider = [pscustomobject]@{
             type = if ($provider.type) { [string]$provider.type } else { [string]$defaults.provider.type }
-            model = if ($provider.model) { [string]$provider.model } else { [string]$defaults.provider.model }
-            base_url = if ($provider.base_url) { [string]$provider.base_url } else { [string]$defaults.provider.base_url }
+            model = if ($provider.model) { [string]$provider.model } else {
+                $modelEnvName = if ($provider.model_env) { [string]$provider.model_env } else { [string]$defaults.provider.model_env }
+                $modelFromEnv = Get-VcoFirstNonEmptyEnvValue -Names @($modelEnvName)
+                if ($modelFromEnv) { [string]$modelFromEnv } else { [string]$defaults.provider.model }
+            }
+            model_env = if ($provider.model_env) { [string]$provider.model_env } else { [string]$defaults.provider.model_env }
+            base_url = if ($provider.base_url) { [string]$provider.base_url } else {
+                $baseUrlEnvCandidates = if ($provider.base_url_env_candidates) { @($provider.base_url_env_candidates) } else { @($defaults.provider.base_url_env_candidates) }
+                $baseUrlFromEnv = Get-VcoFirstNonEmptyEnvValue -Names $baseUrlEnvCandidates
+                if ($baseUrlFromEnv) { [string]$baseUrlFromEnv } else { [string]$defaults.provider.base_url }
+            }
+            base_url_env_candidates = if ($provider.base_url_env_candidates) { @($provider.base_url_env_candidates) } else { @($defaults.provider.base_url_env_candidates) }
+            api_key_env = if ($provider.api_key_env) { [string]$provider.api_key_env } else { [string]$defaults.provider.api_key_env }
             timeout_ms = if ($provider.timeout_ms -ne $null) { [int]$provider.timeout_ms } else { [int]$defaults.provider.timeout_ms }
             max_output_tokens = if ($provider.max_output_tokens -ne $null) { [int]$provider.max_output_tokens } else { [int]$defaults.provider.max_output_tokens }
             temperature = if ($provider.temperature -ne $null) { [double]$provider.temperature } else { [double]$defaults.provider.temperature }
@@ -197,10 +227,20 @@ function Get-LlmAccelerationPolicy {
             max_diff_chars = if ($context.max_diff_chars -ne $null) { [int]$context.max_diff_chars } else { [int]$defaults.context.max_diff_chars }
             vector_diff = [pscustomobject]@{
                 enabled = if ($vectorDiff -and $vectorDiff.enabled -ne $null) { [bool]$vectorDiff.enabled } else { [bool]$defaults.context.vector_diff.enabled }
-                embedding_model = if ($vectorDiff -and $vectorDiff.embedding_model) { [string]$vectorDiff.embedding_model } else { [string]$defaults.context.vector_diff.embedding_model }
+                embedding_model = if ($vectorDiff -and $vectorDiff.embedding_model) { [string]$vectorDiff.embedding_model } else {
+                    $embeddingModelEnv = if ($vectorDiff -and $vectorDiff.embedding_model_env) { [string]$vectorDiff.embedding_model_env } else { [string]$defaults.context.vector_diff.embedding_model_env }
+                    $embeddingModelFromEnv = Get-VcoFirstNonEmptyEnvValue -Names @($embeddingModelEnv)
+                    if ($embeddingModelFromEnv) { [string]$embeddingModelFromEnv } else { [string]$defaults.context.vector_diff.embedding_model }
+                }
+                embedding_model_env = if ($vectorDiff -and $vectorDiff.embedding_model_env) { [string]$vectorDiff.embedding_model_env } else { [string]$defaults.context.vector_diff.embedding_model_env }
                 embedding_provider = [pscustomobject]@{
                     type = if ($embeddingProvider -and $embeddingProvider.type) { [string]$embeddingProvider.type } else { [string]$defaults.context.vector_diff.embedding_provider.type }
-                    base_url = if ($embeddingProvider -and $embeddingProvider.base_url) { [string]$embeddingProvider.base_url } else { [string]$defaults.context.vector_diff.embedding_provider.base_url }
+                    base_url = if ($embeddingProvider -and $embeddingProvider.base_url) { [string]$embeddingProvider.base_url } else {
+                        $embeddingBaseUrlEnvCandidates = if ($embeddingProvider -and $embeddingProvider.base_url_env_candidates) { @($embeddingProvider.base_url_env_candidates) } else { @($defaults.context.vector_diff.embedding_provider.base_url_env_candidates) }
+                        $embeddingBaseUrlFromEnv = Get-VcoFirstNonEmptyEnvValue -Names $embeddingBaseUrlEnvCandidates
+                        if ($embeddingBaseUrlFromEnv) { [string]$embeddingBaseUrlFromEnv } else { [string]$defaults.context.vector_diff.embedding_provider.base_url }
+                    }
+                    base_url_env_candidates = if ($embeddingProvider -and $embeddingProvider.base_url_env_candidates) { @($embeddingProvider.base_url_env_candidates) } else { @($defaults.context.vector_diff.embedding_provider.base_url_env_candidates) }
                     endpoint_path = if ($embeddingProvider -and $embeddingProvider.endpoint_path) { [string]$embeddingProvider.endpoint_path } else { [string]$defaults.context.vector_diff.embedding_provider.endpoint_path }
                     api_key_env = if ($embeddingProvider -and $embeddingProvider.api_key_env) { [string]$embeddingProvider.api_key_env } else { [string]$defaults.context.vector_diff.embedding_provider.api_key_env }
                     timeout_ms = if ($embeddingProvider -and $embeddingProvider.timeout_ms -ne $null) { [int]$embeddingProvider.timeout_ms } else { [int]$defaults.context.vector_diff.embedding_provider.timeout_ms }
@@ -559,8 +599,9 @@ function Get-VcoEmbeddingsForTextsWithCache {
         $embeddingProvider = $null
         $embeddingProviderType = "openai"
         $embeddingProviderBaseUrl = ""
+        $embeddingProviderBaseUrlEnvCandidates = @()
         $embeddingProviderEndpointPath = ""
-        $embeddingProviderApiKeyEnv = ""
+        $embeddingProviderApiKeyEnv = "VCO_VECTOR_DIFF_API_KEY"
         try {
             if ($vectorCfg -and $vectorCfg.embedding_provider) { $embeddingProvider = $vectorCfg.embedding_provider }
         } catch { }
@@ -570,9 +611,9 @@ function Get-VcoEmbeddingsForTextsWithCache {
         try {
             if ($embeddingProvider -and $embeddingProvider.base_url) { $embeddingProviderBaseUrl = [string]$embeddingProvider.base_url }
         } catch { }
-        if (-not $embeddingProviderBaseUrl) {
-            try { $embeddingProviderBaseUrl = [string]$PolicyResolved.provider.base_url } catch { }
-        }
+        try {
+            if ($embeddingProvider -and $embeddingProvider.base_url_env_candidates) { $embeddingProviderBaseUrlEnvCandidates = @($embeddingProvider.base_url_env_candidates) }
+        } catch { }
         try {
             if ($embeddingProvider -and $embeddingProvider.endpoint_path) { $embeddingProviderEndpointPath = [string]$embeddingProvider.endpoint_path }
         } catch { }
@@ -600,14 +641,18 @@ function Get-VcoEmbeddingsForTextsWithCache {
                         -Model $EmbeddingModel `
                         -InputItems @($missingTexts) `
                         -TimeoutMs $timeoutMs `
-                        -BaseUrl $embeddingProviderBaseUrl
+                        -ApiKeyEnv $embeddingProviderApiKeyEnv `
+                        -BaseUrl $embeddingProviderBaseUrl `
+                        -BaseUrlEnvCandidates $embeddingProviderBaseUrlEnvCandidates
                 }
                 "openai-compatible" {
                     $result = Invoke-OpenAiEmbeddingsCreate `
                         -Model $EmbeddingModel `
                         -InputItems @($missingTexts) `
                         -TimeoutMs $timeoutMs `
-                        -BaseUrl $embeddingProviderBaseUrl
+                        -ApiKeyEnv $embeddingProviderApiKeyEnv `
+                        -BaseUrl $embeddingProviderBaseUrl `
+                        -BaseUrlEnvCandidates $embeddingProviderBaseUrlEnvCandidates
                 }
                 default {
                     return [pscustomobject]@{ ok = $false; abstained = $true; reason = "unknown_embedding_provider"; vectors = @() }
@@ -791,13 +836,17 @@ function Get-VcoGitContextSnippet {
 
                 $keyOk = $false
                 $keyReason = $null
+                $embeddingApiKeyEnv = "VCO_VECTOR_DIFF_API_KEY"
+                try {
+                    if ($embProv -and $embProv.api_key_env) { $embeddingApiKeyEnv = [string]$embProv.api_key_env }
+                } catch { }
 
                 switch ($embProvType) {
                     "openai" {
-                        if (Get-OpenAiApiKey) { $keyOk = $true } else { $keyReason = "missing_openai_api_key" }
+                        if (Get-OpenAiApiKey -EnvName $embeddingApiKeyEnv) { $keyOk = $true } else { $keyReason = "missing_vector_diff_api_key" }
                     }
                     "openai-compatible" {
-                        if (Get-OpenAiApiKey) { $keyOk = $true } else { $keyReason = "missing_openai_api_key" }
+                        if (Get-OpenAiApiKey -EnvName $embeddingApiKeyEnv) { $keyOk = $true } else { $keyReason = "missing_vector_diff_api_key" }
                     }
                     default {
                         $keyReason = "unknown_embedding_provider"
@@ -1066,11 +1115,14 @@ function Invoke-LlmDiffDigestProvider {
         }
     }
 
-    if (-not (Get-OpenAiApiKey)) {
+    $adviceApiKeyEnv = if ($PolicyResolved.provider.api_key_env) { [string]$PolicyResolved.provider.api_key_env } else { "VCO_INTENT_ADVICE_API_KEY" }
+    $adviceBaseUrlEnvCandidates = if ($PolicyResolved.provider.base_url_env_candidates) { @($PolicyResolved.provider.base_url_env_candidates) } else { @("VCO_INTENT_ADVICE_BASE_URL") }
+
+    if (-not (Get-OpenAiApiKey -EnvName $adviceApiKeyEnv)) {
         return [pscustomobject]@{
             ok = $false
             abstained = $true
-            reason = "missing_openai_api_key"
+            reason = "missing_intent_advice_api_key"
             api = "none"
             latency_ms = 0
             digest = $null
@@ -1124,6 +1176,8 @@ function Invoke-LlmDiffDigestProvider {
     $instructions = "Return ONLY JSON that matches the JSON Schema. No markdown. No extra keys."
 
     $baseUrl = if ($PolicyResolved.provider.base_url) { [string]$PolicyResolved.provider.base_url } else { "" }
+    $adviceApiKeyEnv = if ($PolicyResolved.provider.api_key_env) { [string]$PolicyResolved.provider.api_key_env } else { "VCO_INTENT_ADVICE_API_KEY" }
+    $adviceBaseUrlEnvCandidates = if ($PolicyResolved.provider.base_url_env_candidates) { @($PolicyResolved.provider.base_url_env_candidates) } else { @("VCO_INTENT_ADVICE_BASE_URL") }
     $timeoutMsSafe = [Math]::Max(500, [int]$timeoutMs)
 
     $chatResponseFormat = [ordered]@{
@@ -1147,6 +1201,8 @@ function Invoke-LlmDiffDigestProvider {
         $r = Invoke-OpenAiResponsesCreate `
             -Model $model `
             -BaseUrl $baseUrl `
+            -ApiKeyEnv $adviceApiKeyEnv `
+            -BaseUrlEnvCandidates $adviceBaseUrlEnvCandidates `
             -InputItems $input `
             -TextFormat $textFormat `
             -Instructions $instructions `
@@ -1163,6 +1219,8 @@ function Invoke-LlmDiffDigestProvider {
         $r = Invoke-OpenAiChatCompletionsCreate `
             -Model $model `
             -BaseUrl $baseUrl `
+            -ApiKeyEnv $adviceApiKeyEnv `
+            -BaseUrlEnvCandidates $adviceBaseUrlEnvCandidates `
             -Messages $chatMessages `
             -ResponseFormat $chatResponseFormat `
             -MaxTokens $maxTokens `
@@ -1182,7 +1240,7 @@ function Invoke-LlmDiffDigestProvider {
     } else {
         $providerResult = & $invokeResponses
         if (-not ([bool]$providerResult.ok -and (-not [bool]$providerResult.abstained) -and $providerResult.output_text)) {
-            if ([string]$providerResult.reason -ne "missing_openai_api_key") {
+            if ([string]$providerResult.reason -ne "missing_intent_advice_api_key") {
                 $providerResult = & $invokeChat
             }
         }
@@ -1351,6 +1409,8 @@ function Invoke-LlmConfirmQuestionBoosterProvider {
 
     $model = [string]$PolicyResolved.provider.model
     $baseUrl = if ($PolicyResolved.provider.base_url) { [string]$PolicyResolved.provider.base_url } else { "" }
+    $adviceApiKeyEnv = if ($PolicyResolved.provider.api_key_env) { [string]$PolicyResolved.provider.api_key_env } else { "VCO_INTENT_ADVICE_API_KEY" }
+    $adviceBaseUrlEnvCandidates = if ($PolicyResolved.provider.base_url_env_candidates) { @($PolicyResolved.provider.base_url_env_candidates) } else { @("VCO_INTENT_ADVICE_BASE_URL") }
 
     $chatResponseFormat = [ordered]@{
         type = "json_schema"
@@ -1375,6 +1435,8 @@ function Invoke-LlmConfirmQuestionBoosterProvider {
         $r = Invoke-OpenAiResponsesCreate `
             -Model $model `
             -BaseUrl $baseUrl `
+            -ApiKeyEnv $adviceApiKeyEnv `
+            -BaseUrlEnvCandidates $adviceBaseUrlEnvCandidates `
             -InputItems $input `
             -TextFormat $textFormat `
             -Instructions $instructions `
@@ -1391,6 +1453,8 @@ function Invoke-LlmConfirmQuestionBoosterProvider {
         $r = Invoke-OpenAiChatCompletionsCreate `
             -Model $model `
             -BaseUrl $baseUrl `
+            -ApiKeyEnv $adviceApiKeyEnv `
+            -BaseUrlEnvCandidates $adviceBaseUrlEnvCandidates `
             -Messages $chatMessages `
             -ResponseFormat $chatResponseFormat `
             -MaxTokens $maxTokens `
@@ -1410,7 +1474,7 @@ function Invoke-LlmConfirmQuestionBoosterProvider {
     } else {
         $providerResult = & $invokeResponses
         if (-not ([bool]$providerResult.ok -and (-not [bool]$providerResult.abstained) -and $providerResult.output_text)) {
-            if ([string]$providerResult.reason -ne "missing_openai_api_key") {
+            if ([string]$providerResult.reason -ne "missing_intent_advice_api_key") {
                 $providerResult = & $invokeChat
             }
         }
@@ -1738,6 +1802,8 @@ function Invoke-LlmAccelerationProviderCommittee {
 	        [ordered]@{ role = "user"; content = $InputText }
 	    )
 
+	    $adviceApiKeyEnv = if ($PolicyResolved.provider.api_key_env) { [string]$PolicyResolved.provider.api_key_env } else { "VCO_INTENT_ADVICE_API_KEY" }
+	    $adviceBaseUrlEnvCandidates = if ($PolicyResolved.provider.base_url_env_candidates) { @($PolicyResolved.provider.base_url_env_candidates) } else { @("VCO_INTENT_ADVICE_BASE_URL") }
 	    $preferChat = $false
 	    if ($baseUrl -and ($baseUrl -notmatch "openai\.com")) {
 	        # For most OpenAI-compatible gateways, /chat/completions is the safest baseline.
@@ -1748,6 +1814,8 @@ function Invoke-LlmAccelerationProviderCommittee {
 	        $r = Invoke-OpenAiResponsesCreate `
 	            -Model $model `
 	            -BaseUrl $baseUrl `
+	            -ApiKeyEnv $adviceApiKeyEnv `
+	            -BaseUrlEnvCandidates $adviceBaseUrlEnvCandidates `
 	            -InputItems $input `
 	            -TextFormat $textFormat `
 	            -Instructions $instructions `
@@ -1764,6 +1832,8 @@ function Invoke-LlmAccelerationProviderCommittee {
 	        $r = Invoke-OpenAiChatCompletionsCreate `
 	            -Model $model `
 	            -BaseUrl $baseUrl `
+	            -ApiKeyEnv $adviceApiKeyEnv `
+	            -BaseUrlEnvCandidates $adviceBaseUrlEnvCandidates `
 	            -Messages $chatMessages `
 	            -ResponseFormat $chatResponseFormat `
 	            -MaxTokens ([int]$PolicyResolved.provider.max_output_tokens) `
@@ -1787,7 +1857,7 @@ function Invoke-LlmAccelerationProviderCommittee {
 
 	    $primary = & $invokeResponses
 	    if ([bool]$primary.ok -and (-not [bool]$primary.abstained) -and $primary.output_text) { return $primary }
-	    if ([string]$primary.reason -eq "missing_openai_api_key") { return $primary }
+	    if ([string]$primary.reason -eq "missing_intent_advice_api_key") { return $primary }
 	    $fallback = & $invokeChat
 	    if ([bool]$fallback.ok -and (-not [bool]$fallback.abstained) -and $fallback.output_text) { return $fallback }
 	    return $primary
@@ -1859,14 +1929,15 @@ function Get-LlmAccelerationAdvice {
         $providerType = [string]$policyResolved.provider.type
         $providerInvokable = $true
 
-        if ($providerType -eq "openai" -and (-not (Get-OpenAiApiKey))) {
+        $adviceApiKeyEnv = if ($policyResolved.provider.api_key_env) { [string]$policyResolved.provider.api_key_env } else { "VCO_INTENT_ADVICE_API_KEY" }
+        if ($providerType -eq "openai" -and (-not (Get-OpenAiApiKey -EnvName $adviceApiKeyEnv))) {
             $providerInvokable = $false
             $providerSummary = [pscustomobject]@{
                 type = [string]$policyResolved.provider.type
                 api = "none"
                 model = [string]$policyResolved.provider.model
                 abstained = $true
-                reason = "missing_openai_api_key"
+                reason = "missing_intent_advice_api_key"
                 latency_ms = 0
                 error = $null
             }

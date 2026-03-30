@@ -8,11 +8,74 @@ SKIP_RUNTIME_FRESHNESS_GATE="false"
 DEEP="false"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADAPTER_RESOLVER="${SCRIPT_DIR}/scripts/common/resolve_vgo_adapter.py"
+PYTHON_MIN_MAJOR=3
+PYTHON_MIN_MINOR=10
 
 if [[ ! -f "${ADAPTER_RESOLVER}" ]]; then
   echo "[FAIL] Missing adapter resolver: ${ADAPTER_RESOLVER}" >&2
   exit 1
 fi
+
+python_version_of() {
+  local candidate="$1"
+  "${candidate}" - <<'PY'
+import sys
+print(f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")
+PY
+}
+
+python_meets_minimum() {
+  local candidate="$1"
+  local version major minor patch
+  version="$(python_version_of "${candidate}" 2>/dev/null || true)"
+  [[ -n "${version}" ]] || return 1
+  IFS='.' read -r major minor patch <<EOF
+${version}
+EOF
+  [[ -n "${major}" && -n "${minor}" ]] || return 1
+  if (( major > PYTHON_MIN_MAJOR )); then
+    return 0
+  fi
+  if (( major == PYTHON_MIN_MAJOR && minor >= PYTHON_MIN_MINOR )); then
+    return 0
+  fi
+  return 1
+}
+
+pick_supported_python() {
+  local candidate resolved=""
+  for candidate in python3 python; do
+    if ! resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      continue
+    fi
+    if [[ -n "${resolved}" ]] && python_meets_minimum "${resolved}"; then
+      printf '%s' "${resolved}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+print_python_requirement_error() {
+  local context="$1"
+  local candidate resolved version found_any="false"
+  echo "[FAIL] ${context} requires Python ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR}+." >&2
+  for candidate in python3 python; do
+    if resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      found_any="true"
+      version="$(python_version_of "${resolved}" 2>/dev/null || echo unknown)"
+      echo "[FAIL] Detected ${candidate} -> ${resolved} (${version})" >&2
+    fi
+  done
+  if [[ "${found_any}" != "true" ]]; then
+    echo "[FAIL] No usable python3/python executable was found in PATH." >&2
+  fi
+  if [[ "$(uname -s 2>/dev/null)" == "Darwin" ]]; then
+    echo "[FAIL] macOS often provides zsh plus an old/missing system Python. Install a modern Python 3.10+ and ensure 'python3 --version' reports >= ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR} before rerunning." >&2
+  else
+    echo "[FAIL] Install a modern Python 3.10+ and ensure 'python3 --version' reports >= ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR} before rerunning." >&2
+  fi
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -26,15 +89,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 pick_python_for_adapter() {
-  if command -v python3 >/dev/null 2>&1; then
-    echo "python3"
-    return 0
-  fi
-  if command -v python >/dev/null 2>&1; then
-    echo "python"
-    return 0
-  fi
-  return 1
+  pick_supported_python
 }
 
 pick_powershell() {
@@ -90,7 +145,7 @@ adapter_query_for_host() {
   local python_bin=""
   python_bin="$(pick_python_for_adapter || true)"
   if [[ -z "${python_bin}" ]]; then
-    echo "[FAIL] Python is required for adapter-driven host resolution metadata." >&2
+    print_python_requirement_error "Adapter-driven host resolution metadata"
     exit 1
   fi
   "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${SCRIPT_DIR}" --host "${host_id}" --property "${property}"
@@ -486,15 +541,7 @@ json_query_scalar_from_file() {
 }
 
 pick_python() {
-  if command -v python3 >/dev/null 2>&1; then
-    echo "python3"
-    return 0
-  fi
-  if command -v python >/dev/null 2>&1; then
-    echo "python"
-    return 0
-  fi
-  return 1
+  pick_supported_python
 }
 
 adapter_query() {
@@ -502,7 +549,7 @@ adapter_query() {
   local python_bin=""
   python_bin="$(pick_python || true)"
   if [[ -z "${python_bin}" ]]; then
-    echo "[FAIL] Python is required for adapter-driven health-check metadata." >&2
+    print_python_requirement_error "Adapter-driven health-check metadata"
     exit 1
   fi
   "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${SCRIPT_DIR}" --host "${HOST_ID}" --property "${property}"
@@ -787,20 +834,16 @@ if [[ "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
 fi
 if [[ "${ADAPTER_CHECK_MODE}" == "preview-guidance" ]]; then
   if [[ "${HOST_ID}" == "opencode" ]]; then
-    warn_note "opencode preview keeps the real opencode.json host-managed; only skills, commands, agents, and an example config scaffold are verified"
-  elif [[ "${HOST_ID}" == "cursor" ]]; then
-    info_note "cursor preview now materializes managed commands, host-closure state, and a minimal settings surface; deeper host-native workflow remains preview-scoped"
+    info_note "opencode preview now runs as skills-only activation; the real opencode.json stays untouched and sidecar state is verified"
   else
-    info_note "${HOST_ID} preview hook/settings scaffold remains intentionally unavailable while the author works through compatibility issues; this is a current product boundary, not an install failure"
+    info_note "${HOST_ID} preview now runs as skills-only activation; host-native config files stay untouched and sidecar state is verified"
   fi
 fi
 if [[ "${ADAPTER_CHECK_MODE}" == "runtime-core" ]]; then
-  if [[ -d "${SCRIPT_DIR}/commands" ]]; then
-    check_path "global workflows" "${TARGET_ROOT}/global_workflows"
-  fi
-  if [[ -f "${SCRIPT_DIR}/mcp/servers.template.json" ]]; then
-    check_path "mcp_config.json" "${TARGET_ROOT}/mcp_config.json"
-  fi
+  info_note "${HOST_ID} runtime-core now verifies skill-native activation and sidecar state only; host-native workflow/config files are intentionally absent"
+fi
+if [[ "${HOST_ID}" == "claude-code" || "${HOST_ID}" == "cursor" || "${HOST_ID}" == "windsurf" || "${HOST_ID}" == "openclaw" || "${HOST_ID}" == "opencode" ]]; then
+  check_path "host settings sidecar" "${TARGET_ROOT}/.vibeskills/host-settings.json"
 fi
 check_path "host closure manifest" "${TARGET_ROOT}/.vibeskills/host-closure.json"
 if [[ -f "${TARGET_ROOT}/.vibeskills/host-closure.json" ]]; then

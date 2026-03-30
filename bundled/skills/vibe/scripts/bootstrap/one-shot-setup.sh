@@ -7,8 +7,10 @@ HOST_ID_EXPLICIT="false"
 TARGET_ROOT=""
 SKIP_EXTERNAL_INSTALL="false"
 STRICT_OFFLINE="false"
-OPENAI_BASE_URL="${OPENAI_BASE_URL:-}"
-OPENAI_API_KEY_INPUT=""
+INTENT_ADVICE_BASE_URL="${VCO_INTENT_ADVICE_BASE_URL:-}"
+INTENT_ADVICE_API_KEY_INPUT=""
+PYTHON_MIN_MAJOR=3
+PYTHON_MIN_MINOR=10
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -17,14 +19,77 @@ while [[ $# -gt 0 ]]; do
     --target-root) TARGET_ROOT="$2"; shift 2 ;;
     --skip-external-install) SKIP_EXTERNAL_INSTALL="true"; shift ;;
     --strict-offline) STRICT_OFFLINE="true"; shift ;;
-    --openai-base-url) OPENAI_BASE_URL="$2"; shift 2 ;;
-    --openai-api-key) OPENAI_API_KEY_INPUT="$2"; shift 2 ;;
+    --intent-advice-base-url) INTENT_ADVICE_BASE_URL="$2"; shift 2 ;;
+    --intent-advice-api-key) INTENT_ADVICE_API_KEY_INPUT="$2"; shift 2 ;;
+    --openai-base-url) INTENT_ADVICE_BASE_URL="$2"; shift 2 ;;
+    --openai-api-key) INTENT_ADVICE_API_KEY_INPUT="$2"; shift 2 ;;
     *)
       echo "Unknown arg: $1" >&2
       exit 1
       ;;
   esac
 done
+
+python_version_of() {
+  local candidate="$1"
+  "${candidate}" - <<'PY'
+import sys
+print(f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")
+PY
+}
+
+python_meets_minimum() {
+  local candidate="$1"
+  local version major minor patch
+  version="$(python_version_of "${candidate}" 2>/dev/null || true)"
+  [[ -n "${version}" ]] || return 1
+  IFS='.' read -r major minor patch <<EOF
+${version}
+EOF
+  [[ -n "${major}" && -n "${minor}" ]] || return 1
+  if (( major > PYTHON_MIN_MAJOR )); then
+    return 0
+  fi
+  if (( major == PYTHON_MIN_MAJOR && minor >= PYTHON_MIN_MINOR )); then
+    return 0
+  fi
+  return 1
+}
+
+pick_supported_python() {
+  local candidate resolved=""
+  for candidate in python3 python; do
+    if ! resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      continue
+    fi
+    if [[ -n "${resolved}" ]] && python_meets_minimum "${resolved}"; then
+      printf '%s' "${resolved}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+print_python_requirement_error() {
+  local context="$1"
+  local candidate resolved version found_any="false"
+  echo "[FAIL] ${context} requires Python ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR}+." >&2
+  for candidate in python3 python; do
+    if resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      found_any="true"
+      version="$(python_version_of "${resolved}" 2>/dev/null || echo unknown)"
+      echo "[FAIL] Detected ${candidate} -> ${resolved} (${version})" >&2
+    fi
+  done
+  if [[ "${found_any}" != "true" ]]; then
+    echo "[FAIL] No usable python3/python executable was found in PATH." >&2
+  fi
+  if [[ "$(uname -s 2>/dev/null)" == "Darwin" ]]; then
+    echo "[FAIL] macOS often provides zsh plus an old/missing system Python. Install a modern Python 3.10+ and ensure 'python3 --version' reports >= ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR} before rerunning." >&2
+  else
+    echo "[FAIL] Install a modern Python 3.10+ and ensure 'python3 --version' reports >= ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR} before rerunning." >&2
+  fi
+}
 
 is_interactive_shell() {
   [[ -t 0 && -t 1 ]]
@@ -211,15 +276,7 @@ require_cmd() {
 }
 
 pick_python() {
-  if command -v python3 >/dev/null 2>&1; then
-    echo "python3"
-    return 0
-  fi
-  if command -v python >/dev/null 2>&1; then
-    echo "python"
-    return 0
-  fi
-  return 1
+  pick_supported_python
 }
 
 pick_powershell() {
@@ -257,7 +314,7 @@ adapter_query() {
   local python_bin=""
   python_bin="$(pick_python || true)"
   if [[ -z "${python_bin}" ]]; then
-    echo "[FAIL] Python is required for adapter-driven bootstrap metadata." >&2
+    print_python_requirement_error "Adapter-driven bootstrap metadata"
     exit 1
   fi
   "${python_bin}" "${ADAPTER_RESOLVER}" --repo-root "${REPO_ROOT}" --host "${HOST_ID}" --property "${property}"
@@ -299,23 +356,23 @@ PY
 
 seed_settings_env_with_python() {
   local codex_root="$1"
-  local provider="$2"
+  local surface="$2"
   local base_url="$3"
   local api_key="$4"
   local python_bin
 
   if ! python_bin="$(pick_python)"; then
-    echo "[WARN] Python not found; skipping ${provider} settings seed." >&2
+    echo "[WARN] Python not found; skipping ${surface} settings seed." >&2
     return 0
   fi
 
-  "${python_bin}" - "${codex_root}" "${provider}" "${base_url}" "${api_key}" <<'PY'
+  "${python_bin}" - "${codex_root}" "${surface}" "${base_url}" "${api_key}" <<'PY'
 import json
 import os
 import sys
 from pathlib import Path
 
-codex_root, provider, base_url, api_key = sys.argv[1:5]
+codex_root, surface, base_url, api_key = sys.argv[1:5]
 settings_path = Path(codex_root) / "settings.json"
 if not settings_path.exists():
     raise SystemExit(f"settings.json not found: {settings_path}")
@@ -325,13 +382,13 @@ with settings_path.open("r", encoding="utf-8-sig") as fh:
 
 env = settings.setdefault("env", {})
 
-if provider == "openai":
+if surface == "intent_advice":
     if base_url:
-        env["OPENAI_BASE_URL"] = base_url
+        env["VCO_INTENT_ADVICE_BASE_URL"] = base_url
     if api_key:
-        env["OPENAI_API_KEY"] = api_key
+        env["VCO_INTENT_ADVICE_API_KEY"] = api_key
 else:
-    raise SystemExit(f"unsupported bootstrap provider seed: {provider}")
+    raise SystemExit(f"unsupported bootstrap settings seed: {surface}")
 
 env.setdefault("VCO_PROFILE", "full")
 env.setdefault("VCO_CODEX_MODE", "true")
@@ -413,7 +470,11 @@ PY
 
 require_cmd bash "Linux/macOS bootstrap requires bash"
 require_cmd git "required by the repository install flow"
-require_cmd "$(pick_python || echo python3)" "required for shell-native settings and MCP materialization fallback"
+PYTHON_BIN_FOR_BOOTSTRAP="$(pick_python || true)"
+if [[ -z "${PYTHON_BIN_FOR_BOOTSTRAP}" ]]; then
+  print_python_requirement_error "Shell-native settings and MCP materialization fallback"
+  exit 1
+fi
 if [[ "${SKIP_EXTERNAL_INSTALL}" != "true" ]]; then
   require_cmd node "required for npm-managed runtimes"
   require_cmd npm "required for claude-flow / external CLI provisioning"
@@ -446,27 +507,27 @@ echo "[1/5] Installing adapter payload..."
 bash "${INSTALL_SH}" "${install_args[@]}"
 
 if [[ "${ADAPTER_BOOTSTRAP_MODE}" == "governed" ]]; then
-  resolved_openai_api_key="${OPENAI_API_KEY_INPUT:-${OPENAI_API_KEY:-}}"
-  existing_openai_key=""
-  if existing_openai_key="$(read_existing_settings_env_value "${TARGET_ROOT}" "OPENAI_API_KEY" 2>/dev/null)"; then
+  resolved_intent_advice_api_key="${INTENT_ADVICE_API_KEY_INPUT:-${VCO_INTENT_ADVICE_API_KEY:-}}"
+  existing_intent_advice_key=""
+  if existing_intent_advice_key="$(read_existing_settings_env_value "${TARGET_ROOT}" "VCO_INTENT_ADVICE_API_KEY" 2>/dev/null)"; then
     :
   else
-    existing_openai_key=""
+    existing_intent_advice_key=""
   fi
-  if [[ -n "${resolved_openai_api_key}" ]]; then
-    echo "[2/5] Seeding OPENAI settings into target settings.json..."
+  if [[ -n "${resolved_intent_advice_api_key}" ]]; then
+    echo "[2/5] Seeding intent advice settings into target settings.json..."
     if pick_powershell >/dev/null 2>&1; then
-      run_powershell_file "${PERSIST_OPENAI_PS1}" -CodexRoot "${TARGET_ROOT}" -BaseUrl "${OPENAI_BASE_URL}" -ApiKey "${resolved_openai_api_key}"
+      run_powershell_file "${PERSIST_OPENAI_PS1}" -CodexRoot "${TARGET_ROOT}" -BaseUrl "${INTENT_ADVICE_BASE_URL}" -ApiKey "${resolved_intent_advice_api_key}"
     else
-      seed_settings_env_with_python "${TARGET_ROOT}" "openai" "${OPENAI_BASE_URL}" "${resolved_openai_api_key}"
+      seed_settings_env_with_python "${TARGET_ROOT}" "intent_advice" "${INTENT_ADVICE_BASE_URL}" "${resolved_intent_advice_api_key}"
     fi
-  elif [[ -n "${existing_openai_key}" ]]; then
-    echo "[2/5] OPENAI settings already exist in target settings.json; keeping current value."
+  elif [[ -n "${existing_intent_advice_key}" ]]; then
+    echo "[2/5] Intent advice settings already exist in target settings.json; keeping current value."
   else
-    echo "[WARN] OPENAI_API_KEY not provided and not present in the current environment. Full online readiness will remain pending."
+    echo "[WARN] VCO_INTENT_ADVICE_API_KEY not provided and not present in the current environment. Built-in intent advice readiness will remain pending."
   fi
 
-  echo "[3/5] Built-in AI governance now supports only OpenAI-compatible provider wiring; no secondary provider seeding is performed."
+  echo "[3/5] Built-in AI governance now uses separated functional keys: intent advice uses VCO_INTENT_ADVICE_* and vector diff embeddings use VCO_VECTOR_DIFF_*."
 
   echo "[4/5] Materializing MCP profile..."
   if pick_powershell >/dev/null 2>&1; then
@@ -485,12 +546,12 @@ elif [[ "${ADAPTER_BOOTSTRAP_MODE}" == "preview-guidance" ]]; then
     echo "[2/5] Host-specific scaffold is currently unavailable for '${HOST_ID}'."
   fi
   echo "[3/5] No hook files or extra preview settings were installed into the target root."
-  echo "[4/5] Provider settings remain host-managed for '${HOST_ID}'. Built-in AI governance now supports only OpenAI-compatible wiring: configure OPENAI_API_KEY, optional OPENAI_BASE_URL/OPENAI_API_BASE, and VCO_RUCNLPIR_MODEL in the real host settings surface or local environment variables. Do not paste API keys into chat."
+  echo "[4/5] Provider settings remain host-managed for '${HOST_ID}'. Configure built-in intent advice with VCO_INTENT_ADVICE_API_KEY / VCO_INTENT_ADVICE_BASE_URL / VCO_INTENT_ADVICE_MODEL, and configure vector diff embeddings separately with VCO_VECTOR_DIFF_API_KEY / VCO_VECTOR_DIFF_BASE_URL / VCO_VECTOR_DIFF_MODEL. Do not paste API keys into chat."
   echo "[5/5] Running supported-path health check..."
   bash "${CHECK_SH}" --profile "${PROFILE}" --host "${HOST_ID}" --target-root "${TARGET_ROOT}" --deep
 else
   echo "[2/5] Runtime-adapter path does not materialize host settings."
-  echo "[3/5] Runtime-adapter path does not seed provider settings. Built-in AI governance now supports only OpenAI-compatible wiring: configure OPENAI_API_KEY, optional OPENAI_BASE_URL/OPENAI_API_BASE, and VCO_RUCNLPIR_MODEL in local settings or local environment variables. Do not paste secrets into chat."
+  echo "[3/5] Runtime-adapter path does not seed provider settings. Configure built-in intent advice with VCO_INTENT_ADVICE_API_KEY / VCO_INTENT_ADVICE_BASE_URL / VCO_INTENT_ADVICE_MODEL, and configure vector diff embeddings separately with VCO_VECTOR_DIFF_API_KEY / VCO_VECTOR_DIFF_BASE_URL / VCO_VECTOR_DIFF_MODEL. Do not paste secrets into chat."
   echo "[4/5] MCP materialization skipped for the runtime-adapter path."
   echo "[5/5] Running runtime-adapter health check..."
   bash "${CHECK_SH}" --profile "${PROFILE}" --host "${HOST_ID}" --target-root "${TARGET_ROOT}" --deep

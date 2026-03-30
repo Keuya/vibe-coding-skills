@@ -1,6 +1,6 @@
 param(
   [string]$CodexRoot = '',
-  [ValidateSet("OpenAI", "All")]
+  [ValidateSet("IntentAdvice", "VectorDiff", "All")]
   [string]$Target = "All",
   [ValidateSet("User", "Process")]
   [string]$Scope = "User",
@@ -74,9 +74,16 @@ function Sync-One {
   Write-Host ("- {0}: synced" -f $Name) -ForegroundColor Green
 }
 
-if ($Target -eq "OpenAI" -or $Target -eq "All") {
-  Sync-One -Name "OPENAI_BASE_URL"
-  Sync-One -Name "OPENAI_API_KEY"
+if ($Target -eq "IntentAdvice" -or $Target -eq "All") {
+  Sync-One -Name "VCO_INTENT_ADVICE_BASE_URL"
+  Sync-One -Name "VCO_INTENT_ADVICE_API_KEY"
+  Sync-One -Name "VCO_INTENT_ADVICE_MODEL"
+}
+
+if ($Target -eq "VectorDiff" -or $Target -eq "All") {
+  Sync-One -Name "VCO_VECTOR_DIFF_BASE_URL"
+  Sync-One -Name "VCO_VECTOR_DIFF_API_KEY"
+  Sync-One -Name "VCO_VECTOR_DIFF_MODEL"
 }
 
 Write-Host "Done. Note: a new shell may be required to pick up User-scope variables." -ForegroundColor Cyan

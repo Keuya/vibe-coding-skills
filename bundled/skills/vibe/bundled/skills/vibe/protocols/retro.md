@@ -1,4 +1,26 @@
-﻿# vibe-retro Protocol
+# vibe-retro Protocol
+
+> **What this protocol does -- plain language overview**
+>
+> This is the retrospective protocol. It defines how VibeSkills reviews completed
+> work, identifies recurring problems, and proposes improvements to your workflow.
+>
+> You do not need to read this to use VibeSkills. It activates after `phase_cleanup`
+> when you want to reflect on what happened and improve for next time.
+>
+> **Key terms used below:**
+> - **CER (Context Evidence Report)**: A structured output format for what went wrong and how to prevent it. Structure: Pattern -> Evidence -> Root Cause -> Intervention -> Guardrail -> Confidence.
+> - **CF-1 to CF-6 (Context Failure classes)**:
+>   CF-1 = attention dilution (AI lost track of early context in a long session);
+>   CF-2 = context poisoning (stale or contradictory state);
+>   CF-3 = observation bloat (tool outputs dominating useful context tokens);
+>   CF-4 = memory mismatch (wrong content retrieved);
+>   CF-5 = tool contract ambiguity (mismatched tool input/output expectations);
+>   CF-6 = evaluation blind spot (no rubric or weak verification).
+> - **Proxy-goal drift**: When the system optimizes a visible metric (the proxy) instead of the actual goal. Example: passing all tests by deleting the failing ones.
+> - **report_only**: A warning recorded for review purposes that does not automatically block any action on its own.
+> - **Context Retro Advisor**: An advisory sub-system that classifies context failures and recommends interventions. It can recommend but cannot change configuration without explicit user approval.
+
 
 Protocol for structured retrospective -- collaborative analysis of recent projects,
 workflow optimization, error pattern detection, context diagnosis, and future improvement planning.

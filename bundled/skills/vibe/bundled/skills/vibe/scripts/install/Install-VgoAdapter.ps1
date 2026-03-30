@@ -64,6 +64,7 @@ function Copy-DirContent {
     }
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
+    Add-VgoCreatedPath -Path $Destination
 }
 
 function Restore-SkillEntryPointIfNeeded {
@@ -128,6 +129,62 @@ function Merge-JsonObject {
 
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
     $merged | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+function Test-VgoSkillOnlyActivationHost {
+    param([string]$HostId)
+
+    return $HostId -in @('claude-code', 'cursor', 'windsurf', 'openclaw', 'opencode')
+}
+
+$script:VgoCreatedPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+$script:VgoManagedJsonPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+$script:VgoTemplateGeneratedPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+$script:VgoSpecialistWrapperPaths = [System.Collections.Generic.List[string]]::new()
+
+function Add-VgoTrackedPath {
+    param(
+        [Parameter(Mandatory)] [string]$Path,
+        [Parameter(Mandatory)] [System.Collections.Generic.HashSet[string]]$Set
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return
+    }
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    [void]$Set.Add($resolved)
+}
+
+function Add-VgoCreatedPath {
+    param([Parameter(Mandatory)] [string]$Path)
+
+    Add-VgoTrackedPath -Path $Path -Set $script:VgoCreatedPaths
+}
+
+function Add-VgoManagedJsonPath {
+    param([Parameter(Mandatory)] [string]$Path)
+
+    Add-VgoTrackedPath -Path $Path -Set $script:VgoManagedJsonPaths
+}
+
+function Add-VgoTemplateGeneratedPath {
+    param([Parameter(Mandatory)] [string]$Path)
+
+    Add-VgoTrackedPath -Path $Path -Set $script:VgoTemplateGeneratedPaths
+}
+
+function Add-VgoSpecialistWrapperPath {
+    param([Parameter(Mandatory)] [string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return
+    }
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
+    if (-not $script:VgoSpecialistWrapperPaths.Contains($resolved)) {
+        [void]$script:VgoSpecialistWrapperPaths.Add($resolved)
+    }
 }
 
 function Test-VgoPathInsideTargetRoot {
@@ -312,6 +369,7 @@ function New-VgoHostSpecialistWrapper {
 
     $toolsRoot = Join-Path $TargetRoot '.vibeskills\bin'
     New-Item -ItemType Directory -Force -Path $toolsRoot | Out-Null
+    Add-VgoCreatedPath -Path $toolsRoot
 
     $wrapperPy = Join-Path $toolsRoot ("{0}-specialist-wrapper.py" -f $HostId)
     $embeddedCommand = if ([string]::IsNullOrWhiteSpace($BridgeCommand)) { '' } else { $BridgeCommand }
@@ -336,6 +394,8 @@ if __name__ == "__main__":
     raise SystemExit(main())
 "@
     Set-Content -LiteralPath $wrapperPy -Value $pythonScript -Encoding UTF8
+    Add-VgoCreatedPath -Path $wrapperPy
+    Add-VgoSpecialistWrapperPath -Path $wrapperPy
 
     $platformTag = Get-VgoPlatformTag
     if ($platformTag -eq 'windows') {
@@ -378,6 +438,8 @@ exec "$PYTHON_BIN" "$SCRIPT_DIR/__WRAPPER_FILE__" "$@"
         } catch {
         }
     }
+    Add-VgoCreatedPath -Path $launcherPath
+    Add-VgoSpecialistWrapperPath -Path $launcherPath
 
     return [pscustomobject]@{
         platform = $platformTag
@@ -396,28 +458,41 @@ function Set-VgoManagedHostSettings {
     )
 
     $materialized = New-Object System.Collections.Generic.List[string]
-    if ($HostId -in @('cursor', 'claude-code')) {
-        $settingsPath = Join-Path $TargetRoot 'settings.json'
-        Merge-JsonObject -Path $settingsPath -Patch @{
-            vibeskills = @{
-                host_id = $HostId
-                managed = $true
-                commands_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'commands'))
-                specialist_wrapper = [string]$WrapperInfo.launcher_path
-            }
-        }
-        $materialized.Add([System.IO.Path]::GetFullPath($settingsPath)) | Out-Null
-    } elseif ($HostId -in @('openclaw', 'windsurf')) {
+    if (Test-VgoSkillOnlyActivationHost -HostId $HostId) {
         $settingsPath = Join-Path $TargetRoot '.vibeskills\host-settings.json'
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $settingsPath) | Out-Null
-        @{
+        $payload = [ordered]@{
+            schema_version = 1
             host_id = $HostId
             managed = $true
-            commands_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'commands'))
-            workflow_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'global_workflows'))
-            mcp_config = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'mcp_config.json'))
-            specialist_wrapper = [string]$WrapperInfo.launcher_path
-        } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
+            skills_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills'))
+            runtime_skill_entry = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills\vibe\SKILL.md'))
+            explicit_vibe_skill_invocation = @('$vibe', '/vibe')
+            specialist_wrapper = [ordered]@{
+                launcher_path = [string]$WrapperInfo.launcher_path
+                script_path = [string]$WrapperInfo.script_path
+                ready = [bool]$WrapperInfo.ready
+            }
+        }
+        $commandsRoot = Join-Path $TargetRoot 'commands'
+        $agentsRoot = Join-Path $TargetRoot 'agents'
+        $workflowRoot = Join-Path $TargetRoot 'global_workflows'
+        $mcpConfigPath = Join-Path $TargetRoot 'mcp_config.json'
+        if (Test-Path -LiteralPath $commandsRoot -PathType Container) {
+            $payload.commands_root = [System.IO.Path]::GetFullPath($commandsRoot)
+        }
+        if (Test-Path -LiteralPath $agentsRoot -PathType Container) {
+            $payload.agents_root = [System.IO.Path]::GetFullPath($agentsRoot)
+        }
+        if (Test-Path -LiteralPath $workflowRoot -PathType Container) {
+            $payload.workflow_root = [System.IO.Path]::GetFullPath($workflowRoot)
+        }
+        if (Test-Path -LiteralPath $mcpConfigPath -PathType Leaf) {
+            $payload.mcp_config = [System.IO.Path]::GetFullPath($mcpConfigPath)
+        }
+        $payload | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
+        Add-VgoCreatedPath -Path $settingsPath
+        Add-VgoManagedJsonPath -Path $settingsPath
         $materialized.Add([System.IO.Path]::GetFullPath($settingsPath)) | Out-Null
     }
 
@@ -447,6 +522,8 @@ function Write-VgoHostClosure {
         platform = Get-VgoPlatformTag
         target_root = [System.IO.Path]::GetFullPath($TargetRoot)
         install_mode = [string]$Adapter.install_mode
+        skills_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills'))
+        runtime_skill_entry = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills\vibe\SKILL.md'))
         commands_root = [System.IO.Path]::GetFullPath($commandsRoot)
         global_workflows_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'global_workflows'))
         mcp_config_path = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'mcp_config.json'))
@@ -464,10 +541,42 @@ function Write-VgoHostClosure {
     $closurePath = Join-Path $TargetRoot '.vibeskills\host-closure.json'
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $closurePath) | Out-Null
     $closure | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $closurePath -Encoding UTF8
+    Add-VgoCreatedPath -Path $closurePath
     return [pscustomobject]@{
         path = [System.IO.Path]::GetFullPath($closurePath)
         data = [pscustomobject]$closure
     }
+}
+
+function Write-VgoInstallLedger {
+    param(
+        [Parameter(Mandatory)] [psobject]$Adapter,
+        [Parameter(Mandatory)] [string]$Profile,
+        [string[]]$ExternalFallbackUsed = @()
+    )
+
+    $ledgerPath = Join-Path $TargetRoot '.vibeskills\install-ledger.json'
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ledgerPath) | Out-Null
+
+    $ledger = [ordered]@{
+        schema_version = 1
+        host_id = [string]$Adapter.id
+        install_mode = [string]$Adapter.install_mode
+        profile = [string]$Profile
+        target_root = [System.IO.Path]::GetFullPath($TargetRoot)
+        runtime_root = [System.IO.Path]::GetFullPath($TargetRoot)
+        canonical_vibe_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills\vibe'))
+        created_paths = @($script:VgoCreatedPaths | Sort-Object)
+        managed_json_paths = @($script:VgoManagedJsonPaths | Sort-Object)
+        generated_from_template_if_absent = @($script:VgoTemplateGeneratedPaths | Sort-Object)
+        specialist_wrapper_paths = @($script:VgoSpecialistWrapperPaths)
+        external_fallback_used = @($ExternalFallbackUsed | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Sort-Object -Unique)
+        timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        ownership_source = 'install-ledger'
+    }
+
+    $ledger | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $ledgerPath -Encoding UTF8
+    return [System.IO.Path]::GetFullPath($ledgerPath)
 }
 
 function Ensure-SkillPresent {
@@ -634,11 +743,14 @@ function Install-RuntimeCorePayload {
     $governancePath = Join-Path $RepoRoot 'config\version-governance.json'
     $governance = Get-Content -LiteralPath $governancePath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-    foreach ($dir in @($packaging.directories)) {
+    $includeCommandSurfaces = -not (Test-VgoSkillOnlyActivationHost -HostId ([string]$Adapter.id))
+    $runtimeDirectories = @($packaging.directories | Where-Object { $includeCommandSurfaces -or [string]$_ -ne 'commands' })
+    foreach ($dir in $runtimeDirectories) {
         New-Item -ItemType Directory -Force -Path (Join-Path $TargetRoot ([string]$dir)) | Out-Null
     }
 
-    foreach ($entry in @($packaging.copy_directories)) {
+    $copyDirectories = @($packaging.copy_directories | Where-Object { $includeCommandSurfaces -or [string]$_.target -ne 'commands' })
+    foreach ($entry in $copyDirectories) {
         $src = Join-Path $RepoRoot ([string]$entry.source)
         $dst = Join-Path $TargetRoot ([string]$entry.target)
         Copy-DirContent -Source $src -Destination $dst
@@ -741,12 +853,17 @@ function Install-GovernedCodexPayload {
     Copy-DirContent -Source (Join-Path $RepoRoot 'agents\templates') -Destination (Join-Path $TargetRoot 'agents\templates')
     Copy-DirContent -Source (Join-Path $RepoRoot 'mcp') -Destination (Join-Path $TargetRoot 'mcp')
     New-Item -ItemType Directory -Force -Path (Join-Path $TargetRoot 'config') | Out-Null
+    Add-VgoCreatedPath -Path (Join-Path $TargetRoot 'config')
     Copy-Item -LiteralPath (Join-Path $RepoRoot 'config\plugins-manifest.codex.json') -Destination (Join-Path $TargetRoot 'config\plugins-manifest.codex.json') -Force
+    Add-VgoCreatedPath -Path (Join-Path $TargetRoot 'config\plugins-manifest.codex.json')
 
     $settingsPath = Join-Path $TargetRoot 'settings.json'
     if (-not (Test-Path -LiteralPath $settingsPath)) {
         Copy-Item -LiteralPath (Join-Path $RepoRoot 'config\settings.template.codex.json') -Destination $settingsPath -Force
+        Add-VgoTemplateGeneratedPath -Path $settingsPath
     }
+    Add-VgoCreatedPath -Path $settingsPath
+    Add-VgoManagedJsonPath -Path $settingsPath
 }
 
 function Install-ClaudeGuidancePayload {
@@ -754,30 +871,39 @@ function Install-ClaudeGuidancePayload {
 }
 
 function Install-OpenCodeGuidancePayload {
-    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\commands') -Destination (Join-Path $TargetRoot 'commands')
-    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\commands') -Destination (Join-Path $TargetRoot 'command')
-    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\agents') -Destination (Join-Path $TargetRoot 'agents')
-    Copy-DirContent -Source (Join-Path $RepoRoot 'config\opencode\agents') -Destination (Join-Path $TargetRoot 'agent')
-
     $exampleConfig = Join-Path $RepoRoot 'config\opencode\opencode.json.example'
     if (Test-Path -LiteralPath $exampleConfig) {
-        Copy-Item -LiteralPath $exampleConfig -Destination (Join-Path $TargetRoot 'opencode.json.example') -Force
+        $destination = Join-Path $TargetRoot 'opencode.json.example'
+        Copy-Item -LiteralPath $exampleConfig -Destination $destination -Force
+        Add-VgoCreatedPath -Path $destination
     }
 }
 
 function Install-RuntimeCoreModePayload {
+    param([psobject]$Adapter)
+
+    if (Test-VgoSkillOnlyActivationHost -HostId ([string]$Adapter.id)) {
+        return
+    }
+
     $commandsRoot = Join-Path $RepoRoot 'commands'
     if (Test-Path -LiteralPath $commandsRoot) {
-        Copy-DirContent -Source $commandsRoot -Destination (Join-Path $TargetRoot 'global_workflows')
+        $workflowRoot = Join-Path $TargetRoot 'global_workflows'
+        Copy-DirContent -Source $commandsRoot -Destination $workflowRoot
+        Add-VgoCreatedPath -Path $workflowRoot
     }
 
     $mcpTemplate = Join-Path $RepoRoot 'mcp\servers.template.json'
     $mcpConfigPath = Join-Path $TargetRoot 'mcp_config.json'
     if ((Test-Path -LiteralPath $mcpTemplate) -and -not (Test-Path -LiteralPath $mcpConfigPath)) {
         Copy-Item -LiteralPath $mcpTemplate -Destination $mcpConfigPath -Force
+        Add-VgoCreatedPath -Path $mcpConfigPath
+        Add-VgoManagedJsonPath -Path $mcpConfigPath
+        Add-VgoTemplateGeneratedPath -Path $mcpConfigPath
     }
 }
 
+Add-VgoCreatedPath -Path $TargetRoot
 $adapter = Resolve-VgoAdapterDescriptor -RepoRoot $RepoRoot -HostId $HostId
 $result = Install-RuntimeCorePayload -Adapter $adapter
 $legacyOpenCodeConfigCleanup = $null
@@ -786,7 +912,6 @@ switch ([string]$adapter.install_mode) {
     'preview-guidance' {
         if ([string]$adapter.id -eq 'opencode') {
             Install-OpenCodeGuidancePayload
-            $legacyOpenCodeConfigCleanup = Repair-VgoLegacyOpenCodeConfig -TargetRoot $TargetRoot
         } elseif ([string]$adapter.id -eq 'claude-code' -or [string]$adapter.id -eq 'cursor') {
             Install-ClaudeGuidancePayload
         } else {
@@ -794,7 +919,7 @@ switch ([string]$adapter.install_mode) {
         }
     }
     'runtime-core' {
-        Install-RuntimeCoreModePayload
+        Install-RuntimeCoreModePayload -Adapter $adapter
     }
     default { throw "Unsupported adapter install mode: $($adapter.install_mode)" }
 }
@@ -804,6 +929,7 @@ $requireClosedReadyEffective = [bool]($RequireClosedReady -and (Test-VgoClosedRe
 if ($requireClosedReadyEffective -and [string]$closureReceipt.data.host_closure_state -ne 'closed_ready') {
     throw ("Host closure for '{0}' is not closed_ready (got '{1}'). Configure the host specialist bridge command first, then retry install." -f [string]$adapter.id, [string]$closureReceipt.data.host_closure_state)
 }
+$installLedgerPath = Write-VgoInstallLedger -Adapter $adapter -Profile $Profile -ExternalFallbackUsed @($result.external_fallback_used)
 
 [pscustomobject]@{
     host_id = [string]$adapter.id
@@ -812,6 +938,7 @@ if ($requireClosedReadyEffective -and [string]$closureReceipt.data.host_closure_
     external_fallback_used = @($result.external_fallback_used)
     host_closure_path = [string]$closureReceipt.path
     host_closure_state = [string]$closureReceipt.data.host_closure_state
+    install_ledger_path = [string]$installLedgerPath
     settings_materialized = @($closureReceipt.data.settings_materialized)
     legacy_opencode_config_cleanup = $legacyOpenCodeConfigCleanup
     specialist_wrapper_ready = [bool]$closureReceipt.data.specialist_wrapper.ready

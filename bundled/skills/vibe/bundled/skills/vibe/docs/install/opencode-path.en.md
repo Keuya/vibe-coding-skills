@@ -10,8 +10,9 @@
 
 - repo-distributed content
 - Vibe-Skills skill content
-- OpenCode command wrappers
-- OpenCode agent wrappers
+- `.vibeskills/host-settings.json`
+- `.vibeskills/host-closure.json`
+- `.vibeskills/bin/*-specialist-wrapper.*`
 - an `opencode.json.example` scaffold
 
 ## What Still Stays Host-Local
@@ -62,17 +63,14 @@ For the framework-only variant, also append `-Profile minimal` explicitly.
 The install writes:
 
 - `skills/**`
-- `commands/*.md`
-- `command/*.md`
-- `agents/*.md`
-- `agent/*.md`
+- `.vibeskills/host-settings.json`
+- `.vibeskills/host-closure.json`
+- `.vibeskills/install-ledger.json`
+- `.vibeskills/bin/*-specialist-wrapper.*`
 - `opencode.json.example`
 
 The install does not create a new real `opencode.json`, and it does not take ownership of that file.
-If install sees a legacy top-level `vibeskills` node that an older Vibe build wrote by mistake, it removes only that Vibe-owned node and preserves the user's `$schema`, `mcp`, and other host-managed settings.
 If you need to change native OpenCode settings, keep doing that on the host side.
-
-Plural and singular command/agent directories are both materialized because the current OpenCode docs treat plural directories as the primary layout while still supporting singular names for backwards compatibility.
 
 ## How To Use
 
@@ -86,6 +84,8 @@ You can also invoke the skill directly in chat, for example:
 
 - `Use the vibe skill to plan this change.`
 - `Use the vibe skill to implement the approved plan.`
+
+These entrypoints stay skill-native. When Vibe is not explicitly invoked, the sidecar state remains silent and does not try to take over native OpenCode configuration.
 
 Custom agents installed by this path:
 

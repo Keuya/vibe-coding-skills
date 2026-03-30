@@ -139,8 +139,10 @@ function Write-DoctorArtifacts {
 
     $lines += '## Settings'
     $lines += ''
-    $lines += ('- `OPENAI_API_KEY`: `{0}` via `{1}`' -f $Artifact.settings.openai_api_key_state, $Artifact.settings.openai_api_key_source)
-    $lines += ('- `VCO_RUCNLPIR_MODEL`: `{0}` via `{1}`' -f $Artifact.settings.vco_rucnlpir_model_state, $Artifact.settings.vco_rucnlpir_model_source)
+    $lines += ('- `VCO_INTENT_ADVICE_API_KEY`: `{0}` via `{1}`' -f $Artifact.settings.intent_advice_api_key_state, $Artifact.settings.intent_advice_api_key_source)
+    $lines += ('- `VCO_INTENT_ADVICE_MODEL`: `{0}` via `{1}`' -f $Artifact.settings.intent_advice_model_state, $Artifact.settings.intent_advice_model_source)
+    $lines += ('- `VCO_VECTOR_DIFF_API_KEY`: `{0}` via `{1}`' -f $Artifact.settings.vector_diff_api_key_state, $Artifact.settings.vector_diff_api_key_source)
+    $lines += ('- `VCO_VECTOR_DIFF_MODEL`: `{0}` via `{1}`' -f $Artifact.settings.vector_diff_model_state, $Artifact.settings.vector_diff_model_source)
     $lines += ''
 
     if ($Artifact.plugins.Count -gt 0) {
@@ -423,13 +425,18 @@ $warnings = New-Object System.Collections.Generic.List[string]
 if (-not (Test-Path -LiteralPath $settingsPath)) {
     $blockingIssues.Add('settings.json is missing in target root.') | Out-Null
 }
-$resolvedOpenAiApiKey = Get-ResolvedSettingState -Settings $settings -Name 'OPENAI_API_KEY'
-$resolvedGovernanceModel = Get-ResolvedSettingState -Settings $settings -Name 'VCO_RUCNLPIR_MODEL'
-if ($resolvedOpenAiApiKey.state -ne 'configured') {
-    $manualActions.Add('OPENAI_API_KEY must be configured for full online Codex usage.') | Out-Null
+$resolvedIntentAdviceApiKey = Get-ResolvedSettingState -Settings $settings -Name 'VCO_INTENT_ADVICE_API_KEY'
+$resolvedIntentAdviceModel = Get-ResolvedSettingState -Settings $settings -Name 'VCO_INTENT_ADVICE_MODEL'
+$resolvedVectorDiffApiKey = Get-ResolvedSettingState -Settings $settings -Name 'VCO_VECTOR_DIFF_API_KEY'
+$resolvedVectorDiffModel = Get-ResolvedSettingState -Settings $settings -Name 'VCO_VECTOR_DIFF_MODEL'
+if ($resolvedIntentAdviceApiKey.state -ne 'configured') {
+    $manualActions.Add('VCO_INTENT_ADVICE_API_KEY must be configured for built-in intent advice readiness.') | Out-Null
 }
-if ($resolvedGovernanceModel.state -ne 'configured') {
-    $manualActions.Add('VCO_RUCNLPIR_MODEL must be configured for built-in governance advice readiness.') | Out-Null
+if ($resolvedIntentAdviceModel.state -ne 'configured') {
+    $manualActions.Add('VCO_INTENT_ADVICE_MODEL must be configured for built-in intent advice readiness.') | Out-Null
+}
+if ($resolvedVectorDiffApiKey.state -ne 'configured' -or $resolvedVectorDiffModel.state -ne 'configured') {
+    $warnings.Add('Vector diff embeddings are not fully configured; large-diff retrieval will degrade gracefully.') | Out-Null
 }
 if (-not (Test-Path -LiteralPath $activeMcpPath)) {
     $manualActions.Add('MCP active profile has not been materialized yet (servers.active.json missing).') | Out-Null
@@ -461,11 +468,16 @@ $artifact = [ordered]@{
     settings = [ordered]@{
         path = $settingsPath
         exists = [bool](Test-Path -LiteralPath $settingsPath)
-        openai_api_key_state = $resolvedOpenAiApiKey.state
-        openai_api_key_source = $resolvedOpenAiApiKey.source
-        openai_base_url_state = (Get-SettingState -Settings $settings -Name 'OPENAI_BASE_URL')
-        vco_rucnlpir_model_state = $resolvedGovernanceModel.state
-        vco_rucnlpir_model_source = $resolvedGovernanceModel.source
+        intent_advice_api_key_state = $resolvedIntentAdviceApiKey.state
+        intent_advice_api_key_source = $resolvedIntentAdviceApiKey.source
+        intent_advice_base_url_state = (Get-SettingState -Settings $settings -Name 'VCO_INTENT_ADVICE_BASE_URL')
+        intent_advice_model_state = $resolvedIntentAdviceModel.state
+        intent_advice_model_source = $resolvedIntentAdviceModel.source
+        vector_diff_api_key_state = $resolvedVectorDiffApiKey.state
+        vector_diff_api_key_source = $resolvedVectorDiffApiKey.source
+        vector_diff_base_url_state = (Get-SettingState -Settings $settings -Name 'VCO_VECTOR_DIFF_BASE_URL')
+        vector_diff_model_state = $resolvedVectorDiffModel.state
+        vector_diff_model_source = $resolvedVectorDiffModel.source
     }
     plugins = @($pluginResults)
     external_tools = @($externalTools)

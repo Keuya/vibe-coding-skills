@@ -171,8 +171,8 @@ if ($registry -and @($registry.providers).Count -gt 0) {
             $envSnapshot[$n] = if (Test-Path -LiteralPath ("env:{0}" -f $n)) { [string](Get-Item -LiteralPath ("env:{0}" -f $n)).Value } else { $null }
         }
 
-        # Also clear common base url overrides so offline tests never depend on host/user configs.
-        foreach ($name in @('OPENAI_BASE_URL', 'OPENAI_API_BASE')) {
+        # Also clear common base-url overrides so offline tests never depend on host/user configs.
+        foreach ($name in @('OPENAI_BASE_URL', 'OPENAI_API_BASE', 'VCO_INTENT_ADVICE_BASE_URL', 'VCO_VECTOR_DIFF_BASE_URL')) {
             if (-not $envSnapshot.ContainsKey($name)) {
                 $envSnapshot[$name] = if (Test-Path -LiteralPath ("env:{0}" -f $name)) { [string](Get-Item -LiteralPath ("env:{0}" -f $name)).Value } else { $null }
             }

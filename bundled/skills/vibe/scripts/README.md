@@ -9,10 +9,10 @@
 ### Bootstrap / Setup Highlights
 
 - [`bootstrap/one-shot-setup.ps1`](./bootstrap/one-shot-setup.ps1): single-command bootstrap for install -> optional settings seeding -> MCP materialization -> `check.ps1 -Deep`
-- [`bootstrap/one-shot-setup.sh`](./bootstrap/one-shot-setup.sh): shell-native bootstrap for Linux / macOS with the same install -> settings seed -> MCP materialization -> `check.sh --deep` flow
+- [`bootstrap/one-shot-setup.sh`](./bootstrap/one-shot-setup.sh): shell-native bootstrap for Linux / macOS with the same install -> settings seed -> MCP materialization -> `check.sh --deep` flow; maintained for macOS system Bash 3.2 + Python 3.10+
 - [`setup/materialize-codex-mcp-profile.ps1`](./setup/materialize-codex-mcp-profile.ps1): materialize the selected MCP profile into `~/.codex\mcp\servers.active.json`
-- [`setup/persist-codex-openai-env.ps1`](./setup/persist-codex-openai-env.ps1): safely persist OpenAI env values into target `settings.json`
-- [`setup/sync-codex-settings-to-user-env.ps1`](./setup/sync-codex-settings-to-user-env.ps1): optionally sync configured settings env values into the user environment
+- [`setup/persist-codex-openai-env.ps1`](./setup/persist-codex-openai-env.ps1): safely persist built-in intent-advice env values into target `settings.json`
+- [`setup/sync-codex-settings-to-user-env.ps1`](./setup/sync-codex-settings-to-user-env.ps1): optionally sync configured `VCO_INTENT_ADVICE_*` / `VCO_VECTOR_DIFF_*` settings into the user environment
 
 - [`governance/README.md`](./governance/README.md)：human-run operator surface，覆盖 sync / rollout / release / audit / policy probes。
 - [`verify/README.md`](./verify/README.md)：verify surface entrypoint 与 canonical run order。

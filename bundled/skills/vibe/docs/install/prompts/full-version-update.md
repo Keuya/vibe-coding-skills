@@ -25,7 +25,8 @@
    - Linux / macOS：`bash ./install.sh --host opencode --profile full` 与 `bash ./check.sh --host opencode --profile full`
 7. 不要要求我把密钥、URL 或 model 粘贴到聊天里。
 8. 如果我后续要补 AI 治理 online 能力，你必须优先告诉我真实推荐键名：
-   - OpenAI-compatible：`OPENAI_API_KEY`，可选 `OPENAI_BASE_URL` / `OPENAI_API_BASE`，以及 `VCO_RUCNLPIR_MODEL`
-   - 内置 AI 治理层当前只支持 OpenAI-compatible 接入
+   - 主路径：`VCO_INTENT_ADVICE_API_KEY` + 可选 `VCO_INTENT_ADVICE_BASE_URL` + `VCO_INTENT_ADVICE_MODEL`
+   - 可选 vector diff：`VCO_VECTOR_DIFF_API_KEY` + 可选 `VCO_VECTOR_DIFF_BASE_URL` + `VCO_VECTOR_DIFF_MODEL`
+   - 说明旧 `OPENAI_*` 不再自动回填，必须手动映射到 `VCO_*`
 9. 更新完成后，用 truth-first 口径告诉我：目标宿主、公开版本、实际 profile、实际命令、自定义治理是否仍在、仍需我手动处理的部分。
 ```

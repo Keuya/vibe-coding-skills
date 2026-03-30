@@ -24,19 +24,16 @@ if (-not (Test-Path -LiteralPath $settingsPath)) {
 
 $resolvedBaseUrl = Get-NonEmptyOrNull -Value $BaseUrl
 if (-not $resolvedBaseUrl) {
-  $resolvedBaseUrl = Get-NonEmptyOrNull -Value $env:OPENAI_BASE_URL
-}
-if (-not $resolvedBaseUrl) {
-  $resolvedBaseUrl = Get-NonEmptyOrNull -Value $env:OPENAI_API_BASE
+  $resolvedBaseUrl = Get-NonEmptyOrNull -Value $env:VCO_INTENT_ADVICE_BASE_URL
 }
 
 $resolvedApiKey = Get-NonEmptyOrNull -Value $ApiKey
 if (-not $resolvedApiKey) {
-  $resolvedApiKey = Get-NonEmptyOrNull -Value $env:OPENAI_API_KEY
+  $resolvedApiKey = Get-NonEmptyOrNull -Value $env:VCO_INTENT_ADVICE_API_KEY
 }
 
 if (-not $resolvedApiKey -and (-not $AllowEmptyApiKey)) {
-  throw "OPENAI_API_KEY is missing. Provide -ApiKey or set env:OPENAI_API_KEY. (We refuse to write an empty/placeholder key by default.)"
+  throw "VCO_INTENT_ADVICE_API_KEY is missing. Provide -ApiKey or set env:VCO_INTENT_ADVICE_API_KEY. (We refuse to write an empty/placeholder key by default.)"
 }
 
 try {
@@ -50,11 +47,11 @@ if (-not $settings.env) {
 }
 
 if ($resolvedBaseUrl) {
-  $settings.env | Add-Member -NotePropertyName OPENAI_BASE_URL -NotePropertyValue $resolvedBaseUrl -Force
+  $settings.env | Add-Member -NotePropertyName VCO_INTENT_ADVICE_BASE_URL -NotePropertyValue $resolvedBaseUrl -Force
 }
 
 if ($resolvedApiKey) {
-  $settings.env | Add-Member -NotePropertyName OPENAI_API_KEY -NotePropertyValue $resolvedApiKey -Force
+  $settings.env | Add-Member -NotePropertyName VCO_INTENT_ADVICE_API_KEY -NotePropertyValue $resolvedApiKey -Force
 }
 
 # Keep these consistent with the shipped template unless user already overrides them.
@@ -68,5 +65,5 @@ if (-not ($settings.env.PSObject.Properties.Name -contains "VCO_CODEX_MODE")) {
 $settings | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
 
 Write-Host "Updated Codex settings.json env:" -ForegroundColor Green
-if ($resolvedBaseUrl) { Write-Host "- OPENAI_BASE_URL set" }
-Write-Host "- OPENAI_API_KEY set"
+if ($resolvedBaseUrl) { Write-Host "- VCO_INTENT_ADVICE_BASE_URL set" }
+Write-Host "- VCO_INTENT_ADVICE_API_KEY set"
