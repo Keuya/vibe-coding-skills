@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = New-VibeRunId
 }
 
-$sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
+$sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
 $intentContract = New-VibeIntentContractObject -Task $Task -Mode $Mode
 $receiptPath = Join-Path $sessionRoot 'intent-contract.json'
 Write-VibeJsonArtifact -Path $receiptPath -Value $intentContract

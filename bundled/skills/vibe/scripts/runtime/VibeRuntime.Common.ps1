@@ -904,20 +904,22 @@ function Get-VibeTitleFromTask {
 function Get-VibeArtifactRoot {
     param(
         [Parameter(Mandatory)] [string]$RepoRoot,
+        [AllowNull()] [object]$Runtime = $null,
         [AllowEmptyString()] [string]$ArtifactRoot = ''
     )
 
-    return [string](New-VibeWorkspaceArtifactProjection -RepoRoot $RepoRoot -ArtifactRoot $ArtifactRoot).artifact_root
+    return [string](New-VibeWorkspaceArtifactProjection -RepoRoot $RepoRoot -Runtime $Runtime -ArtifactRoot $ArtifactRoot).artifact_root
 }
 
 function Get-VibeSessionRoot {
     param(
         [Parameter(Mandatory)] [string]$RepoRoot,
         [Parameter(Mandatory)] [string]$RunId,
+        [AllowNull()] [object]$Runtime = $null,
         [AllowEmptyString()] [string]$ArtifactRoot = ''
     )
 
-    $baseRoot = Get-VibeArtifactRoot -RepoRoot $RepoRoot -ArtifactRoot $ArtifactRoot
+    $baseRoot = Get-VibeArtifactRoot -RepoRoot $RepoRoot -Runtime $Runtime -ArtifactRoot $ArtifactRoot
     return [System.IO.Path]::GetFullPath((Join-Path $baseRoot ("outputs\runtime\vibe-sessions\{0}" -f $RunId)))
 }
 
@@ -925,13 +927,14 @@ function Ensure-VibeSessionRoot {
     param(
         [Parameter(Mandatory)] [string]$RepoRoot,
         [Parameter(Mandatory)] [string]$RunId,
+        [AllowNull()] [object]$Runtime = $null,
         [AllowEmptyString()] [string]$ArtifactRoot = ''
     )
 
-    $sessionRoot = Get-VibeSessionRoot -RepoRoot $RepoRoot -RunId $RunId -ArtifactRoot $ArtifactRoot
+    $sessionRoot = Get-VibeSessionRoot -RepoRoot $RepoRoot -RunId $RunId -Runtime $Runtime -ArtifactRoot $ArtifactRoot
     New-Item -ItemType Directory -Path $sessionRoot -Force | Out-Null
     if ([string]::IsNullOrWhiteSpace($ArtifactRoot)) {
-        Initialize-VibeWorkspaceProjectDescriptor -RepoRoot $RepoRoot | Out-Null
+        Initialize-VibeWorkspaceProjectDescriptor -RepoRoot $RepoRoot -Runtime $Runtime | Out-Null
     }
     return $sessionRoot
 }

@@ -268,6 +268,47 @@ class UnifiedUninstallTests(unittest.TestCase):
         self.assertTrue(requirement_path.exists())
         self.assertNotIn(".vibeskills", payload["deleted_paths"])
 
+    def test_workspace_project_sidecar_downgrades_host_cleanup_to_targeted_marker_deletion(self) -> None:
+        project_path = self.target_root / ".vibeskills" / "project.json"
+        host_settings_path = self.target_root / ".vibeskills" / "host-settings.json"
+        requirement_path = self.target_root / ".vibeskills" / "docs" / "requirements" / "req.md"
+        project_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(
+            project_path,
+            {
+                "schema_version": 1,
+                "workspace_root": str(self.target_root.resolve()),
+                "workspace_sidecar_root": str((self.target_root / ".vibeskills").resolve()),
+            },
+        )
+        write_json(host_settings_path, {"schema_version": 1})
+        requirement_path.parent.mkdir(parents=True, exist_ok=True)
+        requirement_path.write_text("# runtime artifact\n", encoding="utf-8")
+
+        _, payload = self.run_python_uninstall(host="cursor")
+
+        self.assertFalse(host_settings_path.exists())
+        self.assertTrue(project_path.exists())
+        self.assertTrue(requirement_path.exists())
+        self.assertTrue((self.target_root / ".vibeskills").exists())
+        self.assertNotIn(".vibeskills", payload["deleted_paths"])
+        self.assertIn(".vibeskills/host-settings.json", payload["deleted_paths"])
+
+    def test_workspace_runtime_artifacts_without_project_descriptor_are_not_deleted_by_host_uninstall(self) -> None:
+        host_settings_path = self.target_root / ".vibeskills" / "host-settings.json"
+        requirement_path = self.target_root / ".vibeskills" / "docs" / "requirements" / "req.md"
+        host_settings_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(host_settings_path, {"schema_version": 1})
+        requirement_path.parent.mkdir(parents=True, exist_ok=True)
+        requirement_path.write_text("# runtime artifact\n", encoding="utf-8")
+
+        _, payload = self.run_python_uninstall(host="cursor")
+
+        self.assertFalse(host_settings_path.exists())
+        self.assertTrue(requirement_path.exists())
+        self.assertTrue((self.target_root / ".vibeskills").exists())
+        self.assertNotIn(".vibeskills", payload["deleted_paths"])
+
     def test_shared_json_parse_failure_warns_without_deleting(self) -> None:
         settings_path = self.target_root / "settings.json"
         settings_path.write_text("{not-json}\n", encoding="utf-8")

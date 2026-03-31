@@ -90,21 +90,56 @@ def load_json(path: str | Path) -> dict[str, object]:
 
 class RuntimeContractSchemaTests(unittest.TestCase):
     def test_workspace_artifact_projection_defaults_to_repo_sidecar(self) -> None:
-        payload = run_ps_json(
-            "& { "
-            f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
-            "$result = New-VibeWorkspaceArtifactProjection "
-            "-RepoRoot '/tmp/workspace' "
-            "-ArtifactRoot ''; "
-            "$result | ConvertTo-Json -Depth 10 }"
-        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            workspace_root_text = str(workspace_root.resolve())
 
-        self.assertEqual("/tmp/workspace", payload["workspace_root"])
-        self.assertEqual("/tmp/workspace/.vibeskills", payload["workspace_sidecar_root"])
-        self.assertEqual("/tmp/workspace/.vibeskills", payload["artifact_root"])
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$result = New-VibeWorkspaceArtifactProjection "
+                f"-RepoRoot {_ps_single_quote(workspace_root_text)} "
+                "-ArtifactRoot ''; "
+                "$result | ConvertTo-Json -Depth 10 }"
+            )
+
+        self.assertEqual(workspace_root_text, payload["workspace_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["workspace_sidecar_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["artifact_root"])
         self.assertEqual("workspace_sidecar_default", payload["artifact_root_source"])
         self.assertTrue(payload["default_workspace_sidecar_artifact_root"])
-        self.assertEqual("/tmp/workspace/.vibeskills/project.json", payload["project_descriptor_path"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills/project.json", payload["project_descriptor_path"])
+
+    def test_session_root_initialization_persists_host_sidecar_root_from_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            host_root = Path(tempdir) / "cursor-home"
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            host_root.mkdir(parents=True, exist_ok=True)
+            descriptor_path = workspace_root / ".vibeskills" / "project.json"
+
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$runtime = [pscustomobject]@{ "
+                "host_settings = [pscustomobject]@{ "
+                f"target_root = {_ps_single_quote(str(host_root.resolve()))} "
+                "} "
+                "}; "
+                "$sessionRoot = Ensure-VibeSessionRoot "
+                f"-RepoRoot {_ps_single_quote(str(workspace_root.resolve()))} "
+                "-RunId 'run-session-root-host-sidecar' "
+                "-ArtifactRoot '' "
+                "-Runtime $runtime; "
+                f"$descriptor = Get-Content -LiteralPath {_ps_single_quote(str(descriptor_path.resolve()))} -Raw -Encoding UTF8 | ConvertFrom-Json; "
+                "[pscustomobject]@{ "
+                "session_root = $sessionRoot; "
+                "host_sidecar_root = $descriptor.host_sidecar_root "
+                "} | ConvertTo-Json -Depth 10 }"
+            )
+
+        self.assertEqual(str((host_root / ".vibeskills").resolve()), payload["host_sidecar_root"])
 
     def test_identity_projection_preserves_requested_and_effective_ids(self) -> None:
         payload = run_ps_json(
@@ -292,53 +327,58 @@ class RuntimeContractSchemaTests(unittest.TestCase):
         self.assertFalse(payload["child_execution"]["completion_claim_allowed"])
 
     def test_runtime_input_packet_projection_preserves_route_dispatch_and_custom_admission_contracts(self) -> None:
-        payload = run_ps_json(
-            "& { "
-            f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
-            "$hierarchyState = [pscustomobject]@{ governance_scope = 'child'; root_run_id = 'root-7'; parent_run_id = 'parent-7'; parent_unit_id = 'unit-7'; inherited_requirement_doc_path = '/tmp/req.md'; inherited_execution_plan_path = '/tmp/plan.md' }; "
-            "$hierarchy = New-VibeHierarchyProjection -HierarchyState $hierarchyState -IncludeGovernanceScope; "
-            "$authority = New-VibeRuntimePacketAuthorityFlagsProjection -HierarchyState $hierarchyState -RuntimeEntry 'vibe' -ExplicitRuntimeSkill 'vibe' -RouterTruthLevel 'shadow' -ShadowOnly $true -NonAuthoritative $false; "
-            "$storage = New-VibeWorkspaceArtifactProjection -RepoRoot '/tmp/workspace' -ArtifactRoot ''; "
-            "$route = [pscustomobject]@{ "
-            "selected = [pscustomobject]@{ pack_id = 'runtime-governor'; skill = 'systematic-debugging' }; "
-            "route_mode = 'confirm_required'; "
-            "route_reason = 'fixture'; "
-            "confidence = 0.75; "
-            "truth_level = 'shadow'; "
-            "degradation_state = 'none'; "
-            "non_authoritative = $false; "
-            "fallback_active = $false; "
-            "hazard_alert_required = $true; "
-            "unattended_override_applied = $false; "
-            "custom_admission = [pscustomobject]@{ status = 'admitted'; target_root = '/tmp/custom'; admitted_candidates = @([pscustomobject]@{ skill_id = 'systematic-debugging' }, [pscustomobject]@{ skill_id = 'think-harder' }) } "
-            "}; "
-            "$runtime = [pscustomobject]@{ host_adapter = [pscustomobject]@{ requested_id = 'openclaw'; id = 'openclaw'; status = 'preview'; install_mode = 'scaffold'; check_mode = 'audit'; bootstrap_mode = 'bounded' }; host_closure = [pscustomobject]@{ path = '/tmp/closure.json' } }; "
-            "$dispatch = [pscustomobject]@{ approved_dispatch = @([pscustomobject]@{ skill_id = 'systematic-debugging' }); local_specialist_suggestions = @([pscustomobject]@{ skill_id = 'think-harder' }); escalation_required = $true; escalation_status = 'pending_root_approval' }; "
-            "$policy = [pscustomobject]@{ freeze_before_requirement_doc = $true; child_specialist_suggestion_contract = [pscustomobject]@{ approval_owner = 'root_vibe'; status = 'advisory_until_root_approval' } }; "
-            "$packet = New-VibeRuntimeInputPacketProjection "
-            "-RunId 'run-7' "
-            "-Task 'debug task' "
-            "-Mode 'interactive_governed' "
-            "-InternalGrade 'XL' "
-            "-HierarchyState $hierarchyState "
-            "-HierarchyProjection $hierarchy "
-            "-AuthorityFlagsProjection $authority "
-            "-StorageProjection $storage "
-            "-RouteResult $route "
-            "-Runtime $runtime "
-            "-TaskType 'debug' "
-            "-RequestedSkill 'vibe' "
-            "-RouterHostId 'openclaw' "
-            "-RouterTargetRoot '/tmp/openclaw' "
-            "-Unattended:$false "
-            "-RouterScriptPath '/tmp/router.ps1' "
-            "-RuntimeSelectedSkill 'vibe' "
-            "-SpecialistRecommendations @([pscustomobject]@{ skill_id = 'systematic-debugging'; native_usage_required = $true }) "
-            "-SpecialistDispatch $dispatch "
-            "-OverlayDecisions @([pscustomobject]@{ name = 'danger'; decision = 'observe' }) "
-            "-Policy $policy; "
-            "$packet | ConvertTo-Json -Depth 20 }"
-        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            workspace_root_text = str(workspace_root.resolve())
+
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$hierarchyState = [pscustomobject]@{ governance_scope = 'child'; root_run_id = 'root-7'; parent_run_id = 'parent-7'; parent_unit_id = 'unit-7'; inherited_requirement_doc_path = '/tmp/req.md'; inherited_execution_plan_path = '/tmp/plan.md' }; "
+                "$hierarchy = New-VibeHierarchyProjection -HierarchyState $hierarchyState -IncludeGovernanceScope; "
+                "$authority = New-VibeRuntimePacketAuthorityFlagsProjection -HierarchyState $hierarchyState -RuntimeEntry 'vibe' -ExplicitRuntimeSkill 'vibe' -RouterTruthLevel 'shadow' -ShadowOnly $true -NonAuthoritative $false; "
+                f"$storage = New-VibeWorkspaceArtifactProjection -RepoRoot {_ps_single_quote(workspace_root_text)} -ArtifactRoot ''; "
+                "$route = [pscustomobject]@{ "
+                "selected = [pscustomobject]@{ pack_id = 'runtime-governor'; skill = 'systematic-debugging' }; "
+                "route_mode = 'confirm_required'; "
+                "route_reason = 'fixture'; "
+                "confidence = 0.75; "
+                "truth_level = 'shadow'; "
+                "degradation_state = 'none'; "
+                "non_authoritative = $false; "
+                "fallback_active = $false; "
+                "hazard_alert_required = $true; "
+                "unattended_override_applied = $false; "
+                "custom_admission = [pscustomobject]@{ status = 'admitted'; target_root = '/tmp/custom'; admitted_candidates = @([pscustomobject]@{ skill_id = 'systematic-debugging' }, [pscustomobject]@{ skill_id = 'think-harder' }) } "
+                "}; "
+                "$runtime = [pscustomobject]@{ host_adapter = [pscustomobject]@{ requested_id = 'openclaw'; id = 'openclaw'; status = 'preview'; install_mode = 'scaffold'; check_mode = 'audit'; bootstrap_mode = 'bounded' }; host_closure = [pscustomobject]@{ path = '/tmp/closure.json' } }; "
+                "$dispatch = [pscustomobject]@{ approved_dispatch = @([pscustomobject]@{ skill_id = 'systematic-debugging' }); local_specialist_suggestions = @([pscustomobject]@{ skill_id = 'think-harder' }); escalation_required = $true; escalation_status = 'pending_root_approval' }; "
+                "$policy = [pscustomobject]@{ freeze_before_requirement_doc = $true; child_specialist_suggestion_contract = [pscustomobject]@{ approval_owner = 'root_vibe'; status = 'advisory_until_root_approval' } }; "
+                "$packet = New-VibeRuntimeInputPacketProjection "
+                "-RunId 'run-7' "
+                "-Task 'debug task' "
+                "-Mode 'interactive_governed' "
+                "-InternalGrade 'XL' "
+                "-HierarchyState $hierarchyState "
+                "-HierarchyProjection $hierarchy "
+                "-AuthorityFlagsProjection $authority "
+                "-StorageProjection $storage "
+                "-RouteResult $route "
+                "-Runtime $runtime "
+                "-TaskType 'debug' "
+                "-RequestedSkill 'vibe' "
+                "-RouterHostId 'openclaw' "
+                "-RouterTargetRoot '/tmp/openclaw' "
+                "-Unattended:$false "
+                "-RouterScriptPath '/tmp/router.ps1' "
+                "-RuntimeSelectedSkill 'vibe' "
+                "-SpecialistRecommendations @([pscustomobject]@{ skill_id = 'systematic-debugging'; native_usage_required = $true }) "
+                "-SpecialistDispatch $dispatch "
+                "-OverlayDecisions @([pscustomobject]@{ name = 'danger'; decision = 'observe' }) "
+                "-Policy $policy; "
+                "$packet | ConvertTo-Json -Depth 20 }"
+            )
 
         self.assertEqual("runtime_input_freeze", payload["stage"])
         self.assertEqual("run-7", payload["run_id"])
@@ -354,90 +394,98 @@ class RuntimeContractSchemaTests(unittest.TestCase):
         self.assertTrue(payload["divergence_shadow"]["skill_mismatch"])
         self.assertEqual("openclaw", payload["host_adapter"]["requested_host_id"])
         self.assertEqual("openclaw", payload["host_adapter"]["effective_host_id"])
-        self.assertEqual("/tmp/workspace", payload["storage"]["workspace_root"])
-        self.assertEqual("/tmp/workspace/.vibeskills", payload["storage"]["workspace_sidecar_root"])
-        self.assertEqual("/tmp/workspace/.vibeskills", payload["storage"]["artifact_root"])
+        self.assertEqual(workspace_root_text, payload["storage"]["workspace_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["storage"]["workspace_sidecar_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["storage"]["artifact_root"])
         self.assertEqual("workspace_sidecar_default", payload["storage"]["artifact_root_source"])
-        self.assertEqual("/tmp/workspace/.vibeskills/project.json", payload["storage"]["project_descriptor_path"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills/project.json", payload["storage"]["project_descriptor_path"])
         self.assertTrue(payload["provenance"]["freeze_before_requirement_doc"])
 
     def test_runtime_summary_projection_preserves_public_contract_shape(self) -> None:
-        payload = run_ps_json(
-            "& { "
-            f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
-            "$hierarchyState = [pscustomobject]@{ "
-            "governance_scope = 'child'; "
-            "root_run_id = 'root-9'; "
-            "parent_run_id = 'parent-9'; "
-            "parent_unit_id = 'unit-9'; "
-            "inherited_requirement_doc_path = '/tmp/req.md'; "
-            "inherited_execution_plan_path = '/tmp/plan.md' "
-            "}; "
-            "$artifacts = New-VibeRuntimeSummaryArtifactProjection "
-            "-SkeletonReceiptPath '/tmp/skeleton.json' "
-            "-RuntimeInputPacketPath '/tmp/runtime-input.json' "
-            "-IntentContractPath '/tmp/intent.json' "
-            "-RequirementDocPath '/tmp/req.md' "
-            "-RequirementReceiptPath '/tmp/req-receipt.json' "
-            "-ExecutionPlanPath '/tmp/plan.md' "
-            "-ExecutionPlanReceiptPath '/tmp/plan-receipt.json' "
-            "-ExecuteReceiptPath '/tmp/execute.json' "
-            "-ExecutionManifestPath '/tmp/manifest.json' "
-            "-ExecutionTopologyPath '/tmp/topology.json' "
-            "-BenchmarkProofManifestPath '/tmp/proof.json' "
-            "-CleanupReceiptPath '/tmp/cleanup.json' "
-            "-DeliveryAcceptanceReportPath '/tmp/delivery.json' "
-            "-DeliveryAcceptanceMarkdownPath '/tmp/delivery.md' "
-            "-MemoryActivationReportPath '/tmp/memory.json' "
-            "-MemoryActivationMarkdownPath '/tmp/memory.md'; "
-            "$relative = [pscustomobject]@{ "
-            "skeleton_receipt = 'outputs/runtime/vibe-sessions/run/skeleton.json'; "
-            "runtime_input_packet = 'outputs/runtime/vibe-sessions/run/runtime-input.json'; "
-            "intent_contract = 'outputs/runtime/vibe-sessions/run/intent.json'; "
-            "requirement_doc = 'docs/requirements/req.md'; "
-            "requirement_receipt = 'outputs/runtime/vibe-sessions/run/req-receipt.json'; "
-            "execution_plan = 'docs/plans/plan.md'; "
-            "execution_plan_receipt = 'outputs/runtime/vibe-sessions/run/plan-receipt.json'; "
-            "execute_receipt = 'outputs/runtime/vibe-sessions/run/execute.json'; "
-            "execution_manifest = 'outputs/runtime/vibe-sessions/run/manifest.json'; "
-            "execution_topology = 'outputs/runtime/vibe-sessions/run/topology.json'; "
-            "benchmark_proof_manifest = 'outputs/runtime/vibe-sessions/run/proof.json'; "
-            "cleanup_receipt = 'outputs/runtime/vibe-sessions/run/cleanup.json'; "
-            "delivery_acceptance_report = 'outputs/runtime/vibe-sessions/run/delivery.json'; "
-            "delivery_acceptance_markdown = 'outputs/runtime/vibe-sessions/run/delivery.md'; "
-            "memory_activation_report = 'outputs/runtime/vibe-sessions/run/memory.json'; "
-            "memory_activation_markdown = 'outputs/runtime/vibe-sessions/run/memory.md' "
-            "}; "
-            "$memory = [pscustomobject]@{ "
-            "policy = [pscustomobject]@{ mode = 'shadow'; routing_contract = 'advisory_first_post_route_only' }; "
-            "summary = [pscustomobject]@{ fallback_event_count = 2; artifact_count = 4; budget_guard_respected = $true } "
-            "}; "
-            "$delivery = [pscustomobject]@{ "
-            "summary = [pscustomobject]@{ gate_result = 'PASS'; completion_language_allowed = $true; readiness_state = 'passing'; manual_review_layer_count = 0; failing_layer_count = 0 } "
-            "}; "
-            "$storage = [pscustomobject]@{ "
-            "workspace_root = '/tmp/workspace'; "
-            "workspace_sidecar_root = '/tmp/workspace/.vibeskills'; "
-            "project_descriptor_path = '/tmp/workspace/.vibeskills/project.json'; "
-            "artifact_root = '/tmp/workspace/.vibeskills'; "
-            "artifact_root_source = 'workspace_sidecar_default'; "
-            "default_workspace_sidecar_artifact_root = $true; "
-            "host_sidecar_root = '/tmp/openclaw/.vibeskills' "
-            "}; "
-            "$result = New-VibeRuntimeSummaryProjection "
-            "-RunId 'run-9' "
-            "-Mode 'interactive_governed' "
-            "-Task 'task-9' "
-            "-ArtifactRoot '/tmp/root' "
-            "-SessionRoot '/tmp/root/outputs/runtime/vibe-sessions/run-9' "
-            "-HierarchyState $hierarchyState "
-            "-Artifacts $artifacts "
-            "-RelativeArtifacts $relative "
-            "-StorageProjection $storage "
-            "-MemoryActivationReport $memory "
-            "-DeliveryAcceptanceReport $delivery; "
-            "$result | ConvertTo-Json -Depth 20 }"
-        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            host_root = Path(tempdir) / "openclaw"
+            root_path = Path(tempdir) / "root"
+            workspace_root_text = str(workspace_root.resolve())
+            host_root_text = str(host_root.resolve())
+            root_path_text = str(root_path.resolve())
+
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$hierarchyState = [pscustomobject]@{ "
+                "governance_scope = 'child'; "
+                "root_run_id = 'root-9'; "
+                "parent_run_id = 'parent-9'; "
+                "parent_unit_id = 'unit-9'; "
+                "inherited_requirement_doc_path = '/tmp/req.md'; "
+                "inherited_execution_plan_path = '/tmp/plan.md' "
+                "}; "
+                "$artifacts = New-VibeRuntimeSummaryArtifactProjection "
+                "-SkeletonReceiptPath '/tmp/skeleton.json' "
+                "-RuntimeInputPacketPath '/tmp/runtime-input.json' "
+                "-IntentContractPath '/tmp/intent.json' "
+                "-RequirementDocPath '/tmp/req.md' "
+                "-RequirementReceiptPath '/tmp/req-receipt.json' "
+                "-ExecutionPlanPath '/tmp/plan.md' "
+                "-ExecutionPlanReceiptPath '/tmp/plan-receipt.json' "
+                "-ExecuteReceiptPath '/tmp/execute.json' "
+                "-ExecutionManifestPath '/tmp/manifest.json' "
+                "-ExecutionTopologyPath '/tmp/topology.json' "
+                "-BenchmarkProofManifestPath '/tmp/proof.json' "
+                "-CleanupReceiptPath '/tmp/cleanup.json' "
+                "-DeliveryAcceptanceReportPath '/tmp/delivery.json' "
+                "-DeliveryAcceptanceMarkdownPath '/tmp/delivery.md' "
+                "-MemoryActivationReportPath '/tmp/memory.json' "
+                "-MemoryActivationMarkdownPath '/tmp/memory.md'; "
+                "$relative = [pscustomobject]@{ "
+                "skeleton_receipt = 'outputs/runtime/vibe-sessions/run/skeleton.json'; "
+                "runtime_input_packet = 'outputs/runtime/vibe-sessions/run/runtime-input.json'; "
+                "intent_contract = 'outputs/runtime/vibe-sessions/run/intent.json'; "
+                "requirement_doc = 'docs/requirements/req.md'; "
+                "requirement_receipt = 'outputs/runtime/vibe-sessions/run/req-receipt.json'; "
+                "execution_plan = 'docs/plans/plan.md'; "
+                "execution_plan_receipt = 'outputs/runtime/vibe-sessions/run/plan-receipt.json'; "
+                "execute_receipt = 'outputs/runtime/vibe-sessions/run/execute.json'; "
+                "execution_manifest = 'outputs/runtime/vibe-sessions/run/manifest.json'; "
+                "execution_topology = 'outputs/runtime/vibe-sessions/run/topology.json'; "
+                "benchmark_proof_manifest = 'outputs/runtime/vibe-sessions/run/proof.json'; "
+                "cleanup_receipt = 'outputs/runtime/vibe-sessions/run/cleanup.json'; "
+                "delivery_acceptance_report = 'outputs/runtime/vibe-sessions/run/delivery.json'; "
+                "delivery_acceptance_markdown = 'outputs/runtime/vibe-sessions/run/delivery.md'; "
+                "memory_activation_report = 'outputs/runtime/vibe-sessions/run/memory.json'; "
+                "memory_activation_markdown = 'outputs/runtime/vibe-sessions/run/memory.md' "
+                "}; "
+                "$memory = [pscustomobject]@{ "
+                "policy = [pscustomobject]@{ mode = 'shadow'; routing_contract = 'advisory_first_post_route_only' }; "
+                "summary = [pscustomobject]@{ fallback_event_count = 2; artifact_count = 4; budget_guard_respected = $true } "
+                "}; "
+                "$delivery = [pscustomobject]@{ "
+                "summary = [pscustomobject]@{ gate_result = 'PASS'; completion_language_allowed = $true; readiness_state = 'passing'; manual_review_layer_count = 0; failing_layer_count = 0 } "
+                "}; "
+                "$storage = [pscustomobject]@{ "
+                f"workspace_root = {_ps_single_quote(workspace_root_text)}; "
+                f"workspace_sidecar_root = {_ps_single_quote(workspace_root_text + '/.vibeskills')}; "
+                f"project_descriptor_path = {_ps_single_quote(workspace_root_text + '/.vibeskills/project.json')}; "
+                f"artifact_root = {_ps_single_quote(workspace_root_text + '/.vibeskills')}; "
+                "artifact_root_source = 'workspace_sidecar_default'; "
+                "default_workspace_sidecar_artifact_root = $true; "
+                f"host_sidecar_root = {_ps_single_quote(host_root_text + '/.vibeskills')} "
+                "}; "
+                "$result = New-VibeRuntimeSummaryProjection "
+                "-RunId 'run-9' "
+                "-Mode 'interactive_governed' "
+                "-Task 'task-9' "
+                f"-ArtifactRoot {_ps_single_quote(root_path_text)} "
+                f"-SessionRoot {_ps_single_quote(root_path_text + '/outputs/runtime/vibe-sessions/run-9')} "
+                "-HierarchyState $hierarchyState "
+                "-Artifacts $artifacts "
+                "-RelativeArtifacts $relative "
+                "-StorageProjection $storage "
+                "-MemoryActivationReport $memory "
+                "-DeliveryAcceptanceReport $delivery; "
+                "$result | ConvertTo-Json -Depth 20 }"
+            )
 
         self.assertEqual("run-9", payload["run_id"])
         self.assertEqual("child", payload["governance_scope"])
@@ -465,8 +513,8 @@ class RuntimeContractSchemaTests(unittest.TestCase):
         self.assertTrue(payload["memory_activation"]["budget_guard_respected"])
         self.assertEqual("PASS", payload["delivery_acceptance"]["gate_result"])
         self.assertTrue(payload["delivery_acceptance"]["completion_language_allowed"])
-        self.assertEqual("/tmp/workspace", payload["storage"]["workspace_root"])
-        self.assertEqual("/tmp/workspace/.vibeskills", payload["storage"]["workspace_sidecar_root"])
+        self.assertEqual(workspace_root_text, payload["storage"]["workspace_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["storage"]["workspace_sidecar_root"])
         self.assertEqual("workspace_sidecar_default", payload["storage"]["artifact_root_source"])
         self.assertTrue(payload["storage"]["default_workspace_sidecar_artifact_root"])
 

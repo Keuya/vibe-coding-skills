@@ -18,7 +18,7 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = New-VibeRunId
 }
 
-$sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
+$sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
 $shouldExecuteGovernanceCleanup = [bool]$ExecuteGovernanceCleanup
 $shouldExecuteBoundedDefaultCleanup = $false
 foreach ($defaultMode in @($runtime.cleanup_policy.bounded_default_modes)) {

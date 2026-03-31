@@ -269,6 +269,16 @@ def sidecar_has_workspace_project(target_root: Path) -> bool:
     return (target_root / ".vibeskills" / "project.json").exists()
 
 
+def sidecar_has_workspace_runtime_artifacts(target_root: Path) -> bool:
+    sidecar_root = target_root / ".vibeskills"
+    if not sidecar_root.exists():
+        return False
+    for runtime_root in ("docs", "outputs"):
+        if (sidecar_root / runtime_root).exists():
+            return True
+    return False
+
+
 def sidecar_has_host_markers(target_root: Path) -> bool:
     sidecar_root = target_root / ".vibeskills"
     if not sidecar_root.exists():
@@ -384,7 +394,12 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
 
     managed_files.update(collect_host_sidecar_paths(target_root, ledger, closure))
 
-    if sidecar_has_host_markers(target_root) and not sidecar_has_workspace_project(target_root):
+    workspace_sidecar_boundary_present = (
+        sidecar_has_workspace_project(target_root)
+        or sidecar_has_workspace_runtime_artifacts(target_root)
+    )
+
+    if sidecar_has_host_markers(target_root) and not workspace_sidecar_boundary_present:
         deleted_dirs.add(".vibeskills")
 
     if not ownership_source:
