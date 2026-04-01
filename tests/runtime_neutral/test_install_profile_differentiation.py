@@ -240,6 +240,7 @@ class InstallProfileDifferentiationTests(unittest.TestCase):
             self.assertEqual(["default-full"], rerun_ledger["managed_catalog_profiles"])
             self.assertIn(REPRESENTATIVE_NON_CORE_SKILL, rerun_ledger["managed_catalog_skill_names"])
             self.assertEqual(set(first_ledger["managed_catalog_skill_names"]), set(rerun_ledger["managed_catalog_skill_names"]))
+            self.assertEqual([], rerun_ledger["external_fallback_used"])
 
     def test_python_installed_runtime_reruns_do_not_absorb_or_prune_foreign_skill_dirs(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -300,6 +301,27 @@ class InstallProfileDifferentiationTests(unittest.TestCase):
             self.assertTrue(foreign_skill_root.exists())
             self.assertNotIn("foreign-user-skill", rerun_minimal_ledger["managed_catalog_skill_names"])
             self.assertNotIn("foreign-user-skill", rerun_minimal_ledger["managed_skill_names"])
+
+    def test_powershell_installed_runtime_rerun_ignores_prefix_masquerading_created_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            target_root = Path(tempdir) / "full-root"
+            target_root.mkdir(parents=True, exist_ok=True)
+
+            self.install_profile(target_root, profile="full")
+            foreign_skill_root = target_root / "skills" / "foreign-user-skill"
+            foreign_skill_root.mkdir(parents=True, exist_ok=True)
+            (foreign_skill_root / "SKILL.md").write_text("---\nname: foreign-user-skill\n---\n", encoding="utf-8")
+
+            ledger_path = target_root / ".vibeskills" / "install-ledger.json"
+            ledger = load_json(ledger_path)
+            masquerade = Path(str(target_root / "skills") + "foreign-user-skill") / "marker.txt"
+            ledger["created_paths"] = list(ledger.get("created_paths") or []) + [str(masquerade)]
+            ledger_path.write_text(json.dumps(ledger, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+            rerun_ledger = self.rerun_powershell_installer_from_installed_runtime(target_root, profile="full")
+
+            self.assertTrue(foreign_skill_root.exists())
+            self.assertNotIn("foreign-user-skill", rerun_ledger["managed_skill_names"])
 
     def test_python_installed_runtime_rejects_non_leaf_catalog_skill_names_from_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

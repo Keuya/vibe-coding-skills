@@ -1574,7 +1574,7 @@ def install_skill_catalog(repo_root: Path, target_root: Path, catalog_profile_id
     missing = set()
 
     for name in sorted(desired_skill_names):
-        source_candidates = [(root / name, same_path(root, bundled_root) is False) for root in source_roots[:1]]
+        source_candidates = [(source_roots[0] / name, False)]
         if allow_fallback:
             source_candidates.extend((root / name, True) for root in source_roots[1:])
         ensure_skill_present(

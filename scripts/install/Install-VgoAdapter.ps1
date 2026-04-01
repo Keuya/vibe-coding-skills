@@ -277,11 +277,12 @@ function Get-VgoManagedSkillNamesFromLedger {
         } catch {
             continue
         }
-        if (-not $candidate.StartsWith($skillsRoot, [System.StringComparison]::Ordinal)) {
-            continue
-        }
-        $relative = $candidate.Substring($skillsRoot.Length).TrimStart('\', '/')
-        if ([string]::IsNullOrWhiteSpace($relative)) {
+        $relative = [System.IO.Path]::GetRelativePath($skillsRoot, $candidate)
+        if ([string]::IsNullOrWhiteSpace($relative) -or
+            $relative -eq '.' -or
+            $relative -eq '..' -or
+            $relative.StartsWith("..\", [System.StringComparison]::Ordinal) -or
+            $relative.StartsWith("../", [System.StringComparison]::Ordinal)) {
             continue
         }
         $firstPart = @($relative -split '[\\/]') | Select-Object -First 1
@@ -325,6 +326,156 @@ function Remove-VgoPreviouslyManagedSkillDirs {
         if (Test-Path -LiteralPath $skillRoot -PathType Container) {
             Remove-Item -LiteralPath $skillRoot -Recurse -Force
         }
+    }
+}
+
+function Get-VgoPathRelativeToRoot {
+    param(
+        [string]$Root,
+        [string]$Candidate
+    )
+
+    try {
+        $relative = [System.IO.Path]::GetRelativePath($Root, $Candidate)
+    } catch {
+        return $null
+    }
+
+    if ([string]::IsNullOrWhiteSpace($relative) -or
+        $relative -eq '..' -or
+        $relative.StartsWith("..\", [System.StringComparison]::Ordinal) -or
+        $relative.StartsWith("../", [System.StringComparison]::Ordinal)) {
+        return $null
+    }
+    return $relative
+}
+
+function Add-VgoPayloadSummaryOwnedTreeFiles {
+    param(
+        [System.Collections.Generic.HashSet[string]]$OwnedFiles,
+        [string]$TargetRoot,
+        [string]$PathValue
+    )
+
+    try {
+        $candidatePath = [System.IO.Path]::GetFullPath($PathValue)
+    } catch {
+        return
+    }
+    if (-not (Test-Path -LiteralPath $candidatePath -PathType Container)) {
+        return
+    }
+    if ($null -eq (Get-VgoPathRelativeToRoot -Root $TargetRoot -Candidate $candidatePath)) {
+        return
+    }
+
+    foreach ($filePath in @(Get-ChildItem -LiteralPath $candidatePath -Recurse -File -Force -ErrorAction SilentlyContinue)) {
+        try {
+            $resolved = [System.IO.Path]::GetFullPath($filePath.FullName)
+        } catch {
+            continue
+        }
+        if ($null -ne (Get-VgoPathRelativeToRoot -Root $TargetRoot -Candidate $resolved)) {
+            $OwnedFiles.Add($resolved) | Out-Null
+        }
+    }
+}
+
+function Add-VgoPayloadSummaryOwnedFile {
+    param(
+        [System.Collections.Generic.HashSet[string]]$OwnedFiles,
+        [string]$TargetRoot,
+        [string]$PathValue
+    )
+
+    try {
+        $candidatePath = [System.IO.Path]::GetFullPath($PathValue)
+    } catch {
+        return
+    }
+    if (-not (Test-Path -LiteralPath $candidatePath -PathType Leaf)) {
+        return
+    }
+    if ($null -eq (Get-VgoPathRelativeToRoot -Root $TargetRoot -Candidate $candidatePath)) {
+        return
+    }
+    $OwnedFiles.Add($candidatePath) | Out-Null
+}
+
+function Get-VgoInstallLedgerPayloadSummary {
+    param(
+        [hashtable]$Ledger,
+        [string]$TargetRoot
+    )
+
+    $targetRootFull = [System.IO.Path]::GetFullPath($TargetRoot)
+    $skillsRootFull = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills'))
+    $managedSkillNames = @(Get-VgoManagedSkillNamesFromLedger -Ledger $Ledger -TargetRoot $TargetRoot)
+    $installedSkillNames = @(
+        foreach ($name in $managedSkillNames) {
+            if ($name.StartsWith('.', [System.StringComparison]::Ordinal)) {
+                continue
+            }
+            $skillRoot = Join-Path $TargetRoot ("skills\" + $name)
+            if (Test-Path -LiteralPath $skillRoot -PathType Container) {
+                $name
+            }
+        }
+    ) | Sort-Object -Unique
+
+    $managedSkillSet = New-Object System.Collections.Generic.HashSet[string]([System.StringComparer]::Ordinal)
+    foreach ($name in @($managedSkillNames)) {
+        if (-not [string]::IsNullOrWhiteSpace([string]$name)) {
+            $managedSkillSet.Add([string]$name) | Out-Null
+        }
+    }
+
+    $ownedFiles = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($name in @($managedSkillNames)) {
+        if ([string]::IsNullOrWhiteSpace([string]$name)) {
+            continue
+        }
+        Add-VgoPayloadSummaryOwnedTreeFiles -OwnedFiles $ownedFiles -TargetRoot $targetRootFull -PathValue (Join-Path $TargetRoot ("skills\" + $name))
+    }
+
+    foreach ($rawPath in @($Ledger['created_paths'])) {
+        $text = [string]$rawPath
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            continue
+        }
+        try {
+            $candidatePath = [System.IO.Path]::GetFullPath($text)
+        } catch {
+            continue
+        }
+        if (Test-Path -LiteralPath $candidatePath -PathType Container) {
+            if ($candidatePath -eq $targetRootFull -or $candidatePath -eq $skillsRootFull) {
+                continue
+            }
+            $candidateParent = [System.IO.Path]::GetDirectoryName($candidatePath)
+            if ($candidateParent -eq $skillsRootFull -and -not $managedSkillSet.Contains([System.IO.Path]::GetFileName($candidatePath))) {
+                continue
+            }
+            Add-VgoPayloadSummaryOwnedTreeFiles -OwnedFiles $ownedFiles -TargetRoot $targetRootFull -PathValue $candidatePath
+            continue
+        }
+        Add-VgoPayloadSummaryOwnedFile -OwnedFiles $ownedFiles -TargetRoot $targetRootFull -PathValue $candidatePath
+    }
+
+    foreach ($rawPath in @($Ledger['managed_json_paths'])) {
+        Add-VgoPayloadSummaryOwnedFile -OwnedFiles $ownedFiles -TargetRoot $targetRootFull -PathValue ([string]$rawPath)
+    }
+    foreach ($rawPath in @($Ledger['generated_from_template_if_absent'])) {
+        Add-VgoPayloadSummaryOwnedFile -OwnedFiles $ownedFiles -TargetRoot $targetRootFull -PathValue ([string]$rawPath)
+    }
+    foreach ($rawPath in @($Ledger['specialist_wrapper_paths'])) {
+        Add-VgoPayloadSummaryOwnedFile -OwnedFiles $ownedFiles -TargetRoot $targetRootFull -PathValue ([string]$rawPath)
+    }
+
+    return [ordered]@{
+        installed_skill_count = @($installedSkillNames).Count
+        installed_skill_names = @($installedSkillNames)
+        installed_file_count = $ownedFiles.Count
     }
 }
 
@@ -1207,6 +1358,7 @@ function Write-VgoInstallLedger {
 
     $ledgerPath = Join-Path $TargetRoot '.vibeskills\install-ledger.json'
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ledgerPath) | Out-Null
+    Add-VgoCreatedPath -Path $ledgerPath
 
     $managedSkillNames = @($RuntimeManagedSkillNames + $CatalogManagedSkillNames | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Sort-Object -CaseSensitive -Unique)
 
@@ -1239,6 +1391,8 @@ function Write-VgoInstallLedger {
         ownership_source = 'install-ledger'
     }
 
+    $ledger | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $ledgerPath -Encoding UTF8
+    $ledger['payload_summary'] = Get-VgoInstallLedgerPayloadSummary -Ledger $ledger -TargetRoot $TargetRoot
     $ledger | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $ledgerPath -Encoding UTF8
     return [System.IO.Path]::GetFullPath($ledgerPath)
 }

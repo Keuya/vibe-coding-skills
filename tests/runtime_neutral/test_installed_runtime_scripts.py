@@ -808,6 +808,51 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertIn("payload_summary", ledger)
         self.assertGreater(ledger["payload_summary"]["installed_file_count"], 0)
 
+    def test_direct_powershell_adapter_install_writes_payload_summary_without_python_on_path(self) -> None:
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
+
+        target_root = self.root / "pwsh-direct-adapter-target"
+        target_root.mkdir(parents=True, exist_ok=True)
+        empty_bin = self.root / "empty-bin-direct-adapter"
+        empty_bin.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env["PATH"] = str(empty_bin)
+
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(REPO_ROOT / "scripts" / "install" / "Install-VgoAdapter.ps1"),
+                "-RepoRoot",
+                str(REPO_ROOT),
+                "-TargetRoot",
+                str(target_root),
+                "-HostId",
+                "codex",
+                "-Profile",
+                "full",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+        )
+
+        ledger = json.loads((target_root / ".vibeskills" / "install-ledger.json").read_text(encoding="utf-8"))
+        self.assertIn("payload_summary", ledger)
+        self.assertEqual(
+            sum(1 for candidate in target_root.rglob("*") if candidate.is_file()),
+            ledger["payload_summary"]["installed_file_count"],
+        )
+        self.assertIn("vibe", ledger["payload_summary"]["installed_skill_names"])
+        self.assertIn("scikit-learn", ledger["payload_summary"]["installed_skill_names"])
+        self.assertEqual("", result.stderr)
+
     def test_powershell_install_payload_summary_ignores_preexisting_foreign_host_content(self) -> None:
         powershell = resolve_powershell()
         if powershell is None:
