@@ -240,6 +240,39 @@ function Resolve-SkillEntry {
         }
     }
 
+    $canonicalSkillManifestPath = Join-Path $RepoRoot ("core/skills/{0}/skill.json" -f $SkillId)
+    if (Test-Path -LiteralPath $canonicalSkillManifestPath) {
+        $canonicalSkillManifest = Get-JsonDocument -Path $canonicalSkillManifestPath
+        $sourceOfTruth = if ($canonicalSkillManifest.PSObject.Properties.Name -contains 'source_of_truth') { $canonicalSkillManifest.source_of_truth } else { $null }
+        $sourceKind = if ($null -ne $sourceOfTruth -and $sourceOfTruth.PSObject.Properties.Name -contains 'kind') { [string]$sourceOfTruth.kind } else { '' }
+        $sourcePathSpec = if ($null -ne $sourceOfTruth -and $sourceOfTruth.PSObject.Properties.Name -contains 'path') { [string]$sourceOfTruth.path } else { '' }
+        if ($sourceKind -eq 'canonical-skill' -and -not [string]::IsNullOrWhiteSpace($sourcePathSpec)) {
+            $resolvedSourcePath = Resolve-ManagedPath -PathSpec $sourcePathSpec -RepoRoot $RepoRoot
+            $skillDirectory = $resolvedSourcePath
+            $skillMd = $resolvedSourcePath
+            if (Test-Path -LiteralPath $resolvedSourcePath -PathType Leaf) {
+                $skillDirectory = Split-Path -Parent $resolvedSourcePath
+                $skillMd = $resolvedSourcePath
+            } else {
+                $leafName = [System.IO.Path]::GetFileName($resolvedSourcePath)
+                if ($leafName.Equals('SKILL.md', [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $skillDirectory = Split-Path -Parent $resolvedSourcePath
+                    $skillMd = $resolvedSourcePath
+                } else {
+                    $skillDirectory = $resolvedSourcePath
+                    $skillMd = Join-Path $skillDirectory 'SKILL.md'
+                }
+            }
+
+            return [pscustomobject]@{
+                found = (Test-Path -LiteralPath $skillDirectory)
+                root_id = 'canonical_repo_skill'
+                directory = $skillDirectory
+                skill_md = $skillMd
+            }
+        }
+    }
+
     return [pscustomobject]@{
         found = $false
         root_id = $null
@@ -374,11 +407,12 @@ function Validate-RoutedSkillReference {
     Add-Assertion -Condition $skillMdExists -Message "$AssertionPrefix skill '$SkillId' has SKILL.md" | Out-Null
 
     if ($RequireCanonicalTopLevel) {
-        Add-Assertion -Condition ($resolvedSkill.root_id -eq 'user_skills') -Message "$AssertionPrefix skill '$SkillId' resolves to canonical top-level skill root" | Out-Null
+        Add-Assertion -Condition (@('user_skills', 'canonical_repo_skill') -contains [string]$resolvedSkill.root_id) -Message "$AssertionPrefix skill '$SkillId' resolves to canonical top-level skill root" | Out-Null
     }
 
     if ($RequireLockEntry) {
-        $inLock = ($null -ne $LockSet -and $LockSet.Contains($SkillId))
+        $needsBundledLockEntry = ([string]$resolvedSkill.root_id -eq 'bundled_skills')
+        $inLock = ((-not $needsBundledLockEntry) -or ($null -ne $LockSet -and $LockSet.Contains($SkillId)))
         Add-Assertion -Condition $inLock -Message "$AssertionPrefix skill '$SkillId' present in skills-lock" | Out-Null
     }
 

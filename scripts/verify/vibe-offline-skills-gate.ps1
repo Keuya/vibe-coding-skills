@@ -102,6 +102,63 @@ function Get-SkillDirHash {
     }
 }
 
+function Get-CanonicalSkillMap {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepoRoot
+    )
+
+    $map = @{}
+    $coreSkillsRoot = Join-Path $RepoRoot 'core\skills'
+    if (-not (Test-Path -LiteralPath $coreSkillsRoot)) {
+        return $map
+    }
+
+    $skillDirs = @(Get-ChildItem -LiteralPath $coreSkillsRoot -Force -Directory | Sort-Object Name)
+    foreach ($dir in $skillDirs) {
+        $skillJsonPath = Join-Path $dir.FullName 'skill.json'
+        if (-not (Test-Path -LiteralPath $skillJsonPath)) {
+            continue
+        }
+
+        $skillJson = Get-Content -LiteralPath $skillJsonPath -Raw | ConvertFrom-Json
+        $source = if ($skillJson.PSObject.Properties.Name -contains 'source_of_truth') { $skillJson.source_of_truth } else { $null }
+        $sourceKind = if ($null -ne $source -and $source.PSObject.Properties.Name -contains 'kind') { [string]$source.kind } else { '' }
+        $sourcePathSpec = if ($null -ne $source -and $source.PSObject.Properties.Name -contains 'path') { [string]$source.path } else { '' }
+        $skillId = if ($skillJson.PSObject.Properties.Name -contains 'skill_id') { [string]$skillJson.skill_id } else { [string]$dir.Name }
+
+        if ($sourceKind -ne 'canonical-skill' -or [string]::IsNullOrWhiteSpace($skillId) -or [string]::IsNullOrWhiteSpace($sourcePathSpec)) {
+            continue
+        }
+
+        $resolvedSourcePath = Join-Path $RepoRoot ($sourcePathSpec.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+        $skillDirectory = $resolvedSourcePath
+        $skillMd = $resolvedSourcePath
+        if (Test-Path -LiteralPath $resolvedSourcePath -PathType Leaf) {
+            $skillDirectory = Split-Path -Parent $resolvedSourcePath
+            $skillMd = $resolvedSourcePath
+        } else {
+            $leafName = [System.IO.Path]::GetFileName($resolvedSourcePath)
+            if ($leafName.Equals('SKILL.md', [System.StringComparison]::OrdinalIgnoreCase)) {
+                $skillDirectory = Split-Path -Parent $resolvedSourcePath
+                $skillMd = $resolvedSourcePath
+            } else {
+                $skillDirectory = $resolvedSourcePath
+                $skillMd = Join-Path $skillDirectory 'SKILL.md'
+            }
+        }
+
+        $map[$skillId] = [pscustomobject]@{
+            skill_id = $skillId
+            source_kind = $sourceKind
+            directory = $skillDirectory
+            skill_md = $skillMd
+        }
+    }
+
+    return $map
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 if ([string]::IsNullOrWhiteSpace($SkillsRoot)) {
     $SkillsRoot = Join-Path $repoRoot "bundled\skills"
@@ -125,6 +182,11 @@ if (-not (Test-Path -LiteralPath $SkillsLockPath)) {
 
 $manifest = Get-Content -LiteralPath $PackManifestPath -Raw | ConvertFrom-Json
 $lock = Get-Content -LiteralPath $SkillsLockPath -Raw | ConvertFrom-Json
+$canonicalSkillMap = Get-CanonicalSkillMap -RepoRoot $repoRoot
+$canonicalSkillSet = New-CaseInsensitiveSet
+foreach ($canonicalSkillId in @($canonicalSkillMap.Keys)) {
+    [void]$canonicalSkillSet.Add([string]$canonicalSkillId)
+}
 
 $requiredSet = New-CaseInsensitiveSet
 $alwaysRequired = @(
@@ -182,8 +244,18 @@ foreach ($item in $lock.skills) {
 }
 
 $missingRequired = @()
+$missingCanonicalRequired = @()
 $missingRequiredSkillMd = @()
 foreach ($name in $requiredSet | Sort-Object) {
+    if ($canonicalSkillSet.Contains($name)) {
+        $canonicalSkill = $canonicalSkillMap[$name]
+        $canonicalSkillMdPath = if ($null -ne $canonicalSkill) { [string]$canonicalSkill.skill_md } else { '' }
+        if ([string]::IsNullOrWhiteSpace($canonicalSkillMdPath) -or -not (Test-Path -LiteralPath $canonicalSkillMdPath)) {
+            $missingCanonicalRequired += $name
+        }
+        continue
+    }
+
     if (-not $presentSet.Contains($name)) {
         $missingRequired += $name
         continue
@@ -197,6 +269,9 @@ foreach ($name in $requiredSet | Sort-Object) {
 
 $missingInLock = @()
 foreach ($name in $requiredSet | Sort-Object) {
+    if ($canonicalSkillSet.Contains($name)) {
+        continue
+    }
     if (-not $lockSet.Contains($name)) {
         $missingInLock += $name
     }
@@ -262,6 +337,7 @@ if (-not $SkipHash) {
 Write-Host "=== VCO Offline Skills Gate ==="
 Write-Host ("skills_root={0}" -f $SkillsRoot)
 Write-Host ("required_skills={0}" -f $requiredSet.Count)
+Write-Host ("canonical_required_skills={0}" -f $canonicalSkillSet.Count)
 Write-Host ("present_skills={0}" -f $presentSet.Count)
 Write-Host ("lock_skills={0}" -f $lockSet.Count)
 Write-Host ("skip_hash={0}" -f $SkipHash.IsPresent)
@@ -271,6 +347,11 @@ $failed = $false
 if ($missingRequired.Count -gt 0) {
     $failed = $true
     Write-Host ("[FAIL] missing required routed skills: {0}" -f ($missingRequired -join ", ")) -ForegroundColor Red
+}
+
+if ($missingCanonicalRequired.Count -gt 0) {
+    $failed = $true
+    Write-Host ("[FAIL] missing required canonical skills: {0}" -f ($missingCanonicalRequired -join ", ")) -ForegroundColor Red
 }
 
 if ($missingRequiredSkillMd.Count -gt 0) {

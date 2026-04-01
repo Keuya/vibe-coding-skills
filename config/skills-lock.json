@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-03-18T01:37:56+08:00",
+  "generated_at": "2026-04-01T12:10:37+08:00",
   "source": "bundled/skills",
-  "skill_count": 340,
-  "total_bytes": 44157834.0,
+  "skill_count": 339,
+  "total_bytes": 24233983.0,
   "skills": [
     {
       "name": ".system",
@@ -2612,14 +2612,6 @@
       "bytes": 16032,
       "skill_md_hash": "afde8a69eb5735ef5250d21bcc2d6aafc8ac9f203e84d2d7f2e8fcbcdc0c1abe",
       "dir_hash": "62b6a88a5c03b87c642a58c6bb8407117155433c64e1fab12aee9f718cf46cd4"
-    },
-    {
-      "name": "vibe",
-      "relative_path": "bundled/skills/vibe",
-      "file_count": 1699,
-      "bytes": 19923851,
-      "skill_md_hash": "a793b18c7d982474ceae8220207f86c3d47aef3651ee48c21545a722a1ccda8d",
-      "dir_hash": "599b98e8fe03fa702a73ec1901fb296f9c854042d382cb9c2f4c59088923a593"
     },
     {
       "name": "video-studio",
