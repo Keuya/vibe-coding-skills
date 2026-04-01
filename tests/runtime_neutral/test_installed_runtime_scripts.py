@@ -451,7 +451,7 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertIn("Install done.", result.stdout)
         self.assertTrue((target_root / "hooks" / "write-guard.js").exists())
         self.assertEqual(
-            f"node {(target_root / 'hooks' / 'write-guard.js').resolve()}",
+            f'node "{(target_root / "hooks" / "write-guard.js").resolve()}"',
             settings["vibeskills"]["managed_hook_command"],
         )
 
@@ -464,6 +464,36 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         support_manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
         fresh_target = self.root / "traversal-target"
+        fresh_target.mkdir(parents=True, exist_ok=True)
+        installed_root = self.target_root / "skills" / "vibe"
+        result = subprocess.run(
+            [
+                "bash",
+                str(installed_root / "install.sh"),
+                "--host",
+                "codex",
+                "--profile",
+                "full",
+                "--target-root",
+                str(fresh_target),
+            ],
+            cwd=installed_root,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Invalid relative path", result.stderr or result.stdout)
+
+    def test_installed_runtime_rejects_traversing_catalog_root(self) -> None:
+        self.install_shell_runtime(host="codex")
+
+        support_manifest = self.target_root / ".vibeskills" / "runtime-support" / "config" / "skill-catalog-packaging.json"
+        payload = json.loads(support_manifest.read_text(encoding="utf-8"))
+        payload["catalog_root"] = "../outside-skills"
+        support_manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        fresh_target = self.root / "catalog-root-traversal-target"
         fresh_target.mkdir(parents=True, exist_ok=True)
         installed_root = self.target_root / "skills" / "vibe"
         result = subprocess.run(
@@ -605,9 +635,117 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertTrue(target_hook.exists())
         settings = json.loads((target_root / "settings.json").read_text(encoding="utf-8"))
         self.assertEqual(
-            f"node {target_hook.resolve()}",
+            f'node "{target_hook.resolve()}"',
             settings["vibeskills"]["managed_hook_command"],
         )
+
+    def test_powershell_installed_runtime_rejects_traversing_catalog_root_without_python_on_path(self) -> None:
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
+
+        self.install_shell_runtime(host="codex")
+
+        support_manifest = self.target_root / ".vibeskills" / "runtime-support" / "config" / "skill-catalog-packaging.json"
+        payload = json.loads(support_manifest.read_text(encoding="utf-8"))
+        payload["catalog_root"] = "../outside-skills"
+        support_manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        empty_bin = self.root / "empty-bin-catalog-root"
+        empty_bin.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env["PATH"] = str(empty_bin)
+
+        installed_root = self.target_root / "skills" / "vibe"
+        fresh_target = self.root / "pwsh-catalog-root-traversal-target"
+        fresh_target.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(installed_root / "install.ps1"),
+                "-RepoRoot",
+                str(installed_root),
+                "-TargetRoot",
+                str(fresh_target),
+                "-HostId",
+                "codex",
+                "-Profile",
+                "full",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Invalid relative path", result.stderr or result.stdout)
+
+    def test_claude_managed_hook_command_quotes_spaceful_target_paths(self) -> None:
+        target_root = self.root / "claude target spaced"
+        target_root.mkdir(parents=True, exist_ok=True)
+
+        result = subprocess.run(
+            [
+                "bash",
+                str(REPO_ROOT / "install.sh"),
+                "--host",
+                "claude-code",
+                "--profile",
+                "full",
+                "--target-root",
+                str(target_root),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        settings = json.loads((target_root / "settings.json").read_text(encoding="utf-8"))
+        expected = f'node "{(target_root / "hooks" / "write-guard.js").resolve()}"'
+        self.assertIn("Install done.", result.stdout)
+        self.assertEqual(expected, settings["vibeskills"]["managed_hook_command"])
+
+    def test_powershell_claude_managed_hook_command_quotes_spaceful_target_paths_without_python_on_path(self) -> None:
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
+
+        target_root = self.root / "pwsh claude target spaced"
+        target_root.mkdir(parents=True, exist_ok=True)
+        empty_bin = self.root / "empty-bin-spaceful-hook"
+        empty_bin.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env["PATH"] = str(empty_bin)
+
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(REPO_ROOT / "install.ps1"),
+                "-HostId",
+                "claude-code",
+                "-Profile",
+                "full",
+                "-TargetRoot",
+                str(target_root),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+        )
+
+        settings = json.loads((target_root / "settings.json").read_text(encoding="utf-8"))
+        expected = f'node "{(target_root / "hooks" / "write-guard.js").resolve()}"'
+        self.assertIn("Installation complete.", result.stdout)
+        self.assertEqual(expected, settings["vibeskills"]["managed_hook_command"])
 
     def test_powershell_preview_guidance_cursor_install_does_not_materialize_claude_managed_settings(self) -> None:
         powershell = resolve_powershell()

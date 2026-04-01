@@ -662,7 +662,7 @@ def install_claude_managed_settings(repo_root: Path, target_root: Path) -> list[
         )
     copy_file(source_hook, hook_path)
 
-    hook_command = f"node {hook_path.resolve()}"
+    hook_command = f'node "{hook_path.resolve()}"'
     settings["vibeskills"] = {
         "managed": True,
         "host_id": "claude-code",
@@ -1076,7 +1076,12 @@ def load_skill_catalog_packaging(repo_root: Path, target_root: Path | None = Non
 
 
 def resolve_skill_catalog_root(repo_root: Path, catalog_packaging: dict) -> Path:
-    return repo_root / str(catalog_packaging.get("catalog_root") or "bundled/skills")
+    catalog_root_rel = safe_relative_contract_path(
+        catalog_packaging.get("catalog_root"),
+        default="bundled/skills",
+        field_name="catalog_root",
+    )
+    return repo_root / catalog_root_rel
 
 
 def resolve_installed_runtime_catalog_source(repo_root: Path) -> tuple[Path | None, set[str] | None]:

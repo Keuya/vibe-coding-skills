@@ -900,7 +900,7 @@ with open(settings_path, encoding='utf-8-sig') as fh:
     payload = json.load(fh)
 hooks = payload.get("hooks", {})
 entries = hooks.get("PreToolUse", [])
-expected = f"node {hook_path}"
+expected = f'node "{hook_path}"'
 for entry in entries:
     if not isinstance(entry, dict):
         continue

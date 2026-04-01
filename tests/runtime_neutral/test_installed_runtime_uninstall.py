@@ -209,7 +209,7 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         ]
         self.assertIn(user_hook_command, commands)
         self.assertIn(
-            f"node {(target_root / 'hooks' / 'write-guard.js').resolve()}",
+            f'node "{(target_root / "hooks" / "write-guard.js").resolve()}"',
             commands,
         )
 

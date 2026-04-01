@@ -684,7 +684,10 @@ function Get-VgoSkillCatalogRoot {
         [hashtable]$CatalogPackaging
     )
 
-    $catalogRootRel = if ($CatalogPackaging.ContainsKey('catalog_root')) { [string]$CatalogPackaging['catalog_root'] } else { 'bundled/skills' }
+    $catalogRootRel = Get-VgoSafeRelativeContractPath `
+        -Value $(if ($CatalogPackaging.ContainsKey('catalog_root')) { [string]$CatalogPackaging['catalog_root'] } else { $null }) `
+        -Default 'bundled/skills' `
+        -FieldName 'catalog_root'
     return (Join-Path $RepoRoot $catalogRootRel)
 }
 
@@ -1552,7 +1555,7 @@ function Install-ClaudeManagedSettings {
     }
     Add-VgoCreatedPath -Path $hookPath
 
-    $hookCommand = 'node ' + [System.IO.Path]::GetFullPath($hookPath)
+    $hookCommand = 'node "' + [System.IO.Path]::GetFullPath($hookPath) + '"'
     $settings['vibeskills'] = [ordered]@{
         managed = $true
         host_id = 'claude-code'
