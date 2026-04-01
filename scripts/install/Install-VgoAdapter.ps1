@@ -185,6 +185,46 @@ function Merge-JsonObject {
     $merged | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
+function Get-VgoSafeRelativeContractPath {
+    param(
+        [object]$Value,
+        [string]$Default,
+        [string]$FieldName
+    )
+
+    $raw = [string]$(if ($null -ne $Value) { $Value } else { $Default })
+    $raw = $raw.Trim()
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        $raw = $Default
+    }
+
+    $normalized = $raw.Replace('\', '/').Trim('/')
+    if ([System.IO.Path]::IsPathRooted($normalized)) {
+        throw "Invalid relative path for ${FieldName}: $raw"
+    }
+
+    $parts = @($normalized.Split('/') | Where-Object { $_ -ne '' })
+    if ($parts.Count -eq 0 -or @($parts | Where-Object { $_ -in @('.', '..') }).Count -gt 0) {
+        throw "Invalid relative path for ${FieldName}: $raw"
+    }
+
+    return (($parts -join '/'))
+}
+
+function Get-VgoSafeSkillName {
+    param(
+        [object]$Value,
+        [string]$FieldName
+    )
+
+    $name = [string]$Value
+    $name = $name.Trim()
+    if ([string]::IsNullOrWhiteSpace($name) -or $name.Contains('/') -or $name.Contains('\') -or $name -in @('.', '..')) {
+        throw "Invalid skill name in ${FieldName}: $Value"
+    }
+    return $name
+}
+
 function Test-VgoSkillOnlyActivationHost {
     param([string]$HostId)
 
@@ -270,11 +310,56 @@ function Get-VgoSkillCatalogPackagingRelPath {
 
     $runtimePackagingPath = Join-Path $RepoRoot 'config\runtime-core-packaging.json'
     $runtimePackaging = Get-Content -LiteralPath $runtimePackagingPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
-    $manifestRel = [string]$runtimePackaging['catalog_packaging_manifest']
-    if ([string]::IsNullOrWhiteSpace($manifestRel)) {
-        $manifestRel = 'config/skill-catalog-packaging.json'
+    return (Get-VgoSafeRelativeContractPath -Value $runtimePackaging['catalog_packaging_manifest'] -Default 'config/skill-catalog-packaging.json' -FieldName 'catalog_packaging_manifest')
+}
+
+function Get-VgoInstalledRuntimeOwnerRoot {
+    param([string]$RepoRoot)
+
+    $parent = Split-Path -Parent $RepoRoot
+    if ([string]::IsNullOrWhiteSpace($parent) -or (Split-Path -Leaf $parent) -ne 'skills') {
+        return $null
     }
-    return $manifestRel
+
+    $ownerRoot = Split-Path -Parent $parent
+    $ledgerPath = Join-Path $ownerRoot '.vibeskills\install-ledger.json'
+    if (-not (Test-Path -LiteralPath $ledgerPath -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $ledger = Get-Content -LiteralPath $ledgerPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+    } catch {
+        return $null
+    }
+    if (-not ($ledger -is [System.Collections.IDictionary]) -or -not $ledger.ContainsKey('canonical_vibe_root')) {
+        return $null
+    }
+    $canonicalVibeRoot = [string]$ledger['canonical_vibe_root']
+    if ([string]::IsNullOrWhiteSpace($canonicalVibeRoot)) {
+        return $null
+    }
+    if ([System.IO.Path]::GetFullPath($canonicalVibeRoot) -ne [System.IO.Path]::GetFullPath($RepoRoot)) {
+        return $null
+    }
+
+    return $ownerRoot
+}
+
+function Get-VgoInstalledRuntimeSupportRoot {
+    param([string]$RepoRoot)
+
+    $ownerRoot = Get-VgoInstalledRuntimeOwnerRoot -RepoRoot $RepoRoot
+    if ([string]::IsNullOrWhiteSpace($ownerRoot)) {
+        return $null
+    }
+
+    $supportRoot = Join-Path $ownerRoot $script:RuntimeSupportRootRel
+    if (Test-Path -LiteralPath $supportRoot -PathType Container) {
+        return $supportRoot
+    }
+
+    return $null
 }
 
 function Get-VgoSkillCatalogPackagingPath {
@@ -290,6 +375,18 @@ function Get-VgoSkillCatalogPackagingPath {
             base_root = $RepoRoot
             path = $repoCandidate
             relative_path = $manifestRel
+        }
+    }
+
+    $sourceSupportRoot = Get-VgoInstalledRuntimeSupportRoot -RepoRoot $RepoRoot
+    if (-not [string]::IsNullOrWhiteSpace($sourceSupportRoot)) {
+        $sourceSupportCandidate = Join-Path $sourceSupportRoot $manifestRel
+        if (Test-Path -LiteralPath $sourceSupportCandidate -PathType Leaf) {
+            return [pscustomobject]@{
+                base_root = $sourceSupportRoot
+                path = $sourceSupportCandidate
+                relative_path = $manifestRel
+            }
         }
     }
 
@@ -334,20 +431,46 @@ function Get-VgoSkillCatalogRoot {
     )
 
     $catalogRootRel = if ($CatalogPackaging.ContainsKey('catalog_root')) { [string]$CatalogPackaging['catalog_root'] } else { 'bundled/skills' }
-    $candidates = New-Object System.Collections.Generic.List[string]
-    $parent = Get-VgoParentPath -Path $RepoRoot
-    if ((Split-Path -Leaf $parent) -eq 'skills') {
-        $candidates.Add($parent) | Out-Null
-    }
-    $candidates.Add((Join-Path $RepoRoot $catalogRootRel)) | Out-Null
-
-    foreach ($candidate in $candidates) {
-        if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path -LiteralPath $candidate -PathType Container)) {
-            return $candidate
-        }
-    }
-
     return (Join-Path $RepoRoot $catalogRootRel)
+}
+
+function Get-VgoInstalledRuntimeCatalogSourceInfo {
+    param([string]$RepoRoot)
+
+    $ownerRoot = Get-VgoInstalledRuntimeOwnerRoot -RepoRoot $RepoRoot
+    if ([string]::IsNullOrWhiteSpace($ownerRoot)) {
+        return $null
+    }
+
+    $ledgerPath = Join-Path $ownerRoot '.vibeskills\install-ledger.json'
+    if (-not (Test-Path -LiteralPath $ledgerPath -PathType Leaf)) {
+        return $null
+    }
+
+    $ledger = Get-Content -LiteralPath $ledgerPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+    if (-not ($ledger -is [System.Collections.IDictionary])) {
+        return $null
+    }
+
+    $catalogSkillNames = @(
+        @($ledger['managed_catalog_skill_names']) |
+            ForEach-Object { Get-VgoSafeSkillName -Value $_ -FieldName 'managed_catalog_skill_names' } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Sort-Object -Unique
+    )
+    if (@($catalogSkillNames).Count -eq 0) {
+        return $null
+    }
+
+    $skillsRoot = Join-Path $ownerRoot 'skills'
+    if (-not (Test-Path -LiteralPath $skillsRoot -PathType Container)) {
+        return $null
+    }
+
+    return [pscustomobject]@{
+        catalog_root = $skillsRoot
+        bundled_skill_names = $catalogSkillNames
+    }
 }
 
 function Get-VgoSkillCatalogProfiles {
@@ -356,7 +479,7 @@ function Get-VgoSkillCatalogProfiles {
         [hashtable]$CatalogPackaging
     )
 
-    $profilesRel = if ($CatalogPackaging.ContainsKey('profiles_manifest')) { [string]$CatalogPackaging['profiles_manifest'] } else { 'config/skill-catalog-profiles.json' }
+    $profilesRel = Get-VgoSafeRelativeContractPath -Value $(if ($CatalogPackaging.ContainsKey('profiles_manifest')) { [string]$CatalogPackaging['profiles_manifest'] } else { $null }) -Default 'config/skill-catalog-profiles.json' -FieldName 'profiles_manifest'
     return (Get-Content -LiteralPath (Join-Path $BaseRoot $profilesRel) -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable)
 }
 
@@ -366,7 +489,7 @@ function Get-VgoSkillCatalogGroups {
         [hashtable]$CatalogPackaging
     )
 
-    $groupsRel = if ($CatalogPackaging.ContainsKey('groups_manifest')) { [string]$CatalogPackaging['groups_manifest'] } else { 'config/skill-catalog-groups.json' }
+    $groupsRel = Get-VgoSafeRelativeContractPath -Value $(if ($CatalogPackaging.ContainsKey('groups_manifest')) { [string]$CatalogPackaging['groups_manifest'] } else { $null }) -Default 'config/skill-catalog-groups.json' -FieldName 'groups_manifest'
     return (Get-Content -LiteralPath (Join-Path $BaseRoot $groupsRel) -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable)
 }
 
@@ -376,6 +499,7 @@ function Resolve-VgoCatalogProfileSkillNames {
         [hashtable]$CatalogPackaging,
         [string]$ProfileId,
         [string]$CatalogRoot = $null,
+        [string[]]$BundledSkillNames = @(),
         [System.Collections.Generic.HashSet[string]]$Seen
     )
 
@@ -397,7 +521,7 @@ function Resolve-VgoCatalogProfileSkillNames {
 
     $profile = $profiles[$ProfileId]
     foreach ($skillName in @($profile['skills'])) {
-        $text = [string]$skillName
+        $text = Get-VgoSafeSkillName -Value $skillName -FieldName ("profile '{0}'" -f $ProfileId)
         if (-not [string]::IsNullOrWhiteSpace($text)) {
             $names.Add($text) | Out-Null
         }
@@ -409,7 +533,7 @@ function Resolve-VgoCatalogProfileSkillNames {
             throw "Unknown skill catalog group '$groupKey' in profile '$ProfileId'"
         }
         foreach ($skillName in @($groups[$groupKey]['skills'])) {
-            $text = [string]$skillName
+            $text = Get-VgoSafeSkillName -Value $skillName -FieldName ("group '{0}' in profile '{1}'" -f $groupKey, $ProfileId)
             if (-not [string]::IsNullOrWhiteSpace($text)) {
                 $names.Add($text) | Out-Null
             }
@@ -417,22 +541,31 @@ function Resolve-VgoCatalogProfileSkillNames {
     }
 
     foreach ($nestedProfile in @($profile['include_profiles'])) {
-        $resolved = Resolve-VgoCatalogProfileSkillNames -CatalogBaseRoot $CatalogBaseRoot -CatalogPackaging $CatalogPackaging -ProfileId ([string]$nestedProfile) -CatalogRoot $CatalogRoot -Seen $Seen
+        $resolved = Resolve-VgoCatalogProfileSkillNames -CatalogBaseRoot $CatalogBaseRoot -CatalogPackaging $CatalogPackaging -ProfileId ([string]$nestedProfile) -CatalogRoot $CatalogRoot -BundledSkillNames $BundledSkillNames -Seen $Seen
         foreach ($skillName in $resolved) {
             $names.Add([string]$skillName) | Out-Null
         }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($CatalogRoot) -and [bool]$profile['include_all_bundled'] -and (Test-Path -LiteralPath $CatalogRoot -PathType Container)) {
-        foreach ($candidate in @(Get-ChildItem -LiteralPath $CatalogRoot -Directory -ErrorAction SilentlyContinue)) {
-            if (Test-VgoSkillDirectory -Path $candidate.FullName) {
-                $names.Add([string]$candidate.Name) | Out-Null
+    if ([bool]$profile['include_all_bundled']) {
+        if (@($BundledSkillNames).Count -gt 0) {
+            foreach ($skillName in @($BundledSkillNames)) {
+                $text = Get-VgoSafeSkillName -Value $skillName -FieldName ("include_all_bundled for profile '{0}'" -f $ProfileId)
+                if (-not [string]::IsNullOrWhiteSpace($text)) {
+                    $names.Add($text) | Out-Null
+                }
+            }
+        } elseif (-not [string]::IsNullOrWhiteSpace($CatalogRoot) -and (Test-Path -LiteralPath $CatalogRoot -PathType Container)) {
+            foreach ($candidate in @(Get-ChildItem -LiteralPath $CatalogRoot -Directory -ErrorAction SilentlyContinue)) {
+                if (Test-VgoSkillDirectory -Path $candidate.FullName) {
+                    $names.Add([string]$candidate.Name) | Out-Null
+                }
             }
         }
     }
 
     foreach ($excluded in @($profile['exclude_skills'])) {
-        $text = [string]$excluded
+        $text = Get-VgoSafeSkillName -Value $excluded -FieldName ("exclude_skills for profile '{0}'" -f $ProfileId)
         if (-not [string]::IsNullOrWhiteSpace($text)) {
             $names.Remove($text) | Out-Null
         }
@@ -451,8 +584,8 @@ function Sync-VgoCatalogRuntimeSupportFiles {
     $manifestRel = [string]$catalogPackagingInfo.manifest_rel
     $relpaths = @(
         $manifestRel,
-        [string]$(if ($catalogPackaging.ContainsKey('profiles_manifest')) { $catalogPackaging['profiles_manifest'] } else { 'config/skill-catalog-profiles.json' }),
-        [string]$(if ($catalogPackaging.ContainsKey('groups_manifest')) { $catalogPackaging['groups_manifest'] } else { 'config/skill-catalog-groups.json' })
+        (Get-VgoSafeRelativeContractPath -Value $(if ($catalogPackaging.ContainsKey('profiles_manifest')) { $catalogPackaging['profiles_manifest'] } else { $null }) -Default 'config/skill-catalog-profiles.json' -FieldName 'profiles_manifest'),
+        (Get-VgoSafeRelativeContractPath -Value $(if ($catalogPackaging.ContainsKey('groups_manifest')) { $catalogPackaging['groups_manifest'] } else { $null }) -Default 'config/skill-catalog-groups.json' -FieldName 'groups_manifest')
     ) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Sort-Object -Unique
 
     foreach ($relpath in $relpaths) {
@@ -461,6 +594,9 @@ function Sync-VgoCatalogRuntimeSupportFiles {
             throw "Catalog support manifest missing: $src"
         }
         $dst = Join-Path $supportRoot $relpath
+        if ([System.IO.Path]::GetFullPath($src) -eq [System.IO.Path]::GetFullPath($dst)) {
+            continue
+        }
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null
         Copy-Item -LiteralPath $src -Destination $dst -Force
         Add-VgoCreatedPath -Path $dst
@@ -1013,6 +1149,7 @@ function Ensure-SkillPresent {
         [System.Collections.Generic.List[string]]$MissingRequiredSkills
     )
 
+    $Name = Get-VgoSafeSkillName -Value $Name -FieldName 'Ensure-SkillPresent'
     $targetSkillMd = Join-Path $TargetRoot ("skills\" + $Name + "\SKILL.md")
     if (Test-Path -LiteralPath $targetSkillMd) { return }
 
@@ -1035,6 +1172,142 @@ function Ensure-SkillPresent {
             $MissingRequiredSkills.Add($Name) | Out-Null
         }
     }
+}
+
+function Test-VgoShouldReplaceClaudePreToolUseHookEntry {
+    param(
+        [object]$Entry,
+        [string]$ManagedDescription,
+        [string]$HookCommand
+    )
+
+    if ($Entry -isnot [System.Collections.IDictionary]) {
+        return $false
+    }
+
+    $existingCommand = ''
+    if ($Entry.Contains('hooks') -and $Entry['hooks'] -is [System.Collections.IList] -and @($Entry['hooks']).Count -gt 0) {
+        $firstHook = @($Entry['hooks'])[0]
+        if ($firstHook -is [System.Collections.IDictionary] -and $firstHook.Contains('command')) {
+            $existingCommand = [string]$firstHook['command']
+            $existingCommand = $existingCommand.Trim()
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($existingCommand)) {
+        return $existingCommand -eq $HookCommand
+    }
+
+    $description = ''
+    if ($Entry.Contains('description')) {
+        $description = [string]$Entry['description']
+        $description = $description.Trim()
+    }
+    return (-not [string]::IsNullOrWhiteSpace($description)) -and $description -eq $ManagedDescription
+}
+
+function Update-VgoClaudePreToolUseHook {
+    param(
+        [hashtable]$Settings,
+        [string]$HookCommand
+    )
+
+    $managedDescription = 'VibeSkills managed write guard'
+    $hooks = @{}
+    if ($Settings.ContainsKey('hooks') -and $Settings['hooks'] -is [System.Collections.IDictionary]) {
+        foreach ($key in $Settings['hooks'].Keys) {
+            $hooks[$key] = $Settings['hooks'][$key]
+        }
+    }
+
+    $preToolUse = @()
+    if ($hooks.ContainsKey('PreToolUse') -and $hooks['PreToolUse'] -is [System.Collections.IList]) {
+        $preToolUse = @($hooks['PreToolUse'])
+    }
+
+    $managedEntry = [ordered]@{
+        matcher = 'Write'
+        hooks = @(
+            [ordered]@{
+                type = 'command'
+                command = $HookCommand
+            }
+        )
+        description = $managedDescription
+    }
+
+    $nextPreToolUse = New-Object System.Collections.Generic.List[object]
+    $replaced = $false
+    foreach ($entry in $preToolUse) {
+        if (Test-VgoShouldReplaceClaudePreToolUseHookEntry -Entry $entry -ManagedDescription $managedDescription -HookCommand $HookCommand) {
+            if (-not $replaced) {
+                $nextPreToolUse.Add($managedEntry) | Out-Null
+                $replaced = $true
+            }
+            continue
+        }
+        $nextPreToolUse.Add($entry) | Out-Null
+    }
+    if (-not $replaced) {
+        $nextPreToolUse.Add($managedEntry) | Out-Null
+    }
+
+    $hooks['PreToolUse'] = $nextPreToolUse.ToArray()
+    $Settings['hooks'] = $hooks
+}
+
+function Install-ClaudeManagedSettings {
+    param(
+        [string]$RepoRoot,
+        [string]$TargetRoot
+    )
+
+    $settingsPath = Join-Path $TargetRoot 'settings.json'
+    $createdIfAbsent = -not (Test-Path -LiteralPath $settingsPath -PathType Leaf)
+    $settings = @{}
+    if (-not $createdIfAbsent) {
+        try {
+            $parsed = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+        } catch {
+            throw "Failed to parse JSON settings file: $settingsPath"
+        }
+        if ($parsed -isnot [System.Collections.IDictionary]) {
+            throw "Expected JSON object in settings file: $settingsPath"
+        }
+        foreach ($key in $parsed.Keys) {
+            $settings[$key] = $parsed[$key]
+        }
+    }
+
+    $hooksRoot = Join-Path $TargetRoot 'hooks'
+    New-Item -ItemType Directory -Force -Path $hooksRoot | Out-Null
+    Add-VgoCreatedPath -Path $hooksRoot
+    $hookPath = Join-Path $hooksRoot 'write-guard.js'
+    $sourceHook = Join-Path $RepoRoot 'hooks\write-guard.js'
+    if (-not (Test-Path -LiteralPath $sourceHook -PathType Leaf)) {
+        throw "Claude managed settings require hooks/write-guard.js in the runtime payload: $sourceHook"
+    }
+    Copy-Item -LiteralPath $sourceHook -Destination $hookPath -Force
+    Add-VgoCreatedPath -Path $hookPath
+
+    $hookCommand = 'node ' + [System.IO.Path]::GetFullPath($hookPath)
+    $settings['vibeskills'] = [ordered]@{
+        managed = $true
+        host_id = 'claude-code'
+        skills_root = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills'))
+        runtime_skill_entry = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot 'skills\vibe\SKILL.md'))
+        hooks_root = [System.IO.Path]::GetFullPath($hooksRoot)
+        managed_hook_command = $hookCommand
+        managed_hook_description = 'VibeSkills managed write guard'
+        explicit_vibe_skill_invocation = @('/vibe', '$vibe')
+    }
+    Update-VgoClaudePreToolUseHook -Settings $settings -HookCommand $hookCommand
+    $settings | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsPath -Encoding UTF8
+
+    if ($createdIfAbsent) {
+        Add-VgoCreatedPath -Path $settingsPath
+    }
+    Add-VgoManagedJsonPath -Path $settingsPath
 }
 
 function Sync-VibeCanonicalToTarget {
@@ -1337,7 +1610,14 @@ function Install-SkillCatalogPayload {
     $catalogPackaging = $catalogPackagingInfo.packaging
     $catalogBaseRoot = [string]$catalogPackagingInfo.base_root
     $bundledRoot = Get-VgoSkillCatalogRoot -RepoRoot $RepoRoot -CatalogPackaging $catalogPackaging
-    $desiredSkillNames = Resolve-VgoCatalogProfileSkillNames -CatalogBaseRoot $catalogBaseRoot -CatalogPackaging $catalogPackaging -ProfileId $CatalogProfile -CatalogRoot $bundledRoot -Seen ([System.Collections.Generic.HashSet[string]]::new())
+    $installedCatalogSource = Get-VgoInstalledRuntimeCatalogSourceInfo -RepoRoot $RepoRoot
+    $catalogSourceRoot = $bundledRoot
+    $bundledSkillNames = @()
+    if ($installedCatalogSource) {
+        $catalogSourceRoot = [string]$installedCatalogSource.catalog_root
+        $bundledSkillNames = @($installedCatalogSource.bundled_skill_names)
+    }
+    $desiredSkillNames = Resolve-VgoCatalogProfileSkillNames -CatalogBaseRoot $catalogBaseRoot -CatalogPackaging $catalogPackaging -ProfileId $CatalogProfile -CatalogRoot $catalogSourceRoot -BundledSkillNames $bundledSkillNames -Seen ([System.Collections.Generic.HashSet[string]]::new())
     if (@($desiredSkillNames).Count -eq 0) {
         return [pscustomobject]@{
             catalog_packaging = $catalogPackaging
@@ -1351,9 +1631,12 @@ function Install-SkillCatalogPayload {
     $missingRequiredSkills = New-Object System.Collections.Generic.List[string]
 
     foreach ($name in @($desiredSkillNames | Sort-Object)) {
-        $sourceCandidates = @([pscustomobject]@{ source = (Join-Path $bundledRoot $name); is_external = $false })
+        $sourceCandidates = @([pscustomobject]@{ source = (Join-Path $catalogSourceRoot $name); is_external = $false })
         if ($AllowExternalSkillFallback) {
             foreach ($root in $externalRoots) {
+                if ([System.IO.Path]::GetFullPath($root) -eq [System.IO.Path]::GetFullPath($catalogSourceRoot)) {
+                    continue
+                }
                 $sourceCandidates += [pscustomobject]@{ source = (Join-Path $root $name); is_external = $true }
             }
         }
@@ -1397,7 +1680,7 @@ function Install-GovernedCodexPayload {
 }
 
 function Install-ClaudeGuidancePayload {
-    return
+    Install-ClaudeManagedSettings -RepoRoot $RepoRoot -TargetRoot $TargetRoot
 }
 
 function Install-OpenCodeGuidancePayload {
@@ -1441,8 +1724,8 @@ $catalogProfile = $catalogProfile.Trim()
 if ([string]::IsNullOrWhiteSpace($catalogProfile)) {
     $catalogProfile = Get-VgoDefaultCatalogProfileId -Profile $script:SelectedInstallProfile
 }
-$catalogResult = Install-SkillCatalogPayload -CatalogProfile $catalogProfile
 Sync-VgoCatalogRuntimeSupportFiles -RepoRoot $RepoRoot
+$catalogResult = Install-SkillCatalogPayload -CatalogProfile $catalogProfile
 $legacyOpenCodeConfigCleanup = $null
 switch ([string]$adapter.install_mode) {
     'governed' { Install-GovernedCodexPayload }

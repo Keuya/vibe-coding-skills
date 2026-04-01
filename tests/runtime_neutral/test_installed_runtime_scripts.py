@@ -380,6 +380,169 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertTrue((self.target_root / ".vibeskills" / "host-settings.json").exists())
         self.assertFalse((self.target_root / "mcp_config.json").exists())
 
+    def test_installed_runtime_install_script_bootstraps_fresh_target_with_catalog_support_files(self) -> None:
+        self.install_shell_runtime(host="codex")
+
+        installed_root = self.target_root / "skills" / "vibe"
+        fresh_target = self.root / "fresh-codex-target"
+        fresh_target.mkdir(parents=True, exist_ok=True)
+
+        result = subprocess.run(
+            [
+                "bash",
+                str(installed_root / "install.sh"),
+                "--host",
+                "codex",
+                "--profile",
+                "full",
+                "--target-root",
+                str(fresh_target),
+            ],
+            cwd=installed_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        self.assertIn("Install done.", result.stdout)
+        self.assertTrue((fresh_target / ".vibeskills" / "install-ledger.json").exists())
+        self.assertTrue((fresh_target / ".vibeskills" / "runtime-support" / "config" / "skill-catalog-packaging.json").exists())
+        self.assertTrue((fresh_target / "skills" / "scikit-learn" / "SKILL.md").exists())
+
+    def test_installed_runtime_claude_code_rerun_succeeds_with_packaged_write_guard_hook(self) -> None:
+        target_root = self.root / "claude-target"
+        target_root.mkdir(parents=True, exist_ok=True)
+
+        subprocess.run(
+            [
+                "bash",
+                str(REPO_ROOT / "install.sh"),
+                "--host",
+                "claude-code",
+                "--profile",
+                "full",
+                "--target-root",
+                str(target_root),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        installed_root = target_root / "skills" / "vibe"
+        result = subprocess.run(
+            [
+                "bash",
+                str(installed_root / "install.sh"),
+                "--host",
+                "claude-code",
+                "--profile",
+                "full",
+                "--target-root",
+                str(target_root),
+            ],
+            cwd=installed_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        settings = json.loads((target_root / "settings.json").read_text(encoding="utf-8"))
+        self.assertIn("Install done.", result.stdout)
+        self.assertTrue((target_root / "hooks" / "write-guard.js").exists())
+        self.assertEqual(
+            f"node {(target_root / 'hooks' / 'write-guard.js').resolve()}",
+            settings["vibeskills"]["managed_hook_command"],
+        )
+
+    def test_installed_runtime_rejects_traversing_catalog_manifest_paths(self) -> None:
+        self.install_shell_runtime(host="codex")
+
+        support_manifest = self.target_root / ".vibeskills" / "runtime-support" / "config" / "skill-catalog-packaging.json"
+        payload = json.loads(support_manifest.read_text(encoding="utf-8"))
+        payload["profiles_manifest"] = "../outside.json"
+        support_manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        fresh_target = self.root / "traversal-target"
+        fresh_target.mkdir(parents=True, exist_ok=True)
+        installed_root = self.target_root / "skills" / "vibe"
+        result = subprocess.run(
+            [
+                "bash",
+                str(installed_root / "install.sh"),
+                "--host",
+                "codex",
+                "--profile",
+                "full",
+                "--target-root",
+                str(fresh_target),
+            ],
+            cwd=installed_root,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Invalid relative path", result.stderr or result.stdout)
+
+    def test_powershell_installed_runtime_claude_code_rerun_succeeds_without_python_on_path(self) -> None:
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
+
+        target_root = self.root / "pwsh-claude-target"
+        target_root.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                "bash",
+                str(REPO_ROOT / "install.sh"),
+                "--host",
+                "claude-code",
+                "--profile",
+                "full",
+                "--target-root",
+                str(target_root),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        empty_bin = self.root / "empty-bin"
+        empty_bin.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env["PATH"] = str(empty_bin)
+
+        installed_root = target_root / "skills" / "vibe"
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(installed_root / "install.ps1"),
+                "-RepoRoot",
+                str(installed_root),
+                "-TargetRoot",
+                str(target_root),
+                "-HostId",
+                "claude-code",
+                "-Profile",
+                "full",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+        )
+
+        self.assertIn("Installation complete.", result.stdout)
+        self.assertTrue((target_root / "settings.json").exists())
+        self.assertTrue((target_root / "hooks" / "write-guard.js").exists())
+        settings = json.loads((target_root / "settings.json").read_text(encoding="utf-8"))
+        self.assertEqual("claude-code", settings["vibeskills"]["host_id"])
+
     def test_shell_install_prunes_stale_managed_entries_without_recursive_dir_wipe(self) -> None:
         self.install_shell_runtime()
 

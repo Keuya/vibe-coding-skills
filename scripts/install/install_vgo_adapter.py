@@ -650,7 +650,17 @@ def install_claude_managed_settings(repo_root: Path, target_root: Path) -> list[
     hooks_root.mkdir(parents=True, exist_ok=True)
     track_created_path(hooks_root)
     hook_path = hooks_root / "write-guard.js"
-    copy_file(repo_root / "hooks" / "write-guard.js", hook_path)
+    source_hook_candidates = [
+        repo_root / "hooks" / "write-guard.js",
+        target_root / "hooks" / "write-guard.js",
+    ]
+    source_hook = next((candidate for candidate in source_hook_candidates if candidate.exists()), None)
+    if source_hook is None:
+        raise SystemExit(
+            "Claude managed settings require hooks/write-guard.js in the runtime payload "
+            "or the existing target hooks directory."
+        )
+    copy_file(source_hook, hook_path)
 
     hook_command = f"node {hook_path.resolve()}"
     settings["vibeskills"] = {
@@ -985,15 +995,70 @@ def load_runtime_core_packaging(repo_root: Path, profile: str) -> dict:
 def catalog_packaging_manifest_relpath(repo_root: Path) -> str:
     runtime_packaging_path = repo_root / "config" / "runtime-core-packaging.json"
     runtime_packaging = load_json(runtime_packaging_path)
-    manifest_rel = str(runtime_packaging.get("catalog_packaging_manifest") or "config/skill-catalog-packaging.json").strip()
+    manifest_rel = safe_relative_contract_path(
+        runtime_packaging.get("catalog_packaging_manifest"),
+        default="config/skill-catalog-packaging.json",
+        field_name="catalog_packaging_manifest",
+    )
     if not manifest_rel:
         raise SystemExit(f"runtime-core packaging must declare catalog_packaging_manifest: {runtime_packaging_path}")
     return manifest_rel
 
 
+def safe_relative_contract_path(value: object, *, default: str, field_name: str) -> str:
+    raw = str(value or default).strip()
+    if not raw:
+        raw = default
+    normalized = raw.replace("\\", "/").strip("/")
+    candidate = Path(normalized)
+    if candidate.is_absolute() or any(part in {"", ".", ".."} for part in candidate.parts):
+        raise SystemExit(f"Invalid relative path for {field_name}: {raw}")
+    return candidate.as_posix()
+
+
+def safe_skill_name(value: object, *, field_name: str) -> str:
+    name = str(value).strip()
+    if not name or "/" in name or "\\" in name or name in {".", ".."}:
+        raise SystemExit(f"Invalid skill name in {field_name}: {value}")
+    return name
+
+
+def installed_runtime_owner_root(repo_root: Path) -> Path | None:
+    parent = repo_root.parent
+    if parent.name != "skills":
+        return None
+    owner_root = parent.parent
+    ledger_path = owner_root / ".vibeskills" / "install-ledger.json"
+    if not ledger_path.exists():
+        return None
+    try:
+        ledger = load_json(ledger_path)
+    except Exception:
+        return None
+    canonical_vibe_root = ledger.get("canonical_vibe_root") if isinstance(ledger, dict) else None
+    if not canonical_vibe_root:
+        return None
+    if not same_path(Path(str(canonical_vibe_root)), repo_root):
+        return None
+    return owner_root
+
+
+def installed_runtime_support_root(repo_root: Path) -> Path | None:
+    owner_root = installed_runtime_owner_root(repo_root)
+    if owner_root is None:
+        return None
+    support_root = owner_root / RUNTIME_SUPPORT_ROOT_REL
+    if support_root.exists():
+        return support_root
+    return None
+
+
 def resolve_catalog_packaging_manifest_path(repo_root: Path, target_root: Path | None = None) -> tuple[Path, Path]:
     manifest_rel = catalog_packaging_manifest_relpath(repo_root)
     candidates: list[tuple[Path, Path]] = [(repo_root, repo_root / manifest_rel)]
+    source_support_root = installed_runtime_support_root(repo_root)
+    if source_support_root is not None:
+        candidates.append((source_support_root, source_support_root / manifest_rel))
     if target_root is not None:
         support_root = target_root / RUNTIME_SUPPORT_ROOT_REL
         candidates.append((support_root, support_root / manifest_rel))
@@ -1011,19 +1076,48 @@ def load_skill_catalog_packaging(repo_root: Path, target_root: Path | None = Non
 
 
 def resolve_skill_catalog_root(repo_root: Path, catalog_packaging: dict) -> Path:
-    return resolve_bundled_skills_root(
-        repo_root,
-        {"bundled_skills_source": str(catalog_packaging.get("catalog_root") or "bundled/skills")},
-    )
+    return repo_root / str(catalog_packaging.get("catalog_root") or "bundled/skills")
+
+
+def resolve_installed_runtime_catalog_source(repo_root: Path) -> tuple[Path | None, set[str] | None]:
+    owner_root = installed_runtime_owner_root(repo_root)
+    if owner_root is None:
+        return None, None
+
+    ledger = load_existing_install_ledger(owner_root)
+    if not isinstance(ledger, dict):
+        return None, None
+
+    catalog_skill_names = {
+        safe_skill_name(name, field_name="managed_catalog_skill_names")
+        for name in ledger.get("managed_catalog_skill_names") or []
+        if str(name).strip()
+    }
+    if not catalog_skill_names:
+        return None, None
+
+    skills_root = owner_root / "skills"
+    if not skills_root.exists():
+        return None, None
+
+    return skills_root, catalog_skill_names
 
 
 def load_skill_catalog_profiles(base_root: Path, catalog_packaging: dict) -> dict:
-    profiles_rel = str(catalog_packaging.get("profiles_manifest") or "config/skill-catalog-profiles.json")
+    profiles_rel = safe_relative_contract_path(
+        catalog_packaging.get("profiles_manifest"),
+        default="config/skill-catalog-profiles.json",
+        field_name="profiles_manifest",
+    )
     return load_json(base_root / profiles_rel)
 
 
 def load_skill_catalog_groups(base_root: Path, catalog_packaging: dict) -> dict:
-    groups_rel = str(catalog_packaging.get("groups_manifest") or "config/skill-catalog-groups.json")
+    groups_rel = safe_relative_contract_path(
+        catalog_packaging.get("groups_manifest"),
+        default="config/skill-catalog-groups.json",
+        field_name="groups_manifest",
+    )
     return load_json(base_root / groups_rel)
 
 
@@ -1032,6 +1126,7 @@ def resolve_catalog_profile_skill_names(
     catalog_packaging: dict,
     profile_id: str,
     catalog_root: Path | None = None,
+    bundled_skill_names: set[str] | None = None,
     _seen: set[str] | None = None,
 ) -> set[str]:
     profiles = load_skill_catalog_profiles(catalog_base_root, catalog_packaging).get("profiles") or {}
@@ -1046,7 +1141,7 @@ def resolve_catalog_profile_skill_names(
 
     profile = profiles[profile_id]
     names = {
-        str(name).strip()
+        safe_skill_name(name, field_name=f"profile '{profile_id}'")
         for name in profile.get("skills") or []
         if str(name).strip()
     }
@@ -1056,7 +1151,7 @@ def resolve_catalog_profile_skill_names(
         if not isinstance(group, dict):
             raise SystemExit(f"Unknown skill catalog group '{group_id}' in profile '{profile_id}'")
         names.update(
-            str(name).strip()
+            safe_skill_name(name, field_name=f"group '{group_id}' in profile '{profile_id}'")
             for name in group.get("skills") or []
             if str(name).strip()
         )
@@ -1068,19 +1163,27 @@ def resolve_catalog_profile_skill_names(
                 catalog_packaging,
                 str(nested_profile),
                 catalog_root,
+                bundled_skill_names,
                 seen,
             )
         )
 
-    if bool(profile.get("include_all_bundled")) and catalog_root and catalog_root.exists():
-        names.update(
-            candidate.name
-            for candidate in catalog_root.iterdir()
-            if is_skill_directory(candidate)
-        )
+    if bool(profile.get("include_all_bundled")):
+        if bundled_skill_names is not None:
+            names.update(
+                safe_skill_name(name, field_name=f"include_all_bundled for profile '{profile_id}'")
+                for name in bundled_skill_names
+                if str(name).strip()
+            )
+        elif catalog_root and catalog_root.exists():
+            names.update(
+                candidate.name
+                for candidate in catalog_root.iterdir()
+                if is_skill_directory(candidate)
+            )
 
     excluded = {
-        str(name).strip()
+        safe_skill_name(name, field_name=f"exclude_skills for profile '{profile_id}'")
         for name in profile.get("exclude_skills") or []
         if str(name).strip()
     }
@@ -1092,8 +1195,16 @@ def sync_catalog_runtime_support_files(repo_root: Path, target_root: Path) -> No
     support_root = target_root / RUNTIME_SUPPORT_ROOT_REL
     relpaths = {
         catalog_packaging_manifest_relpath(repo_root),
-        str(catalog_packaging.get("profiles_manifest") or "config/skill-catalog-profiles.json"),
-        str(catalog_packaging.get("groups_manifest") or "config/skill-catalog-groups.json"),
+        safe_relative_contract_path(
+            catalog_packaging.get("profiles_manifest"),
+            default="config/skill-catalog-profiles.json",
+            field_name="profiles_manifest",
+        ),
+        safe_relative_contract_path(
+            catalog_packaging.get("groups_manifest"),
+            default="config/skill-catalog-groups.json",
+            field_name="groups_manifest",
+        ),
     }
     for relpath in sorted(relpaths):
         source = catalog_base_root / relpath
@@ -1346,6 +1457,7 @@ def refresh_install_ledger(target_root: Path) -> dict:
 
 
 def ensure_skill_present(target_root: Path, name: str, required: bool, source_candidates, external_used, missing):
+    name = safe_skill_name(name, field_name="ensure_skill_present")
     skill_md = target_root / "skills" / name / "SKILL.md"
     if skill_md.exists():
         return
@@ -1438,19 +1550,22 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
 
 def install_skill_catalog(repo_root: Path, target_root: Path, catalog_profile_id: str, allow_fallback: bool):
     catalog_packaging, catalog_base_root = load_skill_catalog_packaging(repo_root, target_root)
+    installed_catalog_root, installed_catalog_skill_names = resolve_installed_runtime_catalog_source(repo_root)
     bundled_root = resolve_skill_catalog_root(repo_root, catalog_packaging)
+    catalog_source_root = installed_catalog_root or bundled_root
     desired_skill_names = resolve_catalog_profile_skill_names(
         catalog_base_root,
         catalog_packaging,
         catalog_profile_id,
-        bundled_root,
+        catalog_source_root,
+        installed_catalog_skill_names,
     )
     if not desired_skill_names:
         return catalog_packaging, [], []
 
-    source_roots = [bundled_root]
+    source_roots = [catalog_source_root]
     for root in external_skill_source_roots(repo_root):
-        if not same_path(root, bundled_root):
+        if not same_path(root, catalog_source_root):
             source_roots.append(root)
 
     external_used = set()
@@ -1563,6 +1678,7 @@ def main():
     packaging, governance, runtime_external_used, runtime_managed_skill_names = install_runtime_core(
         repo_root, target_root, args.profile, args.allow_external_skill_fallback, adapter
     )
+    sync_catalog_runtime_support_files(repo_root, target_root)
     catalog_profile = str(packaging.get("catalog_profile") or "").strip()
     _catalog_packaging, catalog_external_used, catalog_managed_skill_names = install_skill_catalog(
         repo_root,
@@ -1570,7 +1686,6 @@ def main():
         catalog_profile,
         args.allow_external_skill_fallback,
     )
-    sync_catalog_runtime_support_files(repo_root, target_root)
     managed_skill_names = sorted(set(runtime_managed_skill_names) | set(catalog_managed_skill_names))
     prune_previously_managed_skill_dirs(
         target_root,

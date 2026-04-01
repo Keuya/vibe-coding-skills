@@ -85,6 +85,22 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         self.assertTrue(sentinel.exists())
         self.assertIn("PASS", payload["gate_result"])
 
+    def test_codex_installed_runtime_uninstall_preserves_foreign_skill_dirs(self) -> None:
+        target_root = self.root / "codex-foreign-skill-root"
+        self.install_host("codex", target_root, profile="full")
+        foreign_skill_root = target_root / "skills" / "foreign-user-skill"
+        foreign_skill_root.mkdir(parents=True, exist_ok=True)
+        (foreign_skill_root / "SKILL.md").write_text("---\nname: foreign-user-skill\n---\n", encoding="utf-8")
+
+        payload = self.uninstall_host("codex", target_root, profile="full")
+
+        self.assertTrue((target_root / "skills").exists())
+        self.assertTrue(foreign_skill_root.exists())
+        self.assertTrue((foreign_skill_root / "SKILL.md").exists())
+        self.assertNotIn("skills", payload["deleted_paths"])
+        self.assertIn("skills/foreign-user-skill/SKILL.md", payload["skipped_foreign_paths"])
+        self.assertIn("PASS", payload["gate_result"])
+
     def test_codex_downgrade_from_full_to_minimal_then_uninstall_uses_latest_dual_unit_ledger(self) -> None:
         target_root = self.root / "codex-downgrade-root"
         self.install_host("codex", target_root, profile="full")
@@ -92,14 +108,18 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
 
         self.install_host("codex", target_root, profile="minimal")
         sentinel = target_root / "commands" / "user.md"
+        recreated_full_skill = target_root / "skills" / "verification-before-completion"
         sentinel.write_text("user\n", encoding="utf-8")
-        self.assertFalse((target_root / "skills" / "verification-before-completion").exists())
+        self.assertFalse(recreated_full_skill.exists())
+        recreated_full_skill.mkdir(parents=True, exist_ok=True)
+        (recreated_full_skill / "SKILL.md").write_text("---\nname: verification-before-completion\n---\n", encoding="utf-8")
         self.assertTrue((target_root / "skills" / "brainstorming" / "SKILL.md").exists())
 
         payload = self.uninstall_host("codex", target_root, profile="minimal")
 
         self.assertFalse((target_root / "skills" / "vibe").exists())
         self.assertFalse((target_root / "skills" / "brainstorming").exists())
+        self.assertTrue((recreated_full_skill / "SKILL.md").exists())
         self.assertTrue(sentinel.exists())
         self.assertIn("PASS", payload["gate_result"])
 

@@ -53,6 +53,7 @@
           "config/runtime-config-manifest.json"
         ],
       "directories": [
+        "hooks",
         "templates",
         "mcp"
       ]
@@ -116,6 +117,7 @@
         "scripts/router/invoke-pack-route.py",
         "scripts/router/runtime_neutral/router_contract.py",
           "scripts/verify/runtime_neutral/router_bridge_gate.py",
+          "hooks/write-guard.js",
           "config/runtime-contract.json",
           "config/runtime-modes.json",
           "config/runtime-input-packet-policy.json",

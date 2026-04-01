@@ -276,6 +276,18 @@ def parse_managed_json_paths(values: object, target_root: Path) -> dict[str, dic
     return managed
 
 
+def parse_managed_skill_names(ledger: object) -> set[str]:
+    if not isinstance(ledger, dict):
+        return set()
+
+    return {
+        str(name).strip()
+        for key in ("managed_skill_names", "managed_runtime_skill_names", "managed_catalog_skill_names")
+        for name in ledger.get(key) or []
+        if str(name).strip() and "/" not in str(name) and "\\" not in str(name) and str(name).strip() not in {".", ".."}
+    }
+
+
 def parse_merged_files(values: object, target_root: Path) -> dict[str, dict[str, object]]:
     merged: dict[str, dict[str, object]] = {}
     if not isinstance(values, list):
@@ -364,7 +376,7 @@ def collect_foreign_paths(
     deleted_dirs: set[str],
     protected_relpaths: set[str],
 ) -> list[str]:
-    top_level_roots = {entry.split("/", 1)[0] for entry in managed_files}
+    top_level_roots = {entry.split("/", 1)[0] for entry in managed_files | deleted_dirs}
     foreign: set[str] = set()
 
     for root_name in sorted(top_level_roots):
@@ -417,10 +429,15 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
                 continue
             if candidate.exists() and candidate.is_dir() and not candidate.is_symlink():
                 normalized_rel = rel.replace("\\", "/")
-                if normalized_rel == "skills" or normalized_rel.startswith("skills/"):
+                if normalized_rel.startswith("skills/") and len([part for part in normalized_rel.split("/") if part]) == 2:
                     deleted_dirs.add(rel)
                 continue
             managed_files.add(rel)
+        for name in sorted(parse_managed_skill_names(ledger)):
+            skill_rel = f"skills/{name}"
+            candidate = target_root / skill_rel
+            if candidate.exists() and candidate.is_dir() and not candidate.is_symlink():
+                deleted_dirs.add(skill_rel)
         for rel in sorted(parse_path_list(ledger.get("specialist_wrapper_paths"), target_root)):
             candidate = target_root / rel
             if candidate.exists() and candidate.is_dir() and not candidate.is_symlink():
