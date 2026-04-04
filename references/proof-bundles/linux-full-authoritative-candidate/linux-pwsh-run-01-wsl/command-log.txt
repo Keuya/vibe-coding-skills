@@ -1,4 +1,0 @@
-timestamp=2026-03-13T16:48:39+08:00
-bundle_dst=/mnt/d/table/new_ai_table/_ext/vco-skills-codex/references/proof-bundles/linux-full-authoritative-candidate/linux-pwsh-run-01-wsl
-run_root=/tmp/vco-linux-proof-run1
-frozen_files=12

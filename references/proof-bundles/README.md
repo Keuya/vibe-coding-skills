@@ -9,7 +9,7 @@
 - operation record
 - contract-required receipts
 
-没有活跃消费者的 duplicated verify outputs、command audit copies、receipt inventories 不应继续占据 live proof surface。
+没有活跃消费者的 duplicated verify outputs、command audit copies、receipt inventories，以及仅供人工回放的 raw shell logs，不应继续占据 live proof surface。
 
 ## Live Bundles
 
@@ -26,3 +26,4 @@
 ## Rule
 
 - 没有 manifest、没有活跃消费者、且只承担历史说明作用的 proof bundle 不应继续留在 live surface。
+- 对已经缩减为 manifest + operation record + receipt 的 live bundle，额外 raw logs 默认通过 git history 恢复，而不是继续长期跟踪。

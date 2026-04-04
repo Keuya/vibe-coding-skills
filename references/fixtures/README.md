@@ -22,7 +22,7 @@ Wave123 moves the repository toward a clean boundary:
 - family-level consumer map: [`consumer-ledger.md`](./consumer-ledger.md)
 - `external-corpus/`, `retro-compare/`, and `verify/routing-stability/` are active canonical fixture roots under `config/outputs-boundary-policy.json`
 - `runtime-contract/` remains active through `tests/runtime_neutral/test_runtime_contract_goldens.py`
-- `anti-proxy-goal-drift/` is currently retained pending an explicit archive-or-rewrite decision; do not move it based on grep counts alone
+- `anti-proxy-goal-drift/` has been retired from the live fixture surface after the verify-gate family was removed; historical copies now rely on git history rather than tracked live fixture retention
 
 ## Reading rule
 

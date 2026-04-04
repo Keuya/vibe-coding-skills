@@ -38,13 +38,6 @@
       "bundle_dir": "references/proof-bundles/linux-full-authoritative-candidate/linux-pwsh-run-01-wsl",
       "operation_record": "references/proof-bundles/linux-full-authoritative-candidate/linux-pwsh-run-01-wsl/operation-record.md",
       "required_files": [
-        "environment.log",
-        "install.log",
-        "check.log",
-        "bootstrap-doctor.log",
-        "coherence.log",
-        "command-log.txt",
-        "receipt-files.txt",
         "installed-runtime-outputs/runtime-freshness-receipt.json"
       ],
       "expected_check_summary": "Result: 61 passed, 0 failed, 0 warnings",
@@ -56,14 +49,6 @@
       "bundle_dir": "references/proof-bundles/linux-full-authoritative-candidate/linux-pwsh-run-02-docker",
       "operation_record": "references/proof-bundles/linux-full-authoritative-candidate/linux-pwsh-run-02-docker/operation-record.md",
       "required_files": [
-        "provision.log",
-        "environment.log",
-        "install.log",
-        "check.log",
-        "bootstrap-doctor.log",
-        "coherence.log",
-        "command-log.txt",
-        "receipt-files.txt",
         "installed-runtime-outputs/runtime-freshness-receipt.json"
       ],
       "expected_check_summary": "Result: 61 passed, 0 failed, 0 warnings",
@@ -82,6 +67,7 @@
   "notes": [
     "The current bundle is the canonical proof bundle for the codex/linux promotion candidate lane.",
     "Fresh-machine Linux proof is frozen, but replay/status/release truth remains intentionally below formal full-authoritative promotion.",
-    "Manifest-declared proof artifacts are intentionally tracked in git so clean clones can replay the same promotion truth."
+    "Manifest-declared proof artifacts are intentionally tracked in git so clean clones can replay the same promotion truth.",
+    "Raw shell logs and receipt inventories are no longer part of the minimum tracked proof surface for this bundle."
   ]
 }
