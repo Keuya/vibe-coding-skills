@@ -702,10 +702,4 @@ That is the required zero-regression outcome.
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/plans/2026-03-13-linux-full-authoritative-migration-plan.md`. Two execution options:
-
-**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
-
-**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
-
-Which approach?
+This document is retained as the frozen migration plan for the Linux full-authoritative track.

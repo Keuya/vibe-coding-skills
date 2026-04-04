@@ -27,6 +27,8 @@
 - [connector-action-ledger.md](./connector-action-ledger.md)
 - [upstream-value-ledger.md](./upstream-value-ledger.md)
 - [changelog.md](./changelog.md)
+- [proof-bundles/README.md](./proof-bundles/README.md)
+- [archive/README.md](./archive/README.md)
 
 ### Playbooks / Fixtures
 
@@ -56,3 +58,4 @@
 - 新增长期 reference 资产必须更新本页。
 - time-bound execution 正文不进 `references/`，继续留在 `docs/plans/` 或 `docs/status/`。
 - reference 资产新增后至少补一条 docs 或 gate 锚点。
+- 稳定路径如果因为历史长尾而需要瘦身，应优先拆成 current + archive volume，而不是让 stable path 消失。

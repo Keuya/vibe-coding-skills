@@ -19,6 +19,7 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 - [`../../scripts/verify/README.md`](../../scripts/verify/README.md): verify surface entrypoint
 - [`../status/non-regression-proof-bundle.md`](../status/non-regression-proof-bundle.md): minimum closure proof contract
 - `scripts/verify/vibe-release-truth-consistency-gate.ps1`: fallback and degraded-truth consistency proof for release and promotion surfaces
+- archived release notes: [`../archive/releases/README.md`](../archive/releases/README.md)
 
 ## Recent Governed Releases
 
@@ -26,29 +27,13 @@ This directory stores governed VCO release notes and the minimum runtime-facing 
 - [`v2.3.55.md`](v2.3.55.md) - 2026-03-30 - owned-only uninstall and skill-only host alignment / OpenCode startup safety / explicit intent-vs-vector AI config split / macOS bootstrap compatibility
 - [`v2.3.54.md`](v2.3.54.md) - 2026-03-30 - release operator closure / runtime contract schema baseline / outputs-boundary migration / install-time generated nested compatibility / release truth hardening
 - [`v2.3.53.md`](v2.3.53.md) - 2026-03-30 - governed specialist dispatch and custom admission closure / Windows PowerShell host resolution / managed host install guarantees / cleanup-truth tightening
-- [`v2.3.52.md`](v2.3.52.md) - 2026-03-29 - stage-aware memory activation / governed memory backend adapters / explicit memory-scope boundaries
-- [`v2.3.51.md`](v2.3.51.md) - 2026-03-28 - main-chain delivery acceptance / specialist dispatch governance closure / Windows specialist runtime handoff fix
-- [`v2.3.50.md`](v2.3.50.md) - 2026-03-26 - router AI connectivity probe / host-adapter expansion / single-entry install surface / Windows PowerShell default verification guidance
-- [`v2.3.49.md`](v2.3.49.md) - 2026-03-23 - shallow-worktree install/check hardening / installed-runtime adapter fallback / parent-path guard convergence
-- [`v2.3.48.md`](v2.3.48.md) - 2026-03-23 - benchmark mode compatibility downgrade / governed proof alignment / adaptive-routing gate robustness
-- [`v2.3.47.md`](v2.3.47.md) - 2026-03-15 - no-silent-fallback governance / degraded-truth hazard surfacing / release-truth consistency closure
-- [`v2.3.46.md`](v2.3.46.md) - 2026-03-15 - Linux benchmark/governed-runtime Python host neutrality / proof-chain closure
-- [`v2.3.45.md`](v2.3.45.md) - 2026-03-15 - benchmark_autonomous bridge durability / relative runtime summary paths / restored Python bridge proof
-- [`v2.3.44.md`](v2.3.44.md) - 2026-03-15 - real bounded benchmark_autonomous executor / execution manifests / benchmark proof gate
-- [`v2.3.43.md`](v2.3.43.md) - 2026-03-15 - governed runtime contract / six-stage vibe entry / runtime bridge tests / release-surface alignment
-- [`v2.3.42.md`](v2.3.42.md) - 2026-03-14 - tracked Linux proof artifacts / manifest tracked-file gate / clean-clone release-truth closure
-- [`v2.3.41.md`](v2.3.41.md) - 2026-03-14 - Linux target-root portability hardening / proof-gate execution-context lock / governed manifest alignment
-- [`v2.3.40.md`](v2.3.40.md) - 2026-03-14 - cross-shell receipt normalization / upgrade hint closure / Linux truth sync
-- [`v2.3.39.md`](v2.3.39.md) - 2026-03-14 - Linux regression closure / router contract hardening / freshness recursion fix
-- [`v2.3.38.md`](v2.3.38.md) - 2026-03-14 - config path de-leak / tokenized runtime roots / smoke installed-runtime refresh
-- [`v2.3.37.md`](v2.3.37.md) - 2026-03-13 - scrapling default full-lane promotion / doctor surface split / install-surface version closure
-- [`v2.3.36.md`](v2.3.36.md) - 2026-03-13 - install-surface messaging hardening / host-plugin policy / version alignment
-- [`v2.3.34.md`](v2.3.34.md) - 2026-03-13 - full-feature framing correction / cold-start onboarding / readiness boundary disclosure
-- [`v2.3.33.md`](v2.3.33.md) - 2026-03-13 - provider seeding fix / slow-install expectation hardening / bundled config sync repair
-- [`v2.3.32.md`](v2.3.32.md) - 2026-03-13 - dual-platform one-shot setup / Linux shell bootstrap / install boundary disclosure
-- [`v2.3.31.md`](v2.3.31.md) - 2026-03-13 - post-upstream governance closure / disclosure parity / runtime alignment
 
-Older release notes remain in this directory as historical version records, but they are not part of the active release surface.
+## Historical Release Archive
+
+- Older governed version notes now live behind [`../archive/releases/README.md`](../archive/releases/README.md).
+- The live release surface intentionally keeps only the current consecutive window plus active release-runtime handoff docs.
+
+Older release notes now live behind [`../archive/releases/README.md`](../archive/releases/README.md) so the live release surface stays short.
 
 ## Historical Packetization
 
@@ -90,3 +75,4 @@ Use the gate-family index for the exact scripts. The extended trains stay groupe
 - Degraded closure is never equivalent to authoritative success. If a release depends on fallback or degraded behavior, the release surface must say so explicitly and include fallback-truth consistency proof.
 - Release notes stay one-file-per-version using the `v<version>.md` pattern.
 - Historical release packets must stay distinct from the current governed release surface.
+- Historical version notes should prefer the archive index over re-expanding the live README.

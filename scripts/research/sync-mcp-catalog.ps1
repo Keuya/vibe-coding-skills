@@ -1,6 +1,6 @@
 ﻿param(
     [string]$SourceRoot = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\..')) 'third_party\vco-ecosystem-mirror\awesome-mcp-servers'),
-    [string]$OutputPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\..')) 'references\awesome-mcp-servers.snapshot.json')
+    [string]$OutputPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\..')) 'outputs\research\awesome-mcp-servers.snapshot.json')
 )
 
 $ErrorActionPreference = "Stop"
@@ -96,5 +96,4 @@ Write-Host ("Source root : {0}" -f $sourceRootResolved)
 Write-Host ("README count: {0}" -f $readmes.Count)
 Write-Host ("Entry count : {0}" -f $entries.Count)
 Write-Host ("Output      : {0}" -f $OutputPath)
-
 

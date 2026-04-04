@@ -40,6 +40,7 @@
 - 脚本入口：[`../scripts/README.md`](../scripts/README.md)
 - 长期 reference：[`../references/index.md`](../references/index.md)
 - release 记录：[`releases/README.md`](./releases/README.md)
+- 历史归档入口：[`archive/README.md`](./archive/README.md)
 
 ## Rules
 
@@ -47,3 +48,4 @@
 - 安装口径以 [`install/README.md`](./install/README.md)、[`cold-start-install-paths.md`](./cold-start-install-paths.md) 与 [`../config/adapter-registry.json`](../config/adapter-registry.json) 对齐，不在多个入口页手写互相冲突的宿主模式说明。
 - 当前状态以 [`status/current-state.md`](./status/current-state.md) 和 `outputs/verify/**` 为准，不在索引页手工维护状态表。
 - 新增长期入口时更新本页；dated 材料只更新对应子目录 `README.md`。
+- 历史 dated 材料默认进入 [`archive/README.md`](./archive/README.md)，不要把 archive 内容重新堆回 live 根索引。
