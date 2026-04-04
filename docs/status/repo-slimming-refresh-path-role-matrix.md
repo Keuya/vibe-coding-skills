@@ -21,7 +21,7 @@ The main point of the refresh is simple: the repository is no longer primarily b
 | `references/index.md` | live navigation | correct stable landing surface | keep live and concise |
 | root `references/*` live set | mixed contract surface | about `65` root files remain flat and crowded | regroup by contracts, matrices, ledgers, scenarios, and checklists |
 | `references/proof-bundles/**` | fixture / proof | manifests are valuable, raw detail is noisy | keep manifests and summaries live; archive low-signal raw logs |
-| `references/fixtures/**` | fixture | some families have weak consumer clarity | add consumer ledger, then archive historical-only families |
+| `references/fixtures/**` | fixture | some families have weak consumer clarity | keep active families live; retire historical-only families once consumer proof is empty |
 | `scripts/verify/**` | contract-first executable surface | `205` files, high family sprawl | extract shared logic first, keep path stability |
 | `scripts/setup/**`, `scripts/research/**`, `scripts/learn/**` | auxiliary operator surface | likely contains low-frequency or dead helpers | exact-path consumer audit before retirement |
 | `bundled/skills/**` | packaged payload | about `30M` and `2120` files, largest hotspot | define payload tiers first via `config/bundled-skill-tier-policy.json`, then cut |

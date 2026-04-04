@@ -1,7 +1,0 @@
-[command] pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify/vibe-bootstrap-doctor-gate.ps1 -TargetRoot /tmp/vco-linux-proof-run2/target-root -WriteArtifacts
-=== VCO Bootstrap Doctor Gate ===
-Target root      : /tmp/vco-linux-proof-run2/target-root
-Readiness state  : manual_actions_pending
-Blocking issues  : 0
-Manual actions   : 9
-Warnings         : 0

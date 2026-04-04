@@ -1,4 +1,0 @@
-timestamp=2026-03-13T10:00:41+00:00
-bundle_dst=/bundle
-run_root=/tmp/vco-linux-proof-run2
-frozen_files=14
