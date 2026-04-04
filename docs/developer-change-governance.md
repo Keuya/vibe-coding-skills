@@ -209,7 +209,7 @@ Write or attach a plan before editing if:
 
 Current program plan:
 
-- [`plans/2026-03-13-post-upstream-governance-developer-entry-plan.md`](plans/2026-03-13-post-upstream-governance-developer-entry-plan.md)
+- [`plans/README.md`](plans/README.md)
 
 ## Runtime Proof Bundle
 

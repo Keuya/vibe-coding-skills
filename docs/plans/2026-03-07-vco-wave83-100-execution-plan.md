@@ -162,11 +162,10 @@ Wave83+ 不应该重复 64-82 的工作。新的目标应转向三件事：
 
 ## 11. Execution Status Companion
 
-???? planning board ????????????Wave83-100 ?????????????
-- `docs/plans/2026-03-07-vco-wave83-100-execution-status.md`
-- `config/wave83-100-execution-status.json`
+The planning board remains the authoritative Wave83-100 execution tracker.
+The previously separate execution-status companion is no longer kept as a standalone repo document.
 
-?????????
-- ?? execution frontier ? `Wave83`?
-- `83 -> 89 -> 95` ????????
-- Wave83-100 ????? **ready / blocked / sequenced** ???????????????
+Execution expectations:
+- execution frontier starts at `Wave83`
+- sequencing remains `83 -> 89 -> 95`
+- readiness should stay visible as **ready / blocked / sequenced** inside the planning board and runtime receipts

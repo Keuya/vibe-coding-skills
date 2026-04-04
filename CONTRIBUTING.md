@@ -29,7 +29,7 @@ before making a change.
    [`docs/developer-change-governance.md`](docs/developer-change-governance.md)
 4. If your change touches a frozen or guarded surface, stop and write or attach
    a plan before editing:
-   [`docs/plans/2026-03-13-post-upstream-governance-developer-entry-plan.md`](docs/plans/2026-03-13-post-upstream-governance-developer-entry-plan.md)
+   [`docs/plans/README.md`](docs/plans/README.md)
 
 ## Default Safe Contribution Path
 
@@ -58,7 +58,7 @@ proof burden (see "When a Plan Is Mandatory" below):
 - `protocols/**`
 - `scripts/router/**`
 - `bundled/**`
-- tracked `outputs/**`
+- `outputs/**` generated evidence surfaces
 - `third_party/**`
 - `vendor/**`
 
@@ -109,7 +109,7 @@ then sync and proof must follow. Use this class when you touch:
 
 - `bundled/**`
 - `references/fixtures/**`
-- tracked `outputs/**`
+- `outputs/**` generated evidence surfaces
 - `third_party/**`
 - `vendor/**`
 
@@ -148,9 +148,9 @@ Write or attach a plan before editing if any of the following are true:
 - you are changing vendored, mirrored, provenance, or disclosure surfaces
 - you cannot explain the required proof set before you start editing
 
-The current program plan for developer entry is:
+The current plan entry surface is:
 
-- [`docs/plans/2026-03-13-post-upstream-governance-developer-entry-plan.md`](docs/plans/2026-03-13-post-upstream-governance-developer-entry-plan.md)
+- [`docs/plans/README.md`](docs/plans/README.md)
 
 ## Minimum Proof Expectation
 
@@ -174,7 +174,7 @@ following are true — do not guess your way through these situations:
 
 - you are about to edit `bundled/**` as if it were the source of truth (it is
   not — the canonical source lives elsewhere)
-- you are about to hand-edit tracked `outputs/**` (these are generated)
+- you are about to hand-edit `outputs/**` (these are generated runtime artifacts)
 - you cannot identify the canonical source for a mirrored file
 - you are touching `third_party/**` or `vendor/**` without provenance and
   disclosure updates
@@ -190,15 +190,11 @@ following are true — do not guess your way through these situations:
   [`references/contributor-zone-decision-table.md`](references/contributor-zone-decision-table.md)
 - change proof matrix:
   [`references/change-proof-matrix.md`](references/change-proof-matrix.md)
-- developer entry baseline:
-  [`docs/status/developer-entry-baseline-2026-03-13.md`](docs/status/developer-entry-baseline-2026-03-13.md)
-- developer entry canary:
-  [`docs/status/developer-entry-canary-report-2026-03-13.md`](docs/status/developer-entry-canary-report-2026-03-13.md)
-- developer entry closure:
-  [`docs/status/developer-entry-closure-report-2026-03-13.md`](docs/status/developer-entry-closure-report-2026-03-13.md)
+- current status spine:
+  [`docs/status/README.md`](docs/status/README.md)
 
 ## Scope Note
 
-This contributor guide is the human entry surface for the developer-entry
-rollout. Formal enforcement evidence for templates, gating, and non-regression
-proof lives in the dated status reports under `docs/status/`.
+This contributor guide is the human entry surface for repo contributors.
+Formal enforcement evidence and live closure truth live under the active status
+spine in `docs/status/`.

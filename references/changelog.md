@@ -15,7 +15,6 @@
 - Fixed the OpenCode startup regression by preserving compatibility with pre-existing OpenCode config surfaces instead of writing managed state into locations that could stop the host from booting.
 - Split built-in intent advice from optional vector diff embeddings under explicit `VCO_INTENT_ADVICE_*` and `VCO_VECTOR_DIFF_*` key families, without backfilling legacy `OPENAI_*` names.
 - Hardened macOS shell bootstrap compatibility by removing Bash 4-only assumptions from active entrypoints and by enforcing a clear Python 3.10+ prerequisite before helper dispatch.
-- Detailed release notes: `docs/releases/v2.3.55.md`.
 
 
 ## v2.3.54 (2026-03-30)
@@ -24,7 +23,6 @@
 - Added a stable runtime-contract proof baseline through shared packet projection, contract references, schema/golden tests, and host/runtime projection coverage so later refactors can move with less hidden drift risk.
 - Completed the currently targeted tracked outputs-boundary migration and install-time generated nested compatibility path while preserving installed-runtime behavior and parity gates.
 - Added release-note quality enforcement and re-cut the governed release surface so `v2.3.54` accurately describes the code and verification state that now exists in the repository.
-- Detailed release notes: `docs/releases/v2.3.54.md`.
 
 
 ## v2.3.53 (2026-03-30)
@@ -32,7 +30,6 @@
 - Closed governed specialist dispatch with explicit custom-admission handling, and restored delegated-lane payload plus host-adapter metadata continuity across router admission, runtime packets, and specialist execution closure gates.
 - Hardened Windows PowerShell host resolution for install, check, and bootstrap surfaces, and tightened managed-host install guarantees across the current preview / runtime-core adapter lanes.
 - Tightened cleanup-truth wording and policy so public release claims and runtime cleanup semantics stay aligned with what the governed runtime can actually prove.
-- Detailed release notes: `docs/releases/v2.3.53.md`.
 
 
 ## v2.3.52 (2026-03-29)
@@ -40,7 +37,6 @@
 - Landed stage-aware memory activation inside the standard six-stage `vibe` runtime, including per-run memory activation reports and bounded context injection into governed artifacts.
 - Added real governed backend adapter read/write paths for `Serena`, `ruflo`, and `Cognee`, with session-local request/response receipts instead of policy-only ownership claims.
 - Kept memory-scope boundaries explicit: `ruflo` remains XL-scoped, `knowledge-steward` remains explicit-only, and the runtime cleanup fold is local governed compaction rather than silent skill auto-invocation.
-- Detailed release notes: `docs/releases/v2.3.52.md`.
 
 
 ## v2.3.51 (2026-03-28)
@@ -49,7 +45,6 @@
 - Completed the recent specialist-governance sequence on `main`: stage-bound specialist dispatch, child-lane same-round auto-absorb under root approval, and stronger native-specialist failure proofing.
 - Fixed Windows specialist runtime handoff so governed specialist execution stays usable on current Windows environments instead of breaking at the boundary between orchestration and native specialist lanes.
 - Added benchmark/scenario-backed workflow acceptance and release-truth helpers to support stricter completion-language honesty beyond pure runtime/process success.
-- Detailed release notes: `docs/releases/v2.3.51.md`.
 
 
 ## v2.3.50 (2026-03-26)
@@ -57,7 +52,6 @@
 - Added router AI connectivity proofing for the governance advice path, including a PowerShell gate, a runtime-neutral Python probe, and install-entry quick-check guidance that reports structured readiness states.
 - Hardened LLM acceleration overlay optional-field handling and aligned the default Windows verification command with `powershell.exe` so stock Windows environments can run the router gate without requiring `pwsh`.
 - Landed the current host-adapter and install-surface closure now present on main: OpenClaw runtime-core normalization, OpenCode preview adapter/install surface, Cursor/Windsurf preview support alignment, and a single public install entry with bilingual parity.
-- Detailed release notes: `docs/releases/v2.3.50.md`.
 
 
 ## v2.3.49 (2026-03-23)
@@ -66,7 +60,6 @@
 - Added adapter-registry fallback resolution for installed-runtime check surfaces, so `check.ps1` and `check.sh` keep working from pure installed `skills/vibe` roots without repo-level `adapters/index.json`.
 - Centralized parent-path and canonical-repo detection helpers, then applied the same guardrails across PowerShell and Python adapter/install tooling to reduce cross-surface divergence.
 - Added installed-runtime regression coverage for pure installed-script health checks.
-- Detailed release notes: `docs/releases/v2.3.49.md`.
 
 
 ## v2.3.48 (2026-03-23)
@@ -74,7 +67,6 @@
 - Normalized legacy `benchmark_autonomous` input to `interactive_governed`, making `interactive_governed` the only effective governed runtime mode while preserving silent compatibility for older callers.
 - Updated runtime bridge tests and governed proof gates so the compatibility downgrade is verified explicitly instead of routing legacy mode through unattended execution.
 - Hardened `scripts/verify/vibe-adaptive-routing-readiness-gate.ps1` to handle single-file telemetry without crashing the release train.
-- Detailed release notes: `docs/releases/v2.3.48.md`.
 
 
 ## v2.3.47 (2026-03-15)
@@ -82,7 +74,6 @@
 - Added canonical no-silent-fallback governance plus implementation guardrails so degraded paths must stay explicit, warned, and non-authoritative.
 - Added fallback-truth release gates covering silent fallback, self-introduced fallback, and release-truth consistency across runtime, code, and release surfaces.
 - Synced routed-stability fixture mirrors back to tracked output truth before release cut, then revalidated output artifact boundary closure.
-- Detailed release notes: `docs/releases/v2.3.47.md`.
 
 
 ## v2.3.46 (2026-03-15)
@@ -91,7 +82,6 @@
 - Added platform-neutral Python host resolution through `Resolve-VgoPythonCommandSpec`, supporting `python`, `python3`, and `py -3` without forking runtime truth by host.
 - Updated the Linux no-`pwsh` router gate wrapper and benchmark execution policy to consume the shared Python host resolver instead of direct `python` invocations.
 - Extended `tests/runtime_neutral/test_governed_runtime_bridge.py` with host-resolution coverage so the governed bridge now proves `python3` fallback and Windows `py -3` launcher behavior.
-- Detailed release notes: `docs/releases/v2.3.46.md`.
 
 
 ## v2.3.45 (2026-03-15)
@@ -100,7 +90,6 @@
 - Added artifact-root-relative path fields to the runtime summary, making `benchmark_autonomous` bridge consumers robust under Windows PowerShell path encoding/codepage differences.
 - Fixed `tests/runtime_neutral/test_governed_runtime_bridge.py` to reconstruct artifact paths from the temp artifact root when absolute stdout paths are lossy on Windows.
 - Revalidated benchmark closure with real execution and proof gates after mirror/version sync.
-- Detailed release notes: `docs/releases/v2.3.45.md`.
 
 
 ## v2.3.44 (2026-03-15)
@@ -109,7 +98,6 @@
 - Added `config/benchmark-execution-policy.json` as the canonical scheduler contract for repo-safe benchmark execution, including wave/unit topology and proof thresholds.
 - Strengthened `tests/runtime_neutral/test_governed_runtime_bridge.py` and `scripts/verify/vibe-governed-runtime-contract-gate.ps1` so benchmark mode must now prove real unit execution instead of only artifact existence.
 - Added `scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1` to verify that benchmark runtime closure includes actual command execution, zero failed units, and a tracked proof manifest.
-- Detailed release notes: `docs/releases/v2.3.44.md`.
 
 ## v2.3.43 (2026-03-15)
 
@@ -117,7 +105,6 @@
 - Added governed-runtime packaging/runtime bridge coverage through `tests/runtime_neutral/test_governed_runtime_bridge.py`, including runtime-contract marker coverage and temp artifact-root closure for `invoke-vibe-runtime.ps1`.
 - Extended installed-runtime freshness markers and governed packaging scope so the six-stage runtime surfaces are part of the governed installed-runtime contract rather than repo-only documentation.
 - Aligned outward-facing release surfaces, dist manifests, and proof-bundle source-release markers to `v2.3.43`.
-- Detailed release notes: `docs/releases/v2.3.43.md`.
 
 
 ## v2.3.42 (2026-03-14)
@@ -126,7 +113,6 @@
 - Added `scripts/verify/vibe-proof-bundle-tracked-files-gate.ps1` so manifest-declared proof artifacts, operation records, and fresh-machine reports must all be git-tracked before release truth can be called green.
 - Wired the new tracked-files gate into the platform-promotion bundle so `vibe-platform-promotion-bundle.ps1` now fails whenever proof truth depends on author-machine residue.
 - Corrected the release-truth mismatch discovered in `v2.3.41`: Linux remains `supported-with-constraints`, but proof/promotion governance is now evaluated against versioned repository contents rather than ignored local leftovers.
-- Detailed release notes: `docs/releases/v2.3.42.md`.
 
 ## v2.3.41 (2026-03-14)
 
@@ -134,7 +120,6 @@
 - Added canonical execution-context locking to the Linux proof gate so stale installed-runtime copies fail with an explicit governance hint instead of being misread as repo-root Linux regressions.
 - Aligned official-runtime baseline and dist manifests to the governed `2.3.41` release truth while keeping Linux public support status conservative at `supported-with-constraints`.
 - Updated high-frequency operator docs to use cross-platform `pwsh` / `<target-root>` guidance instead of Windows-first `USERPROFILE` examples.
-- Detailed release notes: `docs/releases/v2.3.41.md`.
 
 
 ## v2.3.40 (2026-03-14)
@@ -143,7 +128,6 @@
 - Added explicit installed-runtime upgrade hints to `check.ps1` and `check.sh` so repo pulls are no longer silently confused with installed runtime upgrades.
 - Kept Linux platform truth conservative while preserving green router, routing-stability, platform-support, mirror-hygiene, and proof-bundle gates.
 - Aligned the governed release surface to `2.3.40` across version governance, maintenance markers, release navigation, and public install copy.
-- Detailed release notes: `docs/releases/v2.3.40.md`.
 
 ## v2.3.39 (2026-03-14)
 
@@ -152,7 +136,6 @@
 - Stabilized governed sub-gate invocation so the no-regression umbrella gate now receives deterministic `exit_code` objects instead of leaking child output shapes.
 - Hardened multiple router overlays for strict-mode safety and re-proved installed-runtime routing through a fresh isolated smoke runtime.
 - Registered the regression-closure router file set in the official-runtime main-chain policy so governance can distinguish this bounded fix wave from unrelated protected-surface drift.
-- Detailed release notes: `docs/releases/v2.3.39.md`.
 
 ## v2.3.38 (2026-03-14)
 
@@ -160,7 +143,6 @@
 - Landed matching path-resolution helpers and consumer updates so config tokenization does not regress runtime behavior, including sync/bootstrap/governance flows and Linux-sensitive RUC-NLPIR preflight handling.
 - Resynced canonical, bundled, and nested-bundled mirrors, then re-materialized the smoke installed runtime to prove the installed surface matches the new canonical governance state.
 - Verified release readiness with zero leaked author-machine paths in the governed config surfaces plus green `vibe-upstream-corpus-manifest-gate.ps1`, `vibe-deep-extraction-pilot-gate.ps1`, `vibe-installed-runtime-freshness-gate.ps1`, and `check.ps1 -Profile full`.
-- Detailed release notes: `docs/releases/v2.3.38.md`.
 
 
 ## v2.3.37 (2026-03-13)
@@ -169,7 +151,6 @@
 - Updated bootstrap doctor semantics to explicitly distinguish three governed surfaces: `scrapling` as the default full-profile runtime surface, `Cognee` as the default long-term enhancement lane, and `Composio / Activepieces` as prewired but setup-required external action surfaces.
 - Expanded the install and onboarding docs across README, cold-start paths, one-shot setup, and host-plugin policy so operators can see the truthful boundary between repo-owned closure and host-managed provisioning.
 - Aligned the governed release surface to `2.3.37` across version governance, maintenance markers, changelog, release ledger, and release navigation.
-- Detailed release notes: `docs/releases/v2.3.37.md`.
 
 
 ## v2.3.36 (2026-03-13)
@@ -178,7 +159,6 @@
 - Added bilingual host-plugin policy docs and reusable Windows/Linux full-featured install prompt bundles for operator onboarding.
 - Updated `README.md`, `README.en.md`, `docs/one-shot-setup.md`, and cold-start install guides to clearly separate `minimum viable`, `recommended full-featured`, and `enterprise-governed` entry paths.
 - Aligned the governed release surface to `2.3.36` across version governance, dist manifests, release notes, and runtime-neutral freshness tests.
-- Detailed release notes: `docs/releases/v2.3.36.md`.
 
 
 ## v2.3.35 (2026-03-13)
@@ -193,7 +173,6 @@
 - Added explicit operator-facing boundary language for host plugins, plugin-backed MCP surfaces, and provider secrets so incomplete host provisioning resolves to `manual_actions_pending` instead of ambiguous expectations.
 - Added cold-start onboarding documents for three install modes: `minimum viable`, `recommended full-featured`, and `enterprise-governed`, with commands, acceptance criteria, and stop rules.
 - Wired the new onboarding docs into the main README, English README, docs index, and one-shot setup guide so first-time users can enter through a deterministic path instead of guessing.
-- Detailed release notes: `docs/releases/v2.3.34.md`.
 
 
 ## v2.3.33 (2026-03-13)
@@ -202,7 +181,6 @@
 - Added operator-facing bootstrap messaging that sets realistic expectations for slow `npm` installs and advisory deprecated warnings during external CLI provisioning.
 - Aligned `check.ps1` with `nested_bundled` governance so optional nested mirrors no longer create false bundled-config warnings during deep doctor runs.
 - Resynced canonical and bundled mirrors, regenerated `config/skills-lock.json`, and re-cut the governed release surface to `v2.3.33`.
-- Detailed release notes: `docs/releases/v2.3.33.md`.
 
 
 ## v2.3.32 (2026-03-13)
@@ -211,29 +189,27 @@
 - Added `scripts/bootstrap/one-shot-setup.sh` to close the shell-native bootstrap gap with install -> settings seed -> MCP active profile materialization -> deep check.
 - Updated deployment and one-shot setup docs to make the full-feature boundary explicit: what the repo can automate, and what still must be provisioned at the host/plugin/secret layer.
 - Regenerated `config/skills-lock.json`, resynced canonical and bundled mirrors, and re-cut the governed release surface to `v2.3.32`.
-- Detailed release notes: `docs/releases/v2.3.32.md`.
 
 
 ## v2.3.31 (2026-03-13)
 
 - Completed the governed execution closure for:
-  - `docs/plans/2026-03-13-distribution-governance-plan.md`
-  - `docs/plans/2026-03-13-post-upstream-governance-repo-convergence-plan.md`
-  - `docs/plans/2026-03-13-post-upstream-governance-developer-entry-plan.md`
+  - distribution governance closure
+  - repo convergence closure
+  - developer-entry closure
 - Repaired external-corpus fixture parity so `vibe-output-artifact-boundary-gate.ps1` returns green with tracked output mirrors aligned.
 - Repaired third-party disclosure canonicalization so `vibe-third-party-disclosure-parity-gate.ps1` no longer misclassifies repository-local document links as undeclared upstream sources.
 - Re-cut the governed version surface to `v2.3.31`, resynced canonical and bundled assets, and prepared runtime/install/remote alignment around the new release marker.
-- Detailed release notes: `docs/releases/v2.3.31.md`.
 
 
 ## 2026-03-09 — Batch0-9 cleanup closure update
 
-- 完成 `docs/plans/2026-03-08-repo-full-cleanup-master-plan.md` 下 Batch 0-9 的一次执行收口，并新增 tracked 报告：`docs/plans/2026-03-09-batch0-9-closure-report.md`。
+- 完成当时 repo-full-cleanup 主计划下 Batch 0-9 的一次执行收口，并新增对应 closure 报告。
 - 修复 `scripts/governance/export-repo-cleanliness-inventory.ps1` 的 artifact 渲染解析错误，使 cleanliness inventory operator 可稳定执行。
 - 新增 `.gitattributes`，补强 `.gitignore` / `config/index.md` / `third_party/README.md` / docs-references-scripts family spine，并把 `.gitattributes` 与 `third_party/` 纳入 `config/repo-cleanliness-policy.json` 的治理面。
 - 修复 `check.sh` 的 UTF-8 BOM 风险，并完成 canonical -> bundled -> nested sync；同时复跑 installed runtime install/freshness/coherence 流程。
 - 关键门禁全部通过：repo-cleanliness、output-artifact-boundary、bom-frontmatter、mirror-edit-hygiene、nested-bundled-parity、version-packaging、installed-runtime-freshness、release-install-runtime-coherence。
-- 说明：这是一轮 cleanup / governance closure，不是新的 release cut；Batch 3 的 canonical workset admission / commit closure 仍保留为下一步 backlog（见 docs/plans/2026-03-09-batch0-9-closure-report.md）。
+- 说明：这是一轮 cleanup / governance closure，不是新的 release cut；Batch 3 的 canonical workset admission / commit closure 仍保留为下一步 backlog。
 
 ## v2.3.30 (2026-03-07)
 
@@ -250,7 +226,6 @@
 - 完成 Wave39 的 promotion / release closure：
   - promotion board 扩展覆盖 Wave31-38 新治理条目。
   - 新增 `pilot-deep-extraction.json` / `vibe-deep-extraction-pilot-gate.ps1`，把 mirror/runtime/corpus/productization 收口指标并入 release 证据链。
-  - 详细说明（release notes）：`docs/releases/v2.3.30.md`。
 ## v2.3.29 (2026-03-07)
 
 - 完成 Wave19-23 的 memory / prompt absorption 收口：
@@ -262,7 +237,6 @@
 - 完成 Wave29-30 的发布收口：
   - canonical / bundled 镜像重新同步，清理退役 `*-shadow.json` pilot 旧命名。
   - `memory-runtime-v2`、`prompt-intelligence`、`browserops-provider`、`desktopops-shadow` 已由 `shadow` 显式写入 `soft`。
-  - 详细说明（release notes）：`docs/releases/v2.3.29.md`。
 
 
 ## v2.3.28 (2026-03-05)
@@ -279,7 +253,6 @@
   - 新增 Skills：`scholarly-publishing`、`submission-checklist`、`manuscript-as-code`、`latex-submission-pipeline`、`slides-as-code`、`scientific-reporting`（含模板与案例库索引）。
   - 路由规则补齐：学术场景正/负关键词、技能 keyword index、回归用例（grant proposal、PPT/Slidev slides-as-code）。
   - 可靠性：开启 legacy fallback 的 confirm guard，避免低信号误自动路由。
-  - 详细说明（release notes）：`docs/releases/v2.3.28.md`。
 - 新增 TuriX‑CUA Computer Use Overlay（advice-only）：
   - UI/浏览器流程任务提供 CUA vs Playwright vs API 决策树与 runbook（自动建议 → 你确认 → 注入）。
 - 可靠性修复：

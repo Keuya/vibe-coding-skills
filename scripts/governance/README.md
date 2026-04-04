@@ -27,7 +27,6 @@
 | [`release-cut.ps1`](release-cut.ps1) | release | yes | `-Preview` | host + preview receipt | updates version governance, changelog, release note, ledger, and runtime-facing release surfaces without mutating a tracked vibe mirror |
 | [`set-openspec-rollout.ps1`](set-openspec-rollout.ps1) | rollout toggle | yes | `-WhatIf` | json | adjusts OpenSpec rollout stage |
 | [`set-gsd-overlay-rollout.ps1`](set-gsd-overlay-rollout.ps1) | rollout toggle | yes | `-WhatIf` | json | adjusts GSD overlay rollout stage |
-| [`publish-openspec-soft-rollout.ps1`](publish-openspec-soft-rollout.ps1) | rollout publish | yes | `-SkipPrecheck` as control, no dry-run | json | runs precheck -> switch -> postcheck sequence |
 | [`publish-absorption-soft-rollout.ps1`](publish-absorption-soft-rollout.ps1) | promotion board write | conditional (`-WriteBoard`) | advice-first by default | host/json-like | evaluates board eligibility; only writes when explicitly asked |
 | [`invoke-openspec-governance.ps1`](invoke-openspec-governance.ps1) | policy advice | no | n/a | json | emits planning advice / lite cards / task metadata |
 | [`invoke-mem0-policy.ps1`](invoke-mem0-policy.ps1) | policy probe | no | n/a | json | checks payload admission against mem0 policy |

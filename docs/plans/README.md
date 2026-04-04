@@ -2,27 +2,32 @@
 
 - Up: [`../README.md`](../README.md)
 
-## What Lives Here
+## Purpose
 
-`docs/plans/` 保存 dated execution plans、program plans 和历史 batch context。这里回答“现在按什么计划执行”，但不承担 live state 或 proof truth。
+`docs/plans/` is the canonical in-repo surface for active governed execution plans.
+It is no longer a timeline archive for every historical remediation batch.
 
 ## Start Here
 
-- 当前根需求：[`../requirements/2026-04-04-remaining-architecture-closure.md`](../requirements/2026-04-04-remaining-architecture-closure.md)
-- 当前根计划：[`2026-04-04-remaining-architecture-closure-plan.md`](./2026-04-04-remaining-architecture-closure-plan.md)
-- 当前安装文档对齐计划：[`2026-04-04-install-docs-registry-alignment-plan.md`](./2026-04-04-install-docs-registry-alignment-plan.md)
-- 当前架构一致性刷新计划：[`2026-04-04-architecture-consistency-audit-refresh-plan.md`](./2026-04-04-architecture-consistency-audit-refresh-plan.md)
-- 当前状态脊柱补齐计划：[`2026-04-04-status-spine-catch-up-plan.md`](./2026-04-04-status-spine-catch-up-plan.md)
-- 最近完成的高价值 contract cutover：[`2026-04-04-release-cut-gate-contract-delegation-plan.md`](./2026-04-04-release-cut-gate-contract-delegation-plan.md)
+- current repo-slimming execution:
+  [`2026-04-04-repo-slimming-architecture-closure-plan.md`](./2026-04-04-repo-slimming-architecture-closure-plan.md)
+- current release baseline:
+  [`../releases/v2.3.56.md`](../releases/v2.3.56.md)
+- current live state:
+  [`../status/current-state.md`](../status/current-state.md)
 
-## Historical Context
+## Retained Contract Anchors
 
-- 2026-04-04 之前的 dated execution / remediation / technical-debt plans 继续保留，按日期检索即可。
-- 历史 closure reports 和 batch reports 继续保留，但不在首页继续堆叠成长列表。
-- live runtime truth 不在这里，而在 [`../status/current-state.md`](../status/current-state.md) 和 [`../status/closure-audit.md`](../status/closure-audit.md)。
+- hierarchy governance still consumed by verify surfaces:
+  [`2026-03-28-root-child-vibe-hierarchy-governance-plan.md`](./2026-03-28-root-child-vibe-hierarchy-governance-plan.md)
+- universalization anchors still consumed by dist/config/tests:
+  [`2026-03-13-universal-vibeskills-execution-program.md`](./2026-03-13-universal-vibeskills-execution-program.md)
+  [`2026-03-13-universal-vibeskills-no-regression-migration-plan.md`](./2026-03-13-universal-vibeskills-no-regression-migration-plan.md)
+  [`2026-03-13-linux-full-authoritative-migration-plan.md`](./2026-03-13-linux-full-authoritative-migration-plan.md)
 
 ## Rules
 
-- 当前 active root plan 和 active microphase plans 可以出现在首页。
-- 纯历史材料不需要继续扩张首页入口。
-- requirement / plan / status 各自承担各自职责，不要把 live proof 写回 `docs/plans/README.md`。
+- Keep only active plans and files that still serve as explicit contract anchors.
+- Do not retain one-off execution traces here once they stop being consumed.
+- Historical execution detail should live in PR context, release notes, or external archival surfaces.
+- Live runtime truth stays in [`../status/current-state.md`](../status/current-state.md) and [`../status/closure-audit.md`](../status/closure-audit.md), not in `docs/plans/`.

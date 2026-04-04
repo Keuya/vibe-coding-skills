@@ -125,4 +125,4 @@ For the detailed operator SOP, see `docs/runtime-freshness-install-sop.md`.
 
 - docs/runtime-freshness-install-sop.md: operator-facing install / runtime freshness playbook.
 - docs/promotion-board-governance.md: Wave39 uses version / parity / coherence gates as promotion and release evidence inputs.
-- docs/plans/2026-03-07-vco-deep-value-extraction-drift-closure-plan.md: Wave31-39 execution plan and closure criteria.
+- Wave31-39 execution plan and closure criteria now live as historical planning context rather than an active repo entry surface.

@@ -4,7 +4,7 @@
 Land a hierarchy model for XL governed execution so one user task has one root `vibe` runtime, child agents inherit `vibe` as subordinate execution lanes, and specialist skills remain bounded assistants rather than recursive governance owners. The design must preserve current explicit `vibe` authority, prevent duplicate canonical surfaces, and produce proof that the new hierarchy is stable, usable, and intelligent under realistic task delegation flows.
 
 ## Frozen Inputs
-- Requirement doc: /home/lqf/table/table5/workspace/issue-57-ai-governance/docs/requirements/2026-03-28-root-child-vibe-hierarchy-governance.md
+- Requirement doc: `docs/requirements/2026-03-28-root-child-vibe-hierarchy-governance.md`
 - Problem statement: recursive child-agent `vibe` use currently risks layered governance, repeated specialist dispatch, and ambiguous completion authority
 - Existing authority invariants:
   - canonical router keeps route authority
