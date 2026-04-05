@@ -1,5 +1,9 @@
 # Office Open XML Technical Reference for PowerPoint
 
+The `pptx/ooxml/scripts/*` entrypoints in this family are thin wrappers over the
+shared OOXML implementation retained under the sibling `docx/ooxml/` tree so the
+document-skills bundle keeps one canonical validator/packer copy.
+
 **Important: Read this entire document before starting.** Critical XML schema rules and formatting requirements are covered throughout. Incorrect implementation can create invalid PPTX files that PowerPoint cannot open.
 
 ## Technical Guidelines
