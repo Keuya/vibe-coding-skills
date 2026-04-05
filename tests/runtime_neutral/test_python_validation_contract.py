@@ -8,7 +8,19 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTEST_INI = REPO_ROOT / "pytest.ini"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "vco-gates.yml"
+TARGETS_FILE = REPO_ROOT / "config" / "python-validation-targets.txt"
+CONFTEST = REPO_ROOT / "tests" / "conftest.py"
 TIMESFM_OUTPUT_ROOT = REPO_ROOT / "bundled" / "skills" / "timesfm-forecasting" / "examples"
+EXPECTED_PYTHON_VALIDATION_TARGETS = [
+    "tests/contract/test_repo_layout_contract.py",
+    "tests/integration/test_runtime_surface_contract_cutover.py",
+    "tests/runtime_neutral/test_apps_surface_hygiene.py",
+    "tests/runtime_neutral/test_custom_admission_bridge.py",
+    "tests/runtime_neutral/test_docs_readme_encoding.py",
+    "tests/runtime_neutral/test_governed_runtime_bridge.py",
+    "tests/runtime_neutral/test_install_profile_differentiation.py",
+    "tests/runtime_neutral/test_python_validation_contract.py",
+]
 
 
 class PythonValidationContractTests(unittest.TestCase):
@@ -26,8 +38,32 @@ class PythonValidationContractTests(unittest.TestCase):
         text = WORKFLOW.read_text(encoding="utf-8-sig")
 
         self.assertIn("actions/setup-python@v5", text)
-        self.assertIn("pytest -q", text)
+        self.assertIn("python -B -m pytest -q", text)
+        self.assertIn("config/python-validation-targets.txt", text)
+        self.assertIn('if [ "${#targets[@]}" -eq 0 ]; then', text)
+        self.assertIn("canonical python validation target list is empty", text)
         self.assertIn("ubuntu-latest", text)
+
+    def test_python_validation_targets_cover_critical_invariants(self) -> None:
+        self.assertTrue(TARGETS_FILE.exists(), "canonical Python validation target list should exist")
+
+        targets = [
+            line.strip()
+            for line in TARGETS_FILE.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+
+        self.assertEqual(EXPECTED_PYTHON_VALIDATION_TARGETS, targets)
+
+    def test_conftest_does_not_mutate_repo_owned_bytecode_artifacts_before_hygiene_assertions(self) -> None:
+        self.assertTrue(CONFTEST.exists(), "tests/conftest.py should exist")
+
+        text = CONFTEST.read_text(encoding="utf-8")
+        self.assertNotIn("shutil.rmtree(", text)
+        self.assertNotIn(".unlink(", text)
+        self.assertNotIn('rglob("__pycache__")', text)
+        self.assertNotIn('rglob("*.pyc")', text)
+        self.assertNotIn('rglob("*.pyo")', text)
 
     def test_timesfm_examples_do_not_track_generated_binary_or_web_outputs(self) -> None:
         forbidden_suffixes = {".png", ".gif", ".html"}
