@@ -283,8 +283,7 @@
       "required_gates": [
         "vibe-docling-contract-gate",
         "vibe-deep-extraction-pilot-gate",
-        "vibe-docling-contract-v2-gate",
-        "vibe-document-plane-benchmark-gate"
+        "vibe-docling-contract-v2-gate"
       ],
       "pilot_fixture": "scripts/verify/fixtures/pilot-deep-extraction.json",
       "pilot_status": "fixture_defined",
@@ -308,7 +307,7 @@
         "revert_to_stage": "shadow",
         "max_safe_auto_write_stage": "soft"
       },
-      "evidence_summary": "Docling v2 contract + golden corpus benchmark 形成 document plane v2 evidence。",
+      "evidence_summary": "Docling v2 contract + golden corpus evidence 形成 document plane v2 evidence。",
       "owner": "vco-core",
       "last_reviewed_at": "2026-03-07"
     },

@@ -53,7 +53,7 @@ bash ./check.sh --host claude-code --profile full --deep
 
 What you get:
 
-- bounded managed `vibeskills` + write-guard hook surface
+- bounded managed `vibeskills` settings surface
 - incremental merge and verification against the real `~/.claude/settings.json`
 - supported-with-constraints health check
 

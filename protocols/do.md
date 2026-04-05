@@ -49,12 +49,6 @@ The job here is to execute, verify, and hand off cleanly to `phase_cleanup`.
 - may pause for explicit confirmation when execution scope materially changes
 - should surface requirement or plan drift before continuing
 
-### `benchmark_autonomous`
-
-- continues without repeated user confirmation
-- must record assumption-driven decisions and execution receipts
-- must not silently widen scope beyond the frozen requirement contract
-
 ## Anti-Drift Execution Guardrails
 
 During execution:

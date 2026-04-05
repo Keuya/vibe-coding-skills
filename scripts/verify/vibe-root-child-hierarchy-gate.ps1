@@ -78,7 +78,7 @@ Add-Assertion -Results ([ref]$results) -Condition ($stableDocText.Contains('root
 
 $runId = "root-child-hierarchy-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
 $artifactRoot = Join-Path $repoRoot (".tmp\root-child-hierarchy-{0}" -f $runId)
-$summary = & $runtimeEntryPath -Task 'Root child hierarchy authority smoke.' -Mode benchmark_autonomous -GovernanceScope root -RunId $runId -ArtifactRoot $artifactRoot
+$summary = & $runtimeEntryPath -Task 'Root child hierarchy authority smoke.' -Mode interactive_governed -GovernanceScope root -RunId $runId -ArtifactRoot $artifactRoot
 
 Add-Assertion -Results ([ref]$results) -Condition ($null -ne $summary) -Message 'runtime smoke returned summary payload'
 $hasSummary = ($null -ne $summary) -and ($summary.PSObject.Properties.Name -contains 'summary')
@@ -88,7 +88,7 @@ if ($hasSummary) {
     $runtimeInputPacket = Get-Content -LiteralPath $summary.summary.artifacts.runtime_input_packet -Raw -Encoding UTF8 | ConvertFrom-Json
     $executionManifest = Get-Content -LiteralPath $summary.summary.artifacts.execution_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
 
-    Add-Assertion -Results ([ref]$results) -Condition ($summary.mode -eq 'interactive_governed') -Message 'legacy benchmark mode is normalized to interactive_governed for hierarchy smoke'
+    Add-Assertion -Results ([ref]$results) -Condition ($summary.mode -eq 'interactive_governed') -Message 'hierarchy smoke runs interactive_governed mode'
     Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.route_snapshot.selected_skill -eq 'vibe') -Message 'root hierarchy smoke keeps vibe as frozen route skill'
     Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.authority_flags.explicit_runtime_skill -eq 'vibe') -Message 'root hierarchy smoke keeps vibe as runtime authority'
     Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.governance_scope -eq 'root') -Message 'runtime packet marks root governance scope'

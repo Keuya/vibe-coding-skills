@@ -1,7 +1,6 @@
 {
   "scenario_id": "l-grade-feature-complete",
   "task_class": "l_serial_feature_delivery",
-  "benchmark_repo": "benchmarks/todo-webapp",
   "runtime": {
     "status": "completed",
     "readiness_state": "ready"

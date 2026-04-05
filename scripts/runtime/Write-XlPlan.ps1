@@ -64,7 +64,7 @@ $executionTopology = New-VibeExecutionTopology `
     -RunId $RunId `
     -Grade $grade `
     -GovernanceScope ([string]$hierarchyState.governance_scope) `
-    -BenchmarkPolicy $runtime.benchmark_execution_policy `
+    -ExecutionPolicy $runtime.execution_runtime_policy `
     -TopologyPolicy $runtime.execution_topology_policy `
     -ApprovedDispatch @($approvedDispatch)
 $executionTopologyPath = Get-VibeExecutionTopologyPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot

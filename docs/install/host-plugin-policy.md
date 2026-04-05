@@ -39,7 +39,7 @@
 
 - 提供支持的安装与使用路径
 - 不靠“补一堆宿主插件”来完成接入
-- 会在保留真实 `~/.claude/settings.json` 的前提下，增量合并受约束的 `vibeskills` 与 write-guard hook 面
+- 会在保留真实 `~/.claude/settings.json` 的前提下，增量合并受约束的 `vibeskills` 设置面
 - plugin enablement、MCP 注册、凭据与更广的 Claude 行为仍由宿主侧管理
 
 ## Cursor
@@ -80,5 +80,5 @@
 - `opencode` 提供支持的安装与使用路径，默认目标根目录是 `OPENCODE_HOME` 或 `~/.vibeskills/targets/opencode`
 - `opencode` 的真实宿主配置目录 `~/.config/opencode` 仍由宿主侧管理
 - `opencode` 走 direct install/check，且不接管真实 `opencode.json`
-- hooks 在当前公开支持面里不是一刀切：Codex/Cursor 仍冻结，Claude 已有受约束的受管 write-guard hook 面
+- hooks 在当前公开支持面里不是一刀切：Codex/Cursor 仍冻结，而 Claude 当前仅保留受约束的受管 settings 面
 - provider 的 `url` / `apikey` / `model` 由用户在本地配置，不要要求用户贴到聊天里

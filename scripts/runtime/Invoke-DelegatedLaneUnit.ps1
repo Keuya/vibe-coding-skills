@@ -22,7 +22,7 @@ $receipt = $null
 $resultPath = $null
 
 switch ($laneKind) {
-    'benchmark_unit' {
+    'execution_unit' {
         $tokens = @{}
         foreach ($property in @($laneSpec.tokens.PSObject.Properties)) {
             $tokens[$property.Name] = [string]$property.Value
@@ -71,7 +71,7 @@ switch ($laneKind) {
             "# Delegated Lane Notes",
             '',
             "- lane_id: $([string]$laneSpec.lane_id)",
-            "- lane_kind: benchmark_unit",
+            "- lane_kind: execution_unit",
             "- write_scope: $([string]$laneSpec.write_scope)",
             "- verification_passed: $([bool]$envelopedResult.verification_passed)",
             "- result_path: $resultPath"

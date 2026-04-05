@@ -112,11 +112,11 @@
             ]
           },
           {
-            "id": "baseline_frozen",
+            "id": "governed_execution_truth_references_exist",
             "promise_level": "promised",
             "evidence_paths": [
-              "docs/universalization/official-runtime-baseline.md",
-              "scripts/verify/vibe-official-runtime-baseline-gate.ps1"
+              "docs/universalization/distribution-lanes.md",
+              "docs/universalization/install-matrix.md"
             ]
           }
         ],
@@ -131,8 +131,7 @@
           "install_matrix": "docs/universalization/install-matrix.md",
           "platform_install_matrix": "docs/universalization/platform-install-matrix.md",
           "platform_support_matrix": "docs/universalization/platform-support-matrix.md",
-          "host_capability_matrix": "docs/universalization/host-capability-matrix.md",
-          "official_runtime_baseline": "docs/universalization/official-runtime-baseline.md"
+          "host_capability_matrix": "docs/universalization/host-capability-matrix.md"
         },
         "support": {
           "platform_support": {
@@ -229,8 +228,7 @@
           "install_matrix": "docs/universalization/install-matrix.md",
           "platform_install_matrix": "docs/universalization/platform-install-matrix.md",
           "platform_support_matrix": "docs/universalization/platform-support-matrix.md",
-          "host_capability_matrix": "docs/universalization/host-capability-matrix.md",
-          "official_runtime_baseline": "docs/universalization/official-runtime-baseline.md"
+          "host_capability_matrix": "docs/universalization/host-capability-matrix.md"
         },
         "support": {
           "platform_support": {
@@ -260,10 +258,10 @@
         "lane_kind": "host-adapter",
         "host_id": "claude-code",
         "stability": "supported-with-constraints",
-        "summary": "Claude Code host adapter lane with bounded managed closure. The repo can write and verify a managed Claude settings + hook surface, while still keeping broader host behavior outside repo ownership.",
+        "summary": "Claude Code host adapter lane with bounded managed closure. The repo can write and verify a managed Claude settings surface, while still keeping broader host behavior outside repo ownership.",
         "runtime_ownership": {
           "owner": "host_managed",
-          "notes": "This lane must not claim official runtime closure. It owns only the bounded vibeskills-managed Claude settings and write-guard hook surface plus truthful readiness boundaries."
+          "notes": "This lane must not claim official runtime closure. It owns only the bounded vibeskills-managed Claude settings surface plus truthful readiness boundaries."
         },
         "entrypoints": {
           "install_primary": "install.ps1 --host claude-code",
@@ -292,15 +290,6 @@
             "evidence_paths": [
               "docs/universalization/router-model-neutrality.md",
               "scripts/router/resolve-pack-route.ps1"
-            ]
-          },
-          {
-            "id": "claude_code_managed_hook_surface_exists",
-            "promise_level": "promised",
-            "evidence_paths": [
-              "hooks/write-guard.js",
-              "check.sh",
-              "tests/runtime_neutral/test_claude_preview_scaffold.py"
             ]
           }
         ],
@@ -734,7 +723,7 @@
         "package_name": "VibeSkills for Claude Code",
         "status": "supported-with-constraints",
         "runtime_role": "host-adapter-supported",
-        "summary": "Claude Code now has a bounded managed install/check lane that writes and verifies a Claude settings + hook surface, but it still does not become the Codex official runtime or full platform-parity lane.",
+        "summary": "Claude Code now has a bounded managed install/check lane that writes and verifies a Claude settings surface, but it still does not become the Codex official runtime or full platform-parity lane.",
         "truth_sources": [
           "docs/universalization/host-capability-matrix.md",
           "docs/universalization/platform-parity-contract.md",
@@ -758,15 +747,13 @@
           "repo_provided": [
             "install.ps1 --host claude-code",
             "install.sh --host claude-code",
-            "settings.json managed vibeskills stanza",
-            "settings.json managed Claude PreToolUse hook entry",
-            "hooks/write-guard.js"
+            "settings.json managed vibeskills stanza"
           ],
           "host_managed": [
             "plugin enablement",
             "MCP registration",
             "provider credentials",
-            "broader Claude host behavior outside the managed vibeskills + write-guard surface"
+            "broader Claude host behavior outside the managed vibeskills settings surface"
           ],
           "notes": [
             "The repo preserves existing Claude settings while merging a bounded managed surface.",

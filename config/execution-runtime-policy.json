@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "updated_at": "2026-03-15",
+  "updated_at": "2026-04-05",
   "enabled": true,
-  "default_profile_id": "repo_safe_benchmark_closure",
+  "default_profile_id": "repo_safe_execution_closure",
   "scheduler": {
     "kind": "bounded_local_xl_executor",
     "wave_execution": "sequential",
@@ -17,15 +17,15 @@
   ],
   "profiles": [
     {
-      "id": "repo_safe_benchmark_closure",
-      "mode": "benchmark_autonomous",
-      "description": "Repo-safe benchmark closure profile that proves real execution using deterministic local verification commands.",
-      "proof_bundle_dirname": "benchmark-proof",
+      "id": "repo_safe_execution_closure",
+      "mode": "interactive_governed",
+      "description": "Repo-safe governed execution profile that proves real execution using deterministic local verification commands.",
+      "proof_bundle_dirname": "execution-proof",
       "expected_minimum_units": 2,
       "waves": [
         {
           "wave_id": "wave-1",
-          "description": "Execute benchmark proof units against repo-safe local commands.",
+          "description": "Execute governed runtime proof units against repo-safe local commands.",
           "units": [
             {
               "unit_id": "runtime-neutral-freshness-gate-tests",

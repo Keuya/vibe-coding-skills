@@ -14,10 +14,6 @@ from .workflow_acceptance_support import (
 def evaluate_workflow_acceptance(repo_root: Path, scenario_path: Path) -> dict[str, Any]:
     contract = load_json(repo_root / "config" / "project-delivery-acceptance-contract.json")
     scenario = load_json(scenario_path)
-    benchmark_repo_rel = str(scenario.get("benchmark_repo") or "").strip()
-    benchmark_repo_path = (repo_root / benchmark_repo_rel).resolve() if benchmark_repo_rel else None
-    benchmark_manifest_path = benchmark_repo_path / "acceptance-manifest.json" if benchmark_repo_path else None
-    benchmark_manifest = load_json(benchmark_manifest_path) if benchmark_manifest_path and benchmark_manifest_path.exists() else None
 
     truth_layers = list(contract.get("truth_layers") or [])
     scenario_truths = scenario.get("truths") or {}
@@ -78,20 +74,7 @@ def evaluate_workflow_acceptance(repo_root: Path, scenario_path: Path) -> dict[s
         "failing_layer_count": len(failing_layers),
         "forbidden_completion_hit_count": len(forbidden_hits),
         "incomplete_layers": incomplete_layers,
-        "benchmark_repo_rel": benchmark_repo_rel,
-        "benchmark_repo_exists": bool(benchmark_repo_path and benchmark_repo_path.exists()),
-        "benchmark_manifest_exists": bool(benchmark_manifest_path and benchmark_manifest_path.exists()),
     }
-
-    if benchmark_repo_rel and not summary["benchmark_repo_exists"]:
-        summary["gate_result"] = "FAIL"
-        summary["completion_language_allowed"] = False
-        summary["incomplete_layers"] = sorted(set(summary["incomplete_layers"] + ["product_acceptance_truth"]))
-    if benchmark_repo_rel and summary["benchmark_repo_exists"] and not summary["benchmark_manifest_exists"]:
-        if summary["gate_result"] == "PASS":
-            summary["gate_result"] = "MANUAL_REVIEW_REQUIRED"
-        summary["completion_language_allowed"] = False
-        summary["incomplete_layers"] = sorted(set(summary["incomplete_layers"] + ["product_acceptance_truth"]))
 
     manual_spot_checks = list(scenario.get("manual_spot_checks") or [])
     residual_risks = list(scenario.get("residual_risks") or [])
@@ -102,14 +85,6 @@ def evaluate_workflow_acceptance(repo_root: Path, scenario_path: Path) -> dict[s
         "contract_version": int(contract.get("version") or 0),
         "scenario_path": str(scenario_path),
         "summary": summary,
-        "benchmark": {
-            "repo_rel": benchmark_repo_rel,
-            "repo_path": str(benchmark_repo_path) if benchmark_repo_path else "",
-            "repo_exists": bool(benchmark_repo_path and benchmark_repo_path.exists()),
-            "manifest_path": str(benchmark_manifest_path) if benchmark_manifest_path else "",
-            "manifest_exists": bool(benchmark_manifest_path and benchmark_manifest_path.exists()),
-            "manifest": benchmark_manifest,
-        },
         "truth_results": truth_results,
         "forbidden_completion_hits": forbidden_hits,
         "manual_spot_checks": manual_spot_checks,

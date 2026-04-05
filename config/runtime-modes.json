@@ -5,9 +5,7 @@
   "allowed_modes": [
     "interactive_governed"
   ],
-  "legacy_mode_aliases": {
-    "benchmark_autonomous": "interactive_governed"
-  },
+  "legacy_mode_aliases": {},
   "mode_contracts": {
     "interactive_governed": {
       "ask_questions": true,
@@ -20,6 +18,6 @@
     "confirm_ui_policy": "config/confirm-ui-policy.json",
     "deep_discovery_policy": "config/deep-discovery-policy.json",
     "plan_execution_policy": "config/plan-execution-policy.json",
-    "benchmark_execution_policy": "config/benchmark-execution-policy.json"
+    "execution_runtime_policy": "config/execution-runtime-policy.json"
   }
 }

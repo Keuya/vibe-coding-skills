@@ -22,7 +22,6 @@
 > - **Root/Child lane**: In multi-agent tasks, "root" is the coordinator; "child" lanes are workers. Only root makes final completion claims.
 > - **Frozen requirement/plan**: Once you approve the requirements or plan, they are locked -- the system will not silently change scope.
 > - **Proof bundle**: Evidence that a task was actually completed -- test results, output logs, verification commands.
-> - **benchmark_autonomous**: A legacy mode name, now normalized to the same interactive-governed mode.
 > - **Silent fallback**: Quietly switching to a degraded path without telling the user -- this is explicitly forbidden.
 
 
@@ -57,19 +56,11 @@ These are syntax variants for the same governed runtime, not separate entrypoint
 
 ### `interactive_governed`
 
-Default mode.
+The only supported mode.
 
 - ask direct high-value questions when needed
 - freeze a requirement document with user-visible assumptions
 - allow approval boundaries before execution
-
-### `benchmark_autonomous`
-
-Legacy compatibility alias only.
-
-- normalize to `interactive_governed`
-- do not create a second unattended runtime plane
-- still generate the same requirement, plan, verification, and cleanup artifacts
 
 ## Fixed 6-Stage State Machine
 
@@ -117,7 +108,6 @@ Rules:
 
 - write under `docs/requirements/`
 - execution and review trace back to this document
-- benchmark mode must record inferred assumptions
 - freeze downstream delivery semantics here, including product acceptance criteria, manual spot checks, and completion-language limits
 - when the canonical anti-proxy-goal-drift policy is active, governed requirement packets must carry its declared objective, proxy-signal, scope, abstraction, completion, and evidence fields
 

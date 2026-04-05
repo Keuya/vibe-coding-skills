@@ -34,7 +34,7 @@ def run_runtime(
     task: str,
     artifact_root: Path,
     *,
-    mode: str = "benchmark_autonomous",
+    mode: str = "interactive_governed",
     script_relative_path: str = "scripts/runtime/invoke-vibe-runtime.ps1",
     governance_scope: str = "root",
     root_run_id: str = "",

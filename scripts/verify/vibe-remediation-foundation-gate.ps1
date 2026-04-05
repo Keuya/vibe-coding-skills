@@ -47,8 +47,7 @@ $requiredFiles = @(
     'config/authoritative-promotion-board.json',
     'references/proof-class-governance.md',
     'docs/governance/vco-remediation-runtime-foundation.md',
-    'scripts/runtime/Freeze-RuntimeInputPacket.ps1',
-    'scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1'
+    'scripts/runtime/Freeze-RuntimeInputPacket.ps1'
 )
 
 foreach ($relativePath in $requiredFiles) {
@@ -58,12 +57,12 @@ foreach ($relativePath in $requiredFiles) {
 
 $runId = "remediation-foundation-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
 $artifactRoot = Join-Path $repoRoot (".tmp\remediation-foundation-{0}" -f $runId)
-$summary = & $runtimeEntryPath -Task 'remediation foundation runtime proof' -Mode benchmark_autonomous -RunId $runId -ArtifactRoot $artifactRoot
+$summary = & $runtimeEntryPath -Task 'remediation foundation runtime proof' -Mode interactive_governed -RunId $runId -ArtifactRoot $artifactRoot
 
 $runtimeInputPacketPath = [string]$summary.summary.artifacts.runtime_input_packet
 $executeReceiptPath = [string]$summary.summary.artifacts.execute_receipt
 $executionManifestPath = [string]$summary.summary.artifacts.execution_manifest
-$proofManifestPath = [string]$summary.summary.artifacts.benchmark_proof_manifest
+$proofManifestPath = [string]$summary.summary.artifacts.execution_proof_manifest
 $cleanupReceiptPath = [string]$summary.summary.artifacts.cleanup_receipt
 
 $runtimeInputPacket = Get-Content -LiteralPath $runtimeInputPacketPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -76,7 +75,7 @@ Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.stage -eq
 Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.provenance.proof_class -eq 'structure') -Message 'runtime input packet proof class is structure'
 Add-Assertion -Results ([ref]$results) -Condition (Test-Path -LiteralPath ([string]$executeReceipt.plan_shadow_path)) -Message 'plan-derived execution shadow artifact exists' -Details ([string]$executeReceipt.plan_shadow_path)
 Add-Assertion -Results ([ref]$results) -Condition ($executionManifest.proof_class -eq 'runtime') -Message 'execution manifest proof class is runtime'
-Add-Assertion -Results ([ref]$results) -Condition ($proofManifest.proof_class -eq 'runtime') -Message 'benchmark proof manifest proof class is runtime'
+Add-Assertion -Results ([ref]$results) -Condition ($proofManifest.proof_class -eq 'runtime') -Message 'execution proof manifest proof class is runtime'
 Add-Assertion -Results ([ref]$results) -Condition (@('receipt_only', 'bounded_cleanup_executed', 'destructive_cleanup_applied', 'cleanup_degraded') -contains [string]$cleanupReceipt.cleanup_mode) -Message 'cleanup receipt uses approved taxonomy' -Details ([string]$cleanupReceipt.cleanup_mode)
 
 $pathBoard = Get-Content -LiteralPath (Join-Path $repoRoot 'config\path-ecology-board.json') -Raw -Encoding UTF8 | ConvertFrom-Json

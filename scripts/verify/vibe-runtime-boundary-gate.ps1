@@ -60,8 +60,7 @@ $assertions = [System.Collections.Generic.List[object]]::new()
 $paths = [ordered]@{
     runtime = Join-Path $repoRoot 'protocols\runtime.md'
     think = Join-Path $repoRoot 'protocols\think.md'
-    skill = Join-Path $repoRoot 'bundled\skills\vibe\SKILL.md'
-    bridge = '/home/lqf/table/table3/docs/architecture/evcode-host-runtime-bridge.md'
+    skill = Join-Path $repoRoot 'SKILL.md'
 }
 
 foreach ($entry in $paths.GetEnumerator()) {
@@ -71,7 +70,6 @@ foreach ($entry in $paths.GetEnumerator()) {
 $runtimeRaw = Get-Content -LiteralPath $paths.runtime -Raw -Encoding UTF8
 $thinkRaw = Get-Content -LiteralPath $paths.think -Raw -Encoding UTF8
 $skillRaw = Get-Content -LiteralPath $paths.skill -Raw -Encoding UTF8
-$bridgeRaw = Get-Content -LiteralPath $paths.bridge -Raw -Encoding UTF8
 
 Add-Assertion -Assertions $assertions -Pass ($runtimeRaw.Contains('superpowers and similar process layers: workflow discipline only')) -Message 'runtime protocol preserves discipline-only status for process layers'
 Add-Assertion -Assertions $assertions -Pass ($runtimeRaw.Contains('a second requirement truth surface')) -Message 'runtime protocol forbids a second requirement truth surface'
@@ -83,10 +81,6 @@ Add-Assertion -Assertions $assertions -Pass ($thinkRaw.Contains('VCO remains the
 Add-Assertion -Assertions $assertions -Pass ($skillRaw.Contains('Compatibility With Process Layers')) -Message 'vibe skill exposes process-layer compatibility section'
 Add-Assertion -Assertions $assertions -Pass ($skillRaw.Contains('second visible startup/runtime prompt surface')) -Message 'vibe skill forbids second visible startup/runtime prompt surface'
 Add-Assertion -Assertions $assertions -Pass ($skillRaw.Contains('second execution-plan surface')) -Message 'vibe skill forbids second execution-plan surface'
-
-Add-Assertion -Assertions $assertions -Pass ($bridgeRaw.Contains('This hook must not emit a visible startup prompt.')) -Message 'bridge doc preserves no-visible-startup-prompt rule'
-Add-Assertion -Assertions $assertions -Pass ($bridgeRaw.Contains('EvCode does not create a second router.')) -Message 'bridge doc preserves no-second-router rule'
-Add-Assertion -Assertions $assertions -Pass ($bridgeRaw.Contains('second visible entry or plan surface')) -Message 'bridge doc forbids second visible entry / plan surface'
 
 $failureCount = @($assertions | Where-Object { -not $_.pass }).Count
 $gateResult = if ($failureCount -eq 0) { 'PASS' } else { 'FAIL' }

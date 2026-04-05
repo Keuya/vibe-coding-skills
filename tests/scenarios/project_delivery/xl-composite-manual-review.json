@@ -1,7 +1,6 @@
 {
   "scenario_id": "xl-composite-manual-review",
   "task_class": "xl_composite_specialist_delivery",
-  "benchmark_repo": "benchmarks/bioinformatics-mini",
   "runtime": {
     "status": "completed",
     "readiness_state": "ready"

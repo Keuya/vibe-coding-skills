@@ -279,7 +279,7 @@ function Get-VibeRuntimeContext {
         native_specialist_execution_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\native-specialist-execution-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         requirement_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\requirement-doc-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         plan_execution_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\plan-execution-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-        benchmark_execution_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\benchmark-execution-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        execution_runtime_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\execution-runtime-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         cleanup_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\phase-cleanup-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         proof_class_registry = Get-Content -LiteralPath (Join-Path $repoRoot 'config\proof-class-registry.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         memory_governance = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-governance.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -436,11 +436,11 @@ function Resolve-VibeRuntimeMode {
     }
 
     $normalized = $Mode.Trim().ToLowerInvariant()
-    if ($normalized -eq 'benchmark_autonomous') {
-        return 'interactive_governed'
+    if ($normalized -ne 'interactive_governed') {
+        throw "Unsupported vibe runtime mode: $Mode"
     }
 
-    return $normalized
+    return 'interactive_governed'
 }
 
 function Resolve-VibeGovernanceScope {
@@ -716,7 +716,7 @@ function New-VibeRuntimeSummaryArtifactProjection {
         [Parameter(Mandatory)] [string]$ExecuteReceiptPath,
         [Parameter(Mandatory)] [string]$ExecutionManifestPath,
         [Parameter(Mandatory)] [string]$ExecutionTopologyPath,
-        [Parameter(Mandatory)] [string]$BenchmarkProofManifestPath,
+        [Parameter(Mandatory)] [string]$ExecutionProofManifestPath,
         [Parameter(Mandatory)] [string]$CleanupReceiptPath,
         [Parameter(Mandatory)] [string]$DeliveryAcceptanceReportPath,
         [Parameter(Mandatory)] [string]$DeliveryAcceptanceMarkdownPath,
@@ -735,7 +735,7 @@ function New-VibeRuntimeSummaryArtifactProjection {
         execute_receipt = $ExecuteReceiptPath
         execution_manifest = $ExecutionManifestPath
         execution_topology = $ExecutionTopologyPath
-        benchmark_proof_manifest = $BenchmarkProofManifestPath
+        execution_proof_manifest = $ExecutionProofManifestPath
         cleanup_receipt = $CleanupReceiptPath
         delivery_acceptance_report = $DeliveryAcceptanceReportPath
         delivery_acceptance_markdown = $DeliveryAcceptanceMarkdownPath
@@ -960,8 +960,6 @@ function New-VibeIntentContractObject {
     $grade = Get-VibeInternalGrade -Task $Task
     $assumptions = @()
     $assumptions += 'Interactive clarification is allowed if unresolved ambiguity materially changes implementation.'
-    $assumptions += 'Legacy benchmark_autonomous requests are normalized into interactive_governed before intent capture.'
-
     return [pscustomobject]@{
         generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         title = $title

@@ -32,9 +32,6 @@ class WorkflowAcceptanceRunnerTests(unittest.TestCase):
         self.assertEqual("PASS", artifact["summary"]["gate_result"])
         self.assertTrue(artifact["summary"]["completion_language_allowed"])
         self.assertEqual(0, artifact["summary"]["forbidden_completion_hit_count"])
-        self.assertTrue(artifact["summary"]["benchmark_repo_exists"])
-        self.assertTrue(artifact["summary"]["benchmark_manifest_exists"])
-        self.assertEqual("todo-webapp", artifact["benchmark"]["manifest"]["benchmark_id"])
 
     def test_manual_review_scenario_blocks_completion_language(self) -> None:
         scenario_path = REPO_ROOT / "tests" / "scenarios" / "project_delivery" / "xl-composite-manual-review.json"
@@ -57,7 +54,7 @@ class WorkflowAcceptanceRunnerTests(unittest.TestCase):
             artifact["summary"]["incomplete_layers"],
         )
 
-    def test_missing_benchmark_manifest_downgrades_to_manual_review(self) -> None:
+    def test_missing_optional_external_fixture_does_not_change_truth_result(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             root = Path(tempdir)
             (root / "config").mkdir(parents=True, exist_ok=True)
@@ -72,9 +69,8 @@ class WorkflowAcceptanceRunnerTests(unittest.TestCase):
             scenario_path.write_text(
                 json.dumps(
                     {
-                        "scenario_id": "missing-benchmark-manifest",
+                        "scenario_id": "no-benchmark-required",
                         "task_class": "test",
-                        "benchmark_repo": "benchmarks/demo",
                         "runtime": {"status": "completed", "readiness_state": "ready"},
                         "truths": {
                             "governance_truth": {"state": "passing"},
@@ -88,8 +84,8 @@ class WorkflowAcceptanceRunnerTests(unittest.TestCase):
                 encoding="utf-8",
             )
             artifact = self.module.evaluate(root, scenario_path)
-            self.assertEqual("MANUAL_REVIEW_REQUIRED", artifact["summary"]["gate_result"])
-            self.assertFalse(artifact["summary"]["completion_language_allowed"])
+            self.assertEqual("PASS", artifact["summary"]["gate_result"])
+            self.assertTrue(artifact["summary"]["completion_language_allowed"])
 
     def test_write_artifacts_emits_json_and_markdown(self) -> None:
         scenario_path = REPO_ROOT / "tests" / "scenarios" / "project_delivery" / "l-grade-feature-complete.json"

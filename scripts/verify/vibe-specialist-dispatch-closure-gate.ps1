@@ -53,7 +53,7 @@ function Invoke-ClosureScenario {
     $scriptPath = Get-VgoRuntimeEntrypointPath -RepoRoot $RepoRoot -RuntimeConfig $RuntimeConfig
     return & $scriptPath `
         -Task $Task `
-        -Mode benchmark_autonomous `
+        -Mode interactive_governed `
         -RunId $RunId `
         -ArtifactRoot $ArtifactRoot `
         -GovernanceScope $GovernanceScope `

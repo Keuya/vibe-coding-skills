@@ -71,11 +71,11 @@
     "scripts/runtime/native_specialist_runner.py",
     "scripts/install/Install-VgoAdapter.ps1",
     "scripts/uninstall/Uninstall-VgoAdapter.ps1",
-    "scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1",
     "scripts/verify/vibe-bom-frontmatter-gate.ps1",
     "scripts/verify/vibe-governed-runtime-contract-gate.ps1",
     "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
     "scripts/verify/vibe-linux-router-no-pwsh-gate.ps1",
+    "scripts/verify/vibe-runtime-execution-proof-gate.ps1",
     "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1"
   ],
   "directories": [
@@ -99,11 +99,11 @@
         "scripts/router/resolve-pack-route.ps1"
       ],
       "verification_gates": [
-        "scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1",
         "scripts/verify/vibe-bom-frontmatter-gate.ps1",
         "scripts/verify/vibe-governed-runtime-contract-gate.ps1",
         "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
         "scripts/verify/vibe-linux-router-no-pwsh-gate.ps1",
+        "scripts/verify/vibe-runtime-execution-proof-gate.ps1",
         "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1"
       ],
       "runtime_support_files": [

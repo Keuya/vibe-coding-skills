@@ -51,7 +51,7 @@ def run_runtime(
             "& { "
             f"$result = & '{script_path}' "
             f"-Task '{task}' "
-            "-Mode benchmark_autonomous "
+            "-Mode interactive_governed "
             f"-GovernanceScope {governance_scope} "
             f"-RunId '{run_id}' "
             f"-ArtifactRoot '{artifact_root}'; "
@@ -205,11 +205,11 @@ class NativeSpecialistFailureInjectionTests(unittest.TestCase):
             self.assertGreaterEqual(int(specialist_accounting["failed_specialist_unit_count"]), 1)
             self.assertEqual("completed_with_failures", execution_manifest["status"])
 
-            benchmark_proof = load_json(summary["artifacts"]["benchmark_proof_manifest"])
-            self.assertEqual("live_native_failed", benchmark_proof["specialist_execution_status"])
+            execution_proof = load_json(summary["artifacts"]["execution_proof_manifest"])
+            self.assertEqual("live_native_failed", execution_proof["specialist_execution_status"])
             self.assertEqual(
                 int(specialist_accounting["failed_specialist_unit_count"]),
-                int(benchmark_proof["failed_specialist_unit_count"]),
+                int(execution_proof["failed_specialist_unit_count"]),
             )
             return payload, execution_manifest, live_failures
 

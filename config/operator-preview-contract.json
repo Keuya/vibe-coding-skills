@@ -48,7 +48,6 @@
         "scripts/verify/vibe-desktopops-replay-gate.ps1",
         "scripts/verify/vibe-desktopops-softrollout-gate.ps1",
         "scripts/verify/vibe-docling-contract-v2-gate.ps1",
-        "scripts/verify/vibe-document-plane-benchmark-gate.ps1",
         "scripts/verify/vibe-connector-scorecard-gate.ps1",
         "scripts/verify/vibe-connector-action-ledger-gate.ps1",
         "scripts/verify/vibe-prompt-intelligence-productization-gate.ps1",

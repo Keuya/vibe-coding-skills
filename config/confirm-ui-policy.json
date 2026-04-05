@@ -41,7 +41,7 @@
   },
   "governed_runtime_bridge": {
     "interactive_mode": "interactive_governed",
-    "unattended_mode": "benchmark_autonomous",
+    "unattended_mode": "interactive_governed",
     "replace_interactive_confirm_with_receipt_in_unattended": true,
     "require_requirement_and_plan_artifacts_before_execute": true
   }

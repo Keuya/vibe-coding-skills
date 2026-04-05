@@ -99,12 +99,10 @@
                                   "require_intent_contract_receipt": true,
                                   "require_requirement_doc_handoff": true,
                                   "runtime_modes": [
-                                      "interactive_governed",
-                                      "benchmark_autonomous"
+                                      "interactive_governed"
                                   ]
                           }
 }
-
 
 
 

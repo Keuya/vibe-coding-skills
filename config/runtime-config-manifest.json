@@ -4,7 +4,6 @@
   "files": [
     "config/agency-overlays.json",
     "config/ai-rerank-policy.json",
-    "config/benchmark-execution-policy.json",
     "config/adapter-registry.json",
     "config/capability-catalog.json",
     "config/closure-overlay.json",
@@ -17,6 +16,7 @@
     "config/data-scale-overlay.json",
     "config/deep-discovery-policy.json",
     "config/docling-provider-policy.json",
+    "config/execution-runtime-policy.json",
     "config/execution-topology-policy.json",
     "config/exploration-domain-map.json",
     "config/exploration-intent-profiles.json",
@@ -79,8 +79,8 @@
   "role_groups": {
     "files": {
       "runtime_governance_files": [
-        "config/benchmark-execution-policy.json",
         "config/confirm-ui-policy.json",
+        "config/execution-runtime-policy.json",
         "config/execution-topology-policy.json",
         "config/fallback-governance.json",
         "config/implementation-guardrails.json",

@@ -149,7 +149,7 @@ git checkout vX.Y.Z
 
 ### Claude Code
 
-- it preserves the real `~/.claude/settings.json` while merging a bounded managed `vibeskills` + write-guard hook surface
+- it preserves the real `~/.claude/settings.json` while merging a bounded managed `vibeskills` settings surface
 - broader Claude plugins, MCP registration, credentials, and host behavior remain host-managed
 - AI governance advice uses `VCO_INTENT_ADVICE_*`, with optional `VCO_VECTOR_DIFF_*`
 

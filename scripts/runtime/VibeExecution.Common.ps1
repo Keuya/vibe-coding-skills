@@ -171,7 +171,7 @@ function Invoke-VibeExecutionUnit {
             $display = @($command) + @($arguments) -join ' '
         }
         default {
-            throw "Unsupported benchmark execution unit kind: $kind"
+            throw "Unsupported execution unit kind: $kind"
         }
     }
 
@@ -1049,24 +1049,24 @@ function Invoke-VibeSpecialistDispatchUnit {
     }
 }
 
-function Get-VibeBenchmarkProfileById {
+function Get-VibeExecutionProfileById {
     param(
-        [Parameter(Mandatory)] [object]$BenchmarkPolicy,
+        [Parameter(Mandatory)] [object]$ExecutionPolicy,
         [Parameter(Mandatory)] [string]$ProfileId
     )
 
-    foreach ($candidate in @($BenchmarkPolicy.profiles)) {
+    foreach ($candidate in @($ExecutionPolicy.profiles)) {
         if ([string]$candidate.id -eq $ProfileId) {
             return $candidate
         }
     }
 
-    throw "Unable to resolve benchmark execution profile '$ProfileId'."
+    throw "Unable to resolve execution profile '$ProfileId'."
 }
 
 function Get-VibeExecutionTopologyProfile {
     param(
-        [Parameter(Mandatory)] [object]$BenchmarkPolicy,
+        [Parameter(Mandatory)] [object]$ExecutionPolicy,
         [Parameter(Mandatory)] [object]$TopologyPolicy,
         [Parameter(Mandatory)] [string]$Grade
     )
@@ -1076,8 +1076,8 @@ function Get-VibeExecutionTopologyProfile {
         throw "Unable to resolve execution topology policy for grade '$Grade'."
     }
 
-    $profileId = [string]$BenchmarkPolicy.default_profile_id
-    $profile = Get-VibeBenchmarkProfileById -BenchmarkPolicy $BenchmarkPolicy -ProfileId $profileId
+    $profileId = [string]$ExecutionPolicy.default_profile_id
+    $profile = Get-VibeExecutionProfileById -ExecutionPolicy $ExecutionPolicy -ProfileId $profileId
 
     return [pscustomobject]@{
         profile_id = $profileId
@@ -1202,12 +1202,12 @@ function New-VibeExecutionTopology {
         [Parameter(Mandatory)] [string]$RunId,
         [Parameter(Mandatory)] [string]$Grade,
         [Parameter(Mandatory)] [string]$GovernanceScope,
-        [Parameter(Mandatory)] [object]$BenchmarkPolicy,
+        [Parameter(Mandatory)] [object]$ExecutionPolicy,
         [Parameter(Mandatory)] [object]$TopologyPolicy,
         [Parameter(Mandatory)] [AllowEmptyCollection()] [object[]]$ApprovedDispatch
     )
 
-    $profileDef = Get-VibeExecutionTopologyProfile -BenchmarkPolicy $BenchmarkPolicy -TopologyPolicy $TopologyPolicy -Grade $Grade
+    $profileDef = Get-VibeExecutionTopologyProfile -ExecutionPolicy $ExecutionPolicy -TopologyPolicy $TopologyPolicy -Grade $Grade
     $effectiveSpecialistExecutionMode = [string]$profileDef.specialist_execution_mode
     if (@($ApprovedDispatch).Count -gt 0) {
         $effectiveSpecialistExecutionMode = 'native_bounded_units'
@@ -1256,7 +1256,7 @@ function New-VibeExecutionTopology {
 
             $unitEntries += [pscustomobject]@{
                 lane_id = "lane-{0}" -f [string]$unit.unit_id
-                lane_kind = 'benchmark_unit'
+                lane_kind = 'execution_unit'
                 source_unit_id = [string]$unit.unit_id
                 parallelizable = [bool]$parallelizable
                 write_scope = $writeScope

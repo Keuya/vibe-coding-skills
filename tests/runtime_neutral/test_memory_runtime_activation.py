@@ -44,7 +44,7 @@ def run_governed_runtime(task: str, artifact_root: Path, env: dict[str, str] | N
             "& { "
             f"$result = & '{script_path}' "
             f"-Task '{task}' "
-            "-Mode benchmark_autonomous "
+            "-Mode interactive_governed "
             f"-RunId '{run_id}' "
             f"-ArtifactRoot '{artifact_root}'; "
             "$result | ConvertTo-Json -Depth 20 }"

@@ -318,7 +318,6 @@ Always confirm with user at these points:
 
 Mode-aware interpretation:
 - `interactive_governed`: the four confirmation points above remain user-visible by default
-- `benchmark_autonomous`: replace interactive pauses with explicit receipts unless a blocking ambiguity, scope breach, or safety boundary is hit
 
 ## GSD-Lite Wave Contract Hook (Optional)
 

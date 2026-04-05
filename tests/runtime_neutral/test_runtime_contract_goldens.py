@@ -47,7 +47,7 @@ def run_runtime(task: str, artifact_root: Path, *, extra_env: dict[str, str] | N
                 "& { "
                 f"$result = & '{RUNTIME_ENTRY}' "
                 f"-Task '{TASK}' "
-                "-Mode benchmark_autonomous "
+                "-Mode interactive_governed "
                 f"-RunId '{run_id}' "
                 f"-ArtifactRoot '{artifact_root}'; "
                 "$result | ConvertTo-Json -Depth 20 }"
@@ -174,4 +174,3 @@ class RuntimeContractGoldenTests(unittest.TestCase):
 
         self.assertEqual("runtime.contract.golden.v1", fixture["schema_version"])
         self.assertEqual(fixture["expected"], actual)
-

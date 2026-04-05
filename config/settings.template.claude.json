@@ -36,19 +36,5 @@
     "elements-of-style@superpowers-marketplace": true,
     "episodic-memory@superpowers-marketplace": true
   },
-  "skipDangerousModePermissionPrompt": true,
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ~/.claude/hooks/write-guard.js"
-          }
-        ],
-        "description": "Block unnecessary .md/.txt file creation in home root"
-      }
-    ]
-  }
+  "skipDangerousModePermissionPrompt": true
 }

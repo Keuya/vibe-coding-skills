@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-LEGACY_MODE_ALIASES = {
-    'benchmark_autonomous': 'interactive_governed',
-}
-
 
 @dataclass(frozen=True, slots=True)
 class RuntimeGovernanceProfile:
@@ -16,7 +12,9 @@ class RuntimeGovernanceProfile:
 
 def normalize_runtime_mode(mode: str | None) -> str:
     normalized = str(mode or 'interactive_governed').strip() or 'interactive_governed'
-    return LEGACY_MODE_ALIASES.get(normalized, normalized)
+    if normalized != 'interactive_governed':
+        raise ValueError(f'unsupported runtime mode: {mode}')
+    return 'interactive_governed'
 
 
 def choose_internal_grade(task_type: str) -> str:

@@ -59,16 +59,9 @@ They may become lighter for simple work, but they are not skipped as a matter of
 
 ### `interactive_governed`
 
-Default and effective mode.
+The only supported governed runtime mode.
 
 Use this when the system should still ask the user high-value questions, confirm frozen requirements, and pause at plan approval boundaries.
-
-### `benchmark_autonomous`
-
-Legacy compatibility alias only.
-
-If older callers still pass `benchmark_autonomous`, the runtime silently normalizes it to `interactive_governed`.
-It is not a separate execution plane and it must not create a second unattended control path.
 
 ## Governor And Specialist Contract
 
@@ -153,7 +146,6 @@ Produce a structured intent contract containing:
 - inferred assumptions
 
 In `interactive_governed`, this stage may ask direct questions.
-Legacy `benchmark_autonomous` input is normalized before this stage runs, so intent capture stays on the same governed mode.
 
 ### 3. `requirement_doc`
 

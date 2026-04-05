@@ -19,7 +19,7 @@
 2. 这次如果我选的是“全量版本+可自定义添加治理”，你必须把它映射到真实 profile：`full`。
 3. 先判断系统类型；Linux / macOS 用 `bash`，Windows 用 `pwsh`。
 4. 如果我选 `codex`，使用 `--host codex --profile full`；明确说明这是当前最完整的 governed 路径，但 hook 仍冻结。
-5. 如果我选 `claude-code`，使用 `--host claude-code --profile full`；明确说明当前提供支持的安装与使用路径，并且会在保留真实 `~/.claude/settings.json` 的前提下合并受约束的 `vibeskills` 与 write-guard hook 面。
+5. 如果我选 `claude-code`，使用 `--host claude-code --profile full`；明确说明当前提供支持的安装与使用路径，并且会在保留真实 `~/.claude/settings.json` 的前提下合并受约束的 `vibeskills` 设置面。
 6. 如果我选 `cursor`，使用 `--host cursor --profile full`；明确说明当前是 preview-guidance 路径，不接管真实 `~/.cursor/settings.json`。
 7. 如果我选 `windsurf`，使用 `--host windsurf --profile full`；明确说明当前是 runtime-core 路径，默认目标根目录是 `WINDSURF_HOME`，否则是 `~/.vibeskills/targets/windsurf`，repo 只负责 shared runtime payload 与 `.vibeskills/*` sidecar 状态。
 8. 如果我选 `openclaw`，使用 `--host openclaw --profile full`；明确说明当前按 preview runtime-core adapter 路径接入，默认目标根目录是 `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`，并说明 attach / copy / bundle 三路径。

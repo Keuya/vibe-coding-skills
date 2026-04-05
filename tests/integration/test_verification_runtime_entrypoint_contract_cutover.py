@@ -3,7 +3,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GATES = [
-    REPO_ROOT / "scripts" / "verify" / "vibe-benchmark-autonomous-proof-gate.ps1",
+    REPO_ROOT / "scripts" / "verify" / "vibe-runtime-execution-proof-gate.ps1",
     REPO_ROOT / "scripts" / "verify" / "vibe-governed-runtime-contract-gate.ps1",
     REPO_ROOT / "scripts" / "verify" / "vibe-specialist-dispatch-closure-gate.ps1",
     REPO_ROOT / "scripts" / "verify" / "vibe-child-specialist-escalation-gate.ps1",

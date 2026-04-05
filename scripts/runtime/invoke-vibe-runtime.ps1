@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory)] [string]$Task,
-    [ValidateSet('interactive_governed', 'benchmark_autonomous')] [string]$Mode = 'interactive_governed',
+    [ValidateSet('interactive_governed')] [string]$Mode = 'interactive_governed',
     [string]$RunId = '',
     [string]$ArtifactRoot = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
@@ -216,7 +216,7 @@ $artifactReadiness = Wait-VibeArtifactSet -Paths @(
     [string]$execute.receipt_path,
     [string]$execute.execution_manifest_path,
     [string]$execute.execution_topology_path,
-    [string]$execute.benchmark_proof_manifest_path,
+    [string]$execute.execution_proof_manifest_path,
     [string]$cleanup.receipt_path,
     [string]$deliveryAcceptanceReportPath,
     [string]$memoryActivation.report_path,
@@ -238,7 +238,7 @@ $summaryArtifacts = New-VibeRuntimeSummaryArtifactProjection `
     -ExecuteReceiptPath ([string]$execute.receipt_path) `
     -ExecutionManifestPath ([string]$execute.execution_manifest_path) `
     -ExecutionTopologyPath ([string]$execute.execution_topology_path) `
-    -BenchmarkProofManifestPath ([string]$execute.benchmark_proof_manifest_path) `
+    -ExecutionProofManifestPath ([string]$execute.execution_proof_manifest_path) `
     -CleanupReceiptPath ([string]$cleanup.receipt_path) `
     -DeliveryAcceptanceReportPath ([string]$deliveryAcceptanceReportPath) `
     -DeliveryAcceptanceMarkdownPath ([string]$deliveryAcceptanceMarkdownPath) `

@@ -13,9 +13,7 @@ def _load_json(path: Path) -> dict[str, object]:
 
 
 def _iter_manifest_paths() -> list[Path]:
-    manifests = sorted(PROOF_BUNDLES_ROOT.glob("*/manifest.json"))
-    manifests.extend(sorted(PROOF_BUNDLES_ROOT.glob("*/baseline-manifest.json")))
-    return manifests
+    return sorted(PROOF_BUNDLES_ROOT.glob("*/manifest.json"))
 
 
 def _assert_repo_paths_exist(paths: list[str], *, owner: Path, field_name: str) -> None:

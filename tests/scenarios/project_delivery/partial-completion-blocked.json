@@ -1,7 +1,6 @@
 {
   "scenario_id": "partial-completion-blocked",
   "task_class": "runtime_partial_completion",
-  "benchmark_repo": "benchmarks/python-lib",
   "runtime": {
     "status": "completed_with_failures",
     "readiness_state": "ready"

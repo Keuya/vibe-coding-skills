@@ -25,7 +25,7 @@ EXPECTED_STAGES = [
 def test_runtime_packet_execution_runs_fixed_stage_sequence() -> None:
     result = execute_runtime_packet(
         RuntimePacket(goal='extract runtime core', stage='skeleton_check'),
-        mode='benchmark_autonomous',
+        mode='interactive_governed',
         requested_skill='vibe',
     )
 

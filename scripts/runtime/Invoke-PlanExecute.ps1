@@ -232,7 +232,7 @@ function Invoke-VibeDirectLaneEntry {
     )
 
     switch ([string]$LaneEntry.lane_kind) {
-        'benchmark_unit' {
+        'execution_unit' {
             $executed = Invoke-VibeExecutionUnit `
                 -Unit $LaneEntry.unit `
                 -RepoRoot $RepoRoot `
@@ -726,9 +726,9 @@ $hierarchyState = Get-VibeHierarchyState `
     -InheritedExecutionPlanPath $(if ($runtimeInputPacket -and $runtimeInputPacket.hierarchy) { [string]$runtimeInputPacket.hierarchy.inherited_execution_plan_path } else { $ExecutionPlanPath }) `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
 
-$policy = $runtime.benchmark_execution_policy
+$policy = $runtime.execution_runtime_policy
 $proofRegistry = $runtime.proof_class_registry
-$profile = Get-VibeBenchmarkProfileById -BenchmarkPolicy $policy -ProfileId ([string]$policy.default_profile_id)
+$profile = Get-VibeExecutionProfileById -ExecutionPolicy $policy -ProfileId ([string]$policy.default_profile_id)
 
 $logsRoot = Join-Path $sessionRoot 'execution-logs'
 $resultsRoot = Join-Path $sessionRoot 'execution-results'
@@ -764,7 +764,7 @@ $executionTopology = New-VibeExecutionTopology `
     -RunId $RunId `
     -Grade $grade `
     -GovernanceScope ([string]$hierarchyState.governance_scope) `
-    -BenchmarkPolicy $policy `
+    -ExecutionPolicy $policy `
     -TopologyPolicy $runtime.execution_topology_policy `
     -ApprovedDispatch @($approvedDispatch)
 Write-VibeJsonArtifact -Path $executionTopologyPath -Value $executionTopology
@@ -913,7 +913,7 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             }
         } else {
             foreach ($laneEntry in @($step.units)) {
-                $outcome = if ([string]$hierarchyState.governance_scope -eq 'root' -and [string]$executionTopology.delegation_mode -ne 'none' -and [string]$laneEntry.lane_kind -eq 'benchmark_unit') {
+                $outcome = if ([string]$hierarchyState.governance_scope -eq 'root' -and [string]$executionTopology.delegation_mode -ne 'none' -and [string]$laneEntry.lane_kind -eq 'execution_unit') {
                     $laneRuntime = New-VibeDelegatedLaneSpec `
                         -SessionRoot $sessionRoot `
                         -RunId $RunId `
@@ -1207,7 +1207,7 @@ $executionManifestPath = Join-Path $sessionRoot 'execution-manifest.json'
 Write-VibeJsonArtifact -Path $executionManifestPath -Value $executionManifest
 
 $proofManifest = [pscustomobject]@{
-    bundle_kind = 'benchmark_autonomous_execution_proof'
+    bundle_kind = 'governed_execution_proof'
     generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     run_id = $RunId
     mode = $Mode
@@ -1221,7 +1221,7 @@ $proofManifest = [pscustomobject]@{
     successful_unit_count = $successfulUnitCount
     failed_unit_count = $failedUnitCount
     minimum_units_required = [int]$profile.expected_minimum_units
-    proof_class = [string]$proofRegistry.artifact_class_defaults.benchmark_proof_manifest
+    proof_class = [string]$proofRegistry.artifact_class_defaults.execution_proof_manifest
     promotion_suitable = [string]$proofRegistry.promotion_suitability.runtime
     specialist_recommendation_count = @($specialistRecommendations).Count
     specialist_dispatch_unit_count = [int]$specialistDispatchUnitCount
@@ -1245,7 +1245,7 @@ $proofManifestPath = Join-Path $proofRoot 'manifest.json'
 Write-VibeJsonArtifact -Path $proofManifestPath -Value $proofManifest
 
 $proofLines = @(
-    '# Benchmark Autonomous Proof',
+    '# Governed Execution Proof',
     '',
     ('- run_id: `{0}`' -f $RunId),
     ('- mode: `{0}`' -f $Mode),
@@ -1298,7 +1298,7 @@ $receipt = [pscustomobject]@{
     execution_memory_context_path = if ([string]::IsNullOrWhiteSpace($ExecutionMemoryContextPath)) { $null } else { $ExecutionMemoryContextPath }
     plan_shadow_path = $planShadow.path
     execution_manifest_path = $executionManifestPath
-    benchmark_proof_manifest_path = $proofManifestPath
+    execution_proof_manifest_path = $proofManifestPath
     execution_topology_path = $executionTopologyPath
     executed_unit_count = $executedUnitCount
     successful_unit_count = $successfulUnitCount
@@ -1343,6 +1343,6 @@ Write-VibeJsonArtifact -Path $receiptPath -Value $receipt
     plan_shadow_path = $planShadow.path
     execution_manifest_path = $executionManifestPath
     execution_topology_path = $executionTopologyPath
-    benchmark_proof_manifest_path = $proofManifestPath
+    execution_proof_manifest_path = $proofManifestPath
     receipt = $receipt
 }

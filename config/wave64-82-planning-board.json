@@ -189,9 +189,9 @@
     {
       "wave": 72,
       "track": "document-runtime",
-      "title": "document plane benchmark",
+      "title": "document plane corpus governance",
       "status": "completed",
-      "primary_goal": "? Docling / markitdown / pdf/docx ???? golden corpus ? benchmark?",
+      "primary_goal": "? Docling / markitdown / pdf/docx ???? golden corpus ? governance?",
       "depends_on": [
         71
       ],
@@ -200,11 +200,10 @@
         "document-skills"
       ],
       "candidate_assets": [
-        "docs/governance/document-plane-benchmark-governance.md",
         "references/document-golden-corpus.md",
-        "scripts/verify/vibe-document-plane-benchmark-gate.ps1"
+        "scripts/verify/vibe-docling-contract-v2-gate.ps1"
       ],
-      "candidate_gate": "vibe-document-plane-benchmark-gate"
+      "candidate_gate": "vibe-docling-contract-v2-gate"
     },
     {
       "wave": 73,

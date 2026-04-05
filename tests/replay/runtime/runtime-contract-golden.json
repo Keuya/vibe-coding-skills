@@ -3,7 +3,7 @@
   "generated_at": "2026-03-30",
   "runtime": {
     "script": "scripts/runtime/invoke-vibe-runtime.ps1",
-    "mode": "benchmark_autonomous",
+    "mode": "interactive_governed",
     "notes": "Curated governed runtime contract baseline. Validates stable packet/manifest semantic subsets after explicit normalization."
   },
   "cases": [
@@ -105,7 +105,7 @@
             "inherited_execution_plan_path": null
           },
           "scheduler_kind": "bounded_local_xl_executor",
-          "profile_id": "repo_safe_benchmark_closure",
+          "profile_id": "repo_safe_execution_closure",
           "authority": {
             "canonical_requirement_write_allowed": true,
             "canonical_plan_write_allowed": true,

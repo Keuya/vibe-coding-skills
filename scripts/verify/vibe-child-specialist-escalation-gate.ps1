@@ -54,7 +54,7 @@ $artifactRoot = Join-Path $repoRoot (".tmp\child-specialist-escalation-{0}" -f $
 
 $rootSummary = & $runtimeEntryPath `
     -Task 'Root specialist dispatch seed for child escalation gate.' `
-    -Mode benchmark_autonomous `
+    -Mode interactive_governed `
     -GovernanceScope root `
     -RunId ("{0}-root" -f $runId) `
     -ArtifactRoot $artifactRoot
@@ -88,7 +88,7 @@ $childSummary = $null
 if ($hasRootSummary) {
     $childSummary = & $runtimeEntryPath `
         -Task 'Child specialist escalation advisory smoke.' `
-        -Mode benchmark_autonomous `
+        -Mode interactive_governed `
         -GovernanceScope child `
         -RunId ("{0}-child" -f $runId) `
         -RootRunId ([string]$rootSummary.summary.run_id) `

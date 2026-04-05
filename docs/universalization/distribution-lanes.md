@@ -65,7 +65,6 @@ Distribution promises must remain consistent with:
 
 - `docs/universalization/install-matrix.md`
 - `docs/universalization/host-capability-matrix.md`
-- `docs/universalization/official-runtime-baseline.md`
 
 If a manifest conflicts with these docs, the manifest is wrong.
 

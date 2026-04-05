@@ -3,7 +3,7 @@
   "generated_at": "2026-03-30",
   "runtime": {
     "script": "scripts/runtime/invoke-vibe-runtime.ps1",
-    "mode": "benchmark_autonomous",
+    "mode": "interactive_governed",
     "effective_mode": "interactive_governed",
     "host_id": "codex",
     "notes": "Golden baseline freezes stable packet/manifest contract surfaces only. Dynamic paths, timestamps, run ids, and per-run counts are intentionally excluded."

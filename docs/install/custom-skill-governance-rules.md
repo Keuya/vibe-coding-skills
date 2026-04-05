@@ -112,7 +112,7 @@
 ## Codex 与 Claude Code 边界
 
 - Codex：官方 governed 宿主；当前不安装 hook
-- Claude Code：提供支持的安装与使用路径；安装器会在保留原有 Claude 设置的前提下写入受约束的 `vibeskills` 节点和受管 `PreToolUse` write-guard hook 面
+- Claude Code：提供支持的安装与使用路径；安装器会在保留原有 Claude 设置的前提下写入受约束的 `vibeskills` 节点
 
 两者都不应要求用户把 key/url/model 贴到聊天里。只允许用户在本地 `settings.json` 的 `env` 或本地环境变量配置。
 

@@ -37,5 +37,5 @@ def test_runtime_stage_machine_rejects_unknown_stage() -> None:
         raise AssertionError('expected stage validation failure')
 
 
-def test_governance_mode_normalizes_legacy_alias() -> None:
-    assert normalize_runtime_mode('benchmark_autonomous') == 'interactive_governed'
+def test_governance_mode_accepts_only_interactive_governed() -> None:
+    assert normalize_runtime_mode('interactive_governed') == 'interactive_governed'

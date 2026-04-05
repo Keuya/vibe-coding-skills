@@ -8,7 +8,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def test_powershell_installed_runtime_defaults_delegate_to_contract_bridge_with_compat_fallback() -> None:
     helper = (REPO_ROOT / "scripts" / "common" / "vibe-governance-helpers.ps1").read_text(encoding="utf-8")
     bridge = (REPO_ROOT / "scripts" / "common" / "runtime_contracts.py").read_text(encoding="utf-8")
-    baseline = (REPO_ROOT / "scripts" / "verify" / "vibe-official-runtime-baseline-gate.ps1").read_text(encoding="utf-8")
 
     assert "installed-runtime-config" in bridge
     assert "default_installed_runtime_config" in bridge
@@ -23,18 +22,9 @@ def test_powershell_installed_runtime_defaults_delegate_to_contract_bridge_with_
     assert "neutral_freshness_gate = 'scripts/verify/runtime_neutral/freshness_gate.py'" in helper
     assert "runtime_entrypoint = 'scripts/runtime/invoke-vibe-runtime.ps1'" in helper
     assert "install.ps1" not in helper.split("function Get-VgoInstalledRuntimeEmergencyFallbackDefaults", 1)[1].split("function Get-VgoInstalledRuntimeFallbackDefaults", 1)[0]
-    assert "$runtimeConfig.frontmatter_gate" in baseline
-    assert "frontmatter_gate declaration matches effective runtime contract" in baseline
-    assert "frontmatter_gate points to vibe-bom-frontmatter-gate.ps1" not in baseline
 
 
-def test_official_runtime_baseline_manifest_tracks_current_release_version() -> None:
-    manifest = json.loads(
-        (REPO_ROOT / "references" / "proof-bundles" / "official-runtime-baseline" / "baseline-manifest.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    governance = json.loads((REPO_ROOT / "config" / "version-governance.json").read_text(encoding="utf-8"))
-
-    assert manifest["source_release"]["version"] == governance["release"]["version"]
-    assert manifest["source_release"]["updated"] == governance["release"]["updated"]
+def test_official_runtime_baseline_surfaces_are_removed() -> None:
+    assert not (REPO_ROOT / "scripts" / "verify" / "vibe-official-runtime-baseline-gate.ps1").exists()
+    assert not (REPO_ROOT / "docs" / "universalization" / "official-runtime-baseline.md").exists()
+    assert not (REPO_ROOT / "references" / "proof-bundles" / "official-runtime-baseline").exists()

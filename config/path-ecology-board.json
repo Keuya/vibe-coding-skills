@@ -13,14 +13,14 @@
       "notes": "Canonical runtime entry and closure surface."
     },
     {
-      "lane_id": "benchmark-autonomous-harness",
+      "lane_id": "governed-execution-harness",
       "heat": "hot",
       "proof_depth": "runtime",
       "operational_value": "medium",
       "maintenance_burden": "medium",
       "risk_if_wrong": "medium",
       "owner_status": "explicit",
-      "notes": "Still the authoritative executor while plan-derived execution remains shadow-only."
+      "notes": "Authoritative governed execution harness while plan-derived execution remains shadow-only."
     },
     {
       "lane_id": "plan-derived-execution-shadow",

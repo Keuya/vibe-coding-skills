@@ -148,10 +148,10 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
         self.assertIn("config/plan-execution-policy.json", required_markers)
         self.assertIn("config/phase-cleanup-policy.json", required_markers)
 
-        benchmark_policy = json.loads(
-            (REPO_ROOT / "config" / "benchmark-execution-policy.json").read_text(encoding="utf-8")
+        execution_policy = json.loads(
+            (REPO_ROOT / "config" / "execution-runtime-policy.json").read_text(encoding="utf-8")
         )
-        first_unit = benchmark_policy["profiles"][0]["waves"][0]["units"][0]
+        first_unit = execution_policy["profiles"][0]["waves"][0]["units"][0]
         self.assertEqual("python_command", first_unit["kind"])
         self.assertEqual("${VGO_PYTHON}", first_unit["command"])
 
@@ -184,7 +184,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                     "& { "
                     f"$result = & '{script_path}' "
                     f"-Task '{SPECIALIST_TASK}' "
-                    "-Mode benchmark_autonomous "
+                    "-Mode interactive_governed "
                     f"-RunId '{run_id}' "
                     f"-ArtifactRoot '{artifact_root}'; "
                     "$result | ConvertTo-Json -Depth 20 }"
@@ -244,7 +244,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 "execution_plan_receipt",
                 "execute_receipt",
                 "execution_manifest",
-                "benchmark_proof_manifest",
+                "execution_proof_manifest",
                 "cleanup_receipt",
             ):
                 self.assertFalse(str(Path(artifacts[key])).lower().startswith(repo_root_text), key)
@@ -257,7 +257,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             execution_plan_path = resolve_artifact_path("execution_plan")
             execute_receipt_path = resolve_artifact_path("execute_receipt")
             execution_manifest_path = resolve_artifact_path("execution_manifest")
-            benchmark_proof_path = resolve_artifact_path("benchmark_proof_manifest")
+            execution_proof_path = resolve_artifact_path("execution_proof_manifest")
             runtime_input_packet_path = resolve_artifact_path("runtime_input_packet")
 
             if requirement_doc_path.exists():
@@ -274,7 +274,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             runtime_input_packet = json.loads(runtime_input_packet_path.read_text(encoding="utf-8"))
             execute_receipt = json.loads(execute_receipt_path.read_text(encoding="utf-8"))
             execution_manifest = json.loads(execution_manifest_path.read_text(encoding="utf-8"))
-            benchmark_proof = json.loads(benchmark_proof_path.read_text(encoding="utf-8"))
+            execution_proof = json.loads(execution_proof_path.read_text(encoding="utf-8"))
 
             self.assertEqual("runtime_input_freeze", runtime_input_packet["stage"])
             self.assertEqual("interactive_governed", runtime_input_packet["runtime_mode"])
@@ -312,20 +312,20 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["approved_dispatch_fully_executed"]))
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["executed_specialists_subset_of_approved_dispatch"]))
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["local_suggestions_contained"]))
-            self.assertTrue(benchmark_proof["proof_passed"])
-            self.assertGreaterEqual(benchmark_proof["executed_unit_count"], 2)
-            self.assertEqual("runtime", benchmark_proof["proof_class"])
-            self.assertTrue(Path(benchmark_proof["plan_shadow_path"]).exists())
-            self.assertGreaterEqual(benchmark_proof["specialist_recommendation_count"], 1)
-            self.assertGreaterEqual(benchmark_proof["specialist_dispatch_unit_count"], 1)
-            self.assertTrue(bool(benchmark_proof["dispatch_integrity_proof_passed"]))
+            self.assertTrue(execution_proof["proof_passed"])
+            self.assertGreaterEqual(execution_proof["executed_unit_count"], 2)
+            self.assertEqual("runtime", execution_proof["proof_class"])
+            self.assertTrue(Path(execution_proof["plan_shadow_path"]).exists())
+            self.assertGreaterEqual(execution_proof["specialist_recommendation_count"], 1)
+            self.assertGreaterEqual(execution_proof["specialist_dispatch_unit_count"], 1)
+            self.assertTrue(bool(execution_proof["dispatch_integrity_proof_passed"]))
 
             cleanup_receipt = json.loads(resolve_artifact_path("cleanup_receipt").read_text(encoding="utf-8"))
             self.assertEqual("receipt_only", cleanup_receipt["cleanup_mode"])
             self.assertEqual("runtime", cleanup_receipt["proof_class"])
             self.assertFalse(cleanup_receipt["default_bounded_cleanup_applied"])
 
-            for result_path in benchmark_proof["result_paths"]:
+            for result_path in execution_proof["result_paths"]:
                 result = json.loads(Path(result_path).read_text(encoding="utf-8"))
                 self.assertEqual(0, result["exit_code"])
                 self.assertTrue(Path(result["stdout_path"]).exists())

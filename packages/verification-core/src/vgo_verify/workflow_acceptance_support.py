@@ -45,9 +45,6 @@ def write_artifacts(repo_root: Path, artifact: dict[str, Any], output_directory:
         f"- Completion Language Allowed: `{artifact['summary']['completion_language_allowed']}`",
         f"- Runtime Status: `{artifact['summary']['runtime_status']}`",
         f"- Readiness State: `{artifact['summary']['readiness_state']}`",
-        f"- Benchmark Repo: `{artifact['summary']['benchmark_repo_rel']}`",
-        f"- Benchmark Repo Exists: `{artifact['summary']['benchmark_repo_exists']}`",
-        f"- Benchmark Manifest Exists: `{artifact['summary']['benchmark_manifest_exists']}`",
         f"- Manual Review Layers: `{artifact['summary']['manual_review_layer_count']}`",
         f"- Failing Layers: `{artifact['summary']['failing_layer_count']}`",
         f"- Forbidden Completion Hits: `{artifact['summary']['forbidden_completion_hit_count']}`",
@@ -63,12 +60,6 @@ def write_artifacts(repo_root: Path, artifact: dict[str, Any], output_directory:
         lines += ["", "## Forbidden Completion Hits", ""]
         for hit in artifact["forbidden_completion_hits"]:
             lines.append(f"- `{hit['source']}`=`{hit['value']}` reason=`{hit['reason']}`")
-    if artifact["benchmark"]["manifest"]:
-        lines += ["", "## Benchmark Manifest", ""]
-        manifest = artifact["benchmark"]["manifest"]
-        lines.append(f"- `benchmark_id`: `{manifest.get('benchmark_id', '')}`")
-        for flow in list(manifest.get("critical_user_flows") or []):
-            lines.append(f"- critical_user_flow: {flow}")
     if artifact["manual_spot_checks"]:
         lines += ["", "## Manual Spot Checks", ""]
         for item in artifact["manual_spot_checks"]:

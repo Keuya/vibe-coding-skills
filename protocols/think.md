@@ -46,21 +46,13 @@ They are not separate user-facing entry branches.
 
 ### `interactive_governed`
 
-Default mode.
+The governed planning mode.
 
 - ask high-value questions when ambiguity blocks planning quality
 - require a user-visible requirement freeze before execution
 - allow approval pauses before execution begins
 
-### `benchmark_autonomous`
-
-Closed-loop mode.
-
-- do not keep asking the user once the input is sufficient to proceed
-- infer missing assumptions and record them explicitly
-- still produce requirement and plan artifacts before execution
-
-In both modes, this protocol must leave execution with a frozen requirement artifact and a plan artifact.
+This protocol must leave execution with a frozen requirement artifact and a plan artifact.
 
 ## Anti-Drift Planning Guardrails
 
@@ -135,8 +127,7 @@ Based on analysis output, determine:
 - Task type (plan/code/review/debug/research)
 - Compound task? -> decompose (see below)
 - Runtime mode fit:
-  - `interactive_governed` if unresolved questions still materially affect solution shape
-  - `benchmark_autonomous` if assumptions can be safely frozen into the requirement document
+  - `interactive_governed` for governed planning and execution
 
 ### Compound Task Decomposition
 
@@ -178,7 +169,6 @@ Tool: superpowers:brainstorming
 
 Governed runtime requirement:
 - persist an intent contract that can be turned into a file under `docs/requirements/`
-- if running in `benchmark_autonomous`, replace live questioning with explicit inferred assumptions
 
 ### B2: Architecture Design (if needed)
 Tool: sc:design

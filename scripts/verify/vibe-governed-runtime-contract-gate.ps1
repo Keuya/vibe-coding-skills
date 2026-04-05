@@ -50,7 +50,7 @@ $requiredFiles = @(
     'config/runtime-modes.json',
     'config/fallback-governance.json',
     'config/implementation-guardrails.json',
-    'config/benchmark-execution-policy.json',
+    'config/execution-runtime-policy.json',
     'config/requirement-doc-policy.json',
     'config/plan-execution-policy.json',
     'config/phase-cleanup-policy.json',
@@ -65,7 +65,7 @@ $requiredFiles = @(
     'scripts/runtime/Invoke-AntiProxyGoalDriftCompaction.ps1',
     'scripts/runtime/Invoke-PlanExecute.ps1',
     'scripts/runtime/Invoke-PhaseCleanup.ps1',
-    'scripts/verify/vibe-benchmark-autonomous-proof-gate.ps1',
+    'scripts/verify/vibe-runtime-execution-proof-gate.ps1',
     'scripts/verify/vibe-specialist-dispatch-closure-gate.ps1',
     'scripts/verify/vibe-no-silent-fallback-contract-gate.ps1',
     'scripts/verify/vibe-no-self-introduced-fallback-gate.ps1',
@@ -100,9 +100,9 @@ Add-Assertion -Results ([ref]$results) -Condition ($teamText.Contains('$vibe')) 
 
 $runId = "contract-gate-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
 $artifactRoot = Join-Path $repoRoot (".tmp\governed-runtime-contract-{0}" -f $runId)
-$summary = & $runtimeEntryPath -Task 'I have a failing test and a stack trace. Help me debug systematically before proposing fixes.' -Mode benchmark_autonomous -RunId $runId -ArtifactRoot $artifactRoot
+$summary = & $runtimeEntryPath -Task 'I have a failing test and a stack trace. Help me debug systematically before proposing fixes.' -Mode interactive_governed -RunId $runId -ArtifactRoot $artifactRoot
 
-Add-Assertion -Results ([ref]$results) -Condition ($summary.mode -eq 'interactive_governed') -Message 'runtime smoke summary normalizes legacy benchmark mode to interactive_governed'
+Add-Assertion -Results ([ref]$results) -Condition ($summary.mode -eq 'interactive_governed') -Message 'runtime smoke summary keeps interactive_governed as the effective mode'
 
 $artifactPaths = @(
     $summary.summary.artifacts.skeleton_receipt,
@@ -111,7 +111,7 @@ $artifactPaths = @(
     $summary.summary.artifacts.execution_plan,
     $summary.summary.artifacts.execute_receipt,
     $summary.summary.artifacts.execution_manifest,
-    $summary.summary.artifacts.benchmark_proof_manifest,
+    $summary.summary.artifacts.execution_proof_manifest,
     $summary.summary.artifacts.cleanup_receipt
 )
 
@@ -121,15 +121,15 @@ foreach ($artifactPath in $artifactPaths) {
 
 $executeReceipt = Get-Content -LiteralPath $summary.summary.artifacts.execute_receipt -Raw -Encoding UTF8 | ConvertFrom-Json
 $executionManifest = Get-Content -LiteralPath $summary.summary.artifacts.execution_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
-$proofManifest = Get-Content -LiteralPath $summary.summary.artifacts.benchmark_proof_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+$proofManifest = Get-Content -LiteralPath $summary.summary.artifacts.execution_proof_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
 $runtimeInputPacket = Get-Content -LiteralPath $summary.summary.artifacts.runtime_input_packet -Raw -Encoding UTF8 | ConvertFrom-Json
 $generatedRequirement = Get-Content -LiteralPath $summary.summary.artifacts.requirement_doc -Raw -Encoding UTF8
 $generatedPlan = Get-Content -LiteralPath $summary.summary.artifacts.execution_plan -Raw -Encoding UTF8
 
 Add-Assertion -Results ([ref]$results) -Condition ($executeReceipt.status -ne 'execution-contract-prepared') -Message 'runtime smoke execute receipt is not receipt-only'
 Add-Assertion -Results ([ref]$results) -Condition ($executionManifest.status -eq 'completed') -Message 'runtime smoke execution manifest completed' -Details $executionManifest.status
-Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.executed_unit_count -ge 2) -Message 'runtime smoke executes at least two benchmark units' -Details $executionManifest.executed_unit_count
-Add-Assertion -Results ([ref]$results) -Condition ([bool]$proofManifest.proof_passed) -Message 'runtime smoke benchmark proof manifest is green'
+Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.executed_unit_count -ge 2) -Message 'runtime smoke executes at least two governed execution units' -Details $executionManifest.executed_unit_count
+Add-Assertion -Results ([ref]$results) -Condition ([bool]$proofManifest.proof_passed) -Message 'runtime smoke execution proof manifest is green'
 Add-Assertion -Results ([ref]$results) -Condition ($generatedRequirement.Contains('## Primary Objective')) -Message 'runtime smoke requirement doc includes anti-drift primary objective section'
 Add-Assertion -Results ([ref]$results) -Condition ($generatedRequirement.Contains('## Completion State')) -Message 'runtime smoke requirement doc includes anti-drift completion section'
 Add-Assertion -Results ([ref]$results) -Condition ($generatedPlan.Contains('## Anti-Proxy-Goal-Drift Controls')) -Message 'runtime smoke execution plan includes anti-drift controls section'

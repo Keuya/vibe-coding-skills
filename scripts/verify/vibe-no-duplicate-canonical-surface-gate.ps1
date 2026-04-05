@@ -64,7 +64,7 @@ $results = @()
 $runId = "canonical-surface-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
 $artifactRoot = Join-Path $repoRoot (".tmp\canonical-surface-{0}" -f $runId)
 $task = "Canonical surface uniqueness probe $runId"
-$summary = & $runtimeEntryPath -Task $task -Mode benchmark_autonomous -GovernanceScope root -RunId $runId -ArtifactRoot $artifactRoot
+$summary = & $runtimeEntryPath -Task $task -Mode interactive_governed -GovernanceScope root -RunId $runId -ArtifactRoot $artifactRoot
 
 Add-Assertion -Results ([ref]$results) -Condition ($null -ne $summary) -Message 'canonical surface probe returned summary payload'
 $hasSummary = ($null -ne $summary) -and ($summary.PSObject.Properties.Name -contains 'summary')
@@ -100,7 +100,7 @@ if ($hasSummary) {
     $childRunId = "canonical-surface-child-" + [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
     $childSummary = & $runtimeEntryPath `
         -Task ("Child canonical surface uniqueness probe {0}" -f $childRunId) `
-        -Mode benchmark_autonomous `
+        -Mode interactive_governed `
         -GovernanceScope child `
         -RunId $childRunId `
         -RootRunId ([string]$summary.summary.run_id) `

@@ -69,7 +69,7 @@ Linux / macOS without `pwsh` still gets the shipped content and the runtime-neut
 ### `preview-guidance`：当前是 `claude-code`、`cursor`、`opencode`
 
 - 不会伪装成 fully managed host takeover
-- `claude-code` 当前会走受约束的 scaffold / write-guard path
+- `claude-code` 当前会走受约束的 scaffold / managed-settings path
 - `cursor` 与 `opencode` 不会额外写入 host-specific scaffold
 - 仍会运行 `check.* --deep`，但 provider settings 与 host-local config 继续保持 host-managed
 

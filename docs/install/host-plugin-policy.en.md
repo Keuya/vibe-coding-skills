@@ -39,7 +39,7 @@ Other agents should not currently be described as having a supported install pat
 
 - supported install-and-use path
 - not integrated by “adding a pile of host plugins”
-- preserves the real `~/.claude/settings.json` while merging a bounded managed `vibeskills` + write-guard hook surface
+- preserves the real `~/.claude/settings.json` while merging a bounded managed `vibeskills` settings surface
 - plugin enablement, MCP registration, credentials, and broader Claude behavior remain host-managed
 
 ## Cursor
@@ -80,5 +80,5 @@ Other agents should not currently be described as having a supported install pat
 - `opencode` has a supported install-and-use path, with default target root from `OPENCODE_HOME` or `~/.vibeskills/targets/opencode`
 - the real `~/.config/opencode` directory remains host-managed
 - `opencode` uses direct install/check and does not take ownership of the real `opencode.json`
-- hooks are not one-size-fits-all across the current public surface: Codex/Cursor still keep hooks frozen, while Claude now has a bounded managed write-guard hook surface
+- hooks are not one-size-fits-all across the current public surface: Codex/Cursor still keep hooks frozen, while Claude now exposes only a bounded managed settings surface
 - provider `url` / `apikey` / `model` values stay local and should not be pasted into chat

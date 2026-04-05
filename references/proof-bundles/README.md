@@ -4,7 +4,7 @@
 
 最小 live proof surface 默认只保留：
 
-- manifest / baseline manifest
+- manifest
 - bundle README 或 summary
 - operation record
 - contract-required receipts
@@ -16,7 +16,6 @@
 - `linux-full-authoritative-candidate`
 - `claude-code-managed-closure-candidate`
 - `openclaw-runtime-core-preview-candidate`
-- `official-runtime-baseline`
 
 ## Archive
 

@@ -34,7 +34,6 @@
       "docs/universalization/platform-install-matrix.md",
       "docs/universalization/platform-support-matrix.md",
       "docs/universalization/host-capability-matrix.md",
-      "docs/universalization/official-runtime-baseline.md",
       "config/settings.template.codex.json",
       "config/plugins-manifest.codex.json",
       "adapters/codex/host-profile.json",
@@ -108,8 +107,7 @@
     "install_matrix": "docs/universalization/install-matrix.md",
     "platform_install_matrix": "docs/universalization/platform-install-matrix.md",
     "platform_support_matrix": "docs/universalization/platform-support-matrix.md",
-    "host_capability_matrix": "docs/universalization/host-capability-matrix.md",
-    "official_runtime_baseline": "docs/universalization/official-runtime-baseline.md"
+    "host_capability_matrix": "docs/universalization/host-capability-matrix.md"
   },
   "support": {
     "platform_support": {
