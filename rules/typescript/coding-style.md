@@ -7,7 +7,7 @@ paths:
 ---
 # TypeScript/JavaScript Coding Style
 
-> This file extends [common/coding-style.md](../common/coding-style.md) with TypeScript/JavaScript specific content.
+> This file is the stable host-facing JS/TS rule anchor. It complements [`index.md`](./index.md) plus the merged common guidance in [`../common/engineering.md`](../common/engineering.md) and [`../common/quality.md`](../common/quality.md).
 
 ## Immutability
 
@@ -62,4 +62,4 @@ const validated = schema.parse(input)
 
 - No `console.log` statements in production code
 - Use proper logging libraries instead
-- See hooks for automatic detection
+- See [`index.md`](./index.md) for hook and testing guidance

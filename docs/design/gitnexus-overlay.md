@@ -54,7 +54,8 @@ GitNexus overlay 模板位于：
 ### A) 只用 GitNexus overlay（单独建议）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-gitnexus-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog gitnexus `
   -Task "写你的任务描述" `
   -Stage think
 ```
@@ -62,7 +63,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-gitn
 选择并渲染注入片段（默认最多选 1 个）：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-gitnexus-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog gitnexus `
   -Task "写你的任务描述" `
   -Stage think `
   -Select "1"
@@ -73,7 +75,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-gitn
 统一入口（GitNexus 优先级更高，且支持组合）：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog vco `
   -Task "写你的任务描述" `
   -Stage do
 ```
@@ -81,7 +84,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-
 选择 2 个并渲染注入片段（典型：GitNexus + Testing/Engineering）：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog vco `
   -Task "写你的任务描述" `
   -Stage do `
   -Select "1,2"

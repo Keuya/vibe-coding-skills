@@ -50,7 +50,6 @@ function Get-GroupStats {
         $legacy = ($items | Where-Object { $_.route.route_mode -eq "legacy_fallback" }).Count
         $confirm = ($items | Where-Object { $_.route.route_mode -eq "confirm_required" }).Count
         $lowGap = ($items | Where-Object { [double]$_.route.top1_top2_gap -lt $MinTopGap }).Count
-        # Avoid dotted-property Measure-Object ambiguity by projecting numeric arrays first.
         $confidenceValues = @(
             $items | ForEach-Object {
                 if ($_.route -and $_.route.confidence -ne $null) {

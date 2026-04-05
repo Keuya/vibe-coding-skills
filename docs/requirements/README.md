@@ -21,7 +21,7 @@ Primary policy:
 
 ## Current Entry
 
-- [`2026-04-05-platform-references-priority-slimming.md`](./2026-04-05-platform-references-priority-slimming.md): 冻结本轮 `platform/` 空壳清理与 `references/` 优先级精简的治理范围、保留边界和验收标准。
+- [`2026-04-05-pr117-review-fixes.md`](./2026-04-05-pr117-review-fixes.md): 冻结 PR `#117` review-fix 波次的修复范围、运行时约束和验收标准。
 
 ## Contract-Retained Baselines
 

@@ -19,7 +19,7 @@
 - `scripts/common/`: shared primitives and execution-context helpers
 - `scripts/router/`: routing helpers and probes
 - `scripts/bootstrap/`, `scripts/setup/`: install and environment setup
-- `scripts/research/`, `scripts/learn/`: auxiliary support surfaces with exact-caller retention only
+- `scripts/research/`: auxiliary support surfaces with exact-caller retention only
 
 ## Cross-Layer Handoff
 

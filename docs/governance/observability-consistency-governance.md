@@ -54,7 +54,7 @@ Default policy is low-context and privacy-safe:
 
 ## Learning Model (Offline, Manual Apply)
 
-- Script: `scripts/learn/vibe-adaptive-train.ps1`
+- Script: `scripts/research/vibe-adaptive-train.ps1`
 - Input: telemetry JSONL + current router thresholds
 - Output: `outputs/learn/vibe-adaptive-suggestions.json` + markdown report
 - Policy: bounded threshold deltas, manual review required

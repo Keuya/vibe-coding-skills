@@ -13,8 +13,8 @@
 
 ## Start Here
 
-- 当前 `platform/` 与 `references/` 精简计划：[`2026-04-05-platform-references-priority-slimming-plan.md`](./2026-04-05-platform-references-priority-slimming-plan.md)
-- 配套冻结需求：[`../requirements/2026-04-05-platform-references-priority-slimming.md`](../requirements/2026-04-05-platform-references-priority-slimming.md)
+- 当前 PR `#117` review-fix 计划：[`2026-04-05-pr117-review-fixes-execution-plan.md`](./2026-04-05-pr117-review-fixes-execution-plan.md)
+- 配套冻结需求：[`../requirements/2026-04-05-pr117-review-fixes.md`](../requirements/2026-04-05-pr117-review-fixes.md)
 
 ## Contract-Retained Plans
 

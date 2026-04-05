@@ -82,12 +82,14 @@ gitnexus query "overlay" -l 3
 ### 5.1 统一入口（GitNexus + 部门专家可组合，推荐）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog vco `
   -Task "你的任务描述" `
   -Stage do
 
 # 选择并渲染注入片段（最多选 2 个）
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog vco `
   -Task "你的任务描述" `
   -Stage do `
   -Select "1,2"
@@ -96,7 +98,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-
 ### 5.2 只建议 GitNexus overlay（更克制）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-gitnexus-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog gitnexus `
   -Task "你的任务描述" `
   -Stage review
 ```

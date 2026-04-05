@@ -50,7 +50,8 @@ TuriX‑CUA 在该平面中的定位：
 ### 1) 单独建议（只看 TuriX‑CUA）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-turix-cua-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog turix-cua `
   -Task "写你的任务描述" `
   -Stage do
 ```
@@ -58,7 +59,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-turi
 ### 2) 统一入口（与 BrowserOps provider plane 协同）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-vco-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog vco `
   -Task "写你的任务描述" `
   -Stage do
 

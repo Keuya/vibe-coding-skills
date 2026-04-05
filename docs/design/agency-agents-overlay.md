@@ -45,7 +45,8 @@
 ### 1) 获取候选 overlay（自动建议）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-agency-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog agency `
   -Task "写你的任务描述" `
   -Stage think
 ```
@@ -59,7 +60,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-agen
 用序号选择（最多 2 个）：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-agency-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog agency `
   -Task "写你的任务描述" `
   -Stage think `
   -Select "1,2"
@@ -68,7 +70,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-agen
 或者用 overlay id 选择：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-agency-overlays.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 `
+  -Catalog agency `
   -Task "写你的任务描述" `
   -Stage think `
   -Select "agency-testing,agency-engineering"

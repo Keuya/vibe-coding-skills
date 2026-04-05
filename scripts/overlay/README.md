@@ -11,11 +11,8 @@
 
 | Script | Purpose |
 | --- | --- |
-| [`suggest-agency-overlays.ps1`](suggest-agency-overlays.ps1) | 建议 agency role overlays |
+| [`suggest-overlays.ps1`](suggest-overlays.ps1) | 统一建议 overlay catalogs：`agency` / `gitnexus` / `turix-cua` / `ruc-nlpir` / `vco` |
 | [`suggest-browserops-provider.ps1`](suggest-browserops-provider.ps1) | 建议 BrowserOps provider |
-| [`suggest-gitnexus-overlays.ps1`](suggest-gitnexus-overlays.ps1) | 建议 GitNexus overlays |
-| [`suggest-turix-cua-overlays.ps1`](suggest-turix-cua-overlays.ps1) | 建议 TuriX-CUA overlays |
-| [`suggest-vco-overlays.ps1`](suggest-vco-overlays.ps1) | 建议 VCO overlay set |
 
 ## Rule
 

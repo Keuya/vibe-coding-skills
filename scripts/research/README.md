@@ -4,6 +4,7 @@ This directory contains corpus-to-config research scripts used to enhance VCO ro
 
 - `extract-prompt-signals.ps1`: parses external prompt/tool files into structured signals and token statistics.
 - `generate-vco-suggestions.ps1`: converts extracted signals into conservative VCO keyword suggestions and emits a candidate `skill-keyword-index` file.
+- `vibe-adaptive-train.ps1`: reads route telemetry and emits bounded offline threshold suggestions for manual review.
 
 Run sequence:
 

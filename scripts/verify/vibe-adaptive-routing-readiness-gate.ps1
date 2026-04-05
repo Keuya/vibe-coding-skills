@@ -51,7 +51,7 @@ function Write-GateArtifacts {
 
 $context = Get-VgoGovernanceContext -ScriptPath $PSCommandPath -EnforceExecutionContext
 $configPath = Join-Path $context.repoRoot 'config\adaptive-routing-eval-governance.json'
-$docPath = Join-Path $context.repoRoot 'docs\adaptive-routing-eval-governance.md'
+$docPath = Join-Path $context.repoRoot 'docs\governance\adaptive-routing-eval-governance.md'
 $replayContract = Join-Path $context.repoRoot 'references\eval-replay-ledger-contract.md'
 $promotionBoardPath = Join-Path $context.repoRoot 'config\promotion-board.json'
 $requiredScripts = @(
@@ -59,7 +59,7 @@ $requiredScripts = @(
     'scripts/verify/vibe-pack-regression-matrix.ps1',
     'scripts/verify/vibe-keyword-precision-audit.ps1',
     'scripts/verify/vibe-pilot-scenarios.ps1',
-    'scripts/learn/vibe-adaptive-train.ps1'
+    'scripts/research/vibe-adaptive-train.ps1'
 )
 $assertions = [System.Collections.Generic.List[object]]::new()
 
