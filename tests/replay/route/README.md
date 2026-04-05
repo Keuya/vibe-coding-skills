@@ -1,13 +1,13 @@
 # Route Replay Fixtures
 
-`official-runtime-golden.json` encodes the **current official router outputs** for
-a small set of high-signal prompts.
+This directory now keeps only route-facing fixtures that still have live consumers.
 
-These prompts are chosen to be:
+Retained fixtures:
 
-- Offline safe (no provider calls).
-- Deterministic enough to act as a regression baseline.
-- Representative of core routing intents (planning, review, debug, TDD, orchestration).
+- `router-contract-gate-golden.json`: normalized route contract reference retained by active governance docs.
+- `recovery-wave-curated-prompts.json`: curated prompt pack consumed by router-bridge runtime tests.
+- `openclaw-runtime-core-preview.json`: preview-lane route replay retained by proof bundles and preview governance.
 
-Validated by: `scripts/verify/vibe-cross-host-route-parity-gate.ps1`
-
+The former `official-runtime-golden.json` replay baseline is no longer tracked because the current
+no-regression gate validates host/platform contract truth from `tests/replay/fixtures/host-capability-matrix.json`
+instead of replaying full official router outputs.

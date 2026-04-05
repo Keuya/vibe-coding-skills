@@ -1,14 +1,10 @@
-# Runtime Contract Goldens
+# Runtime Contract Proof
 
-This directory stores governed-runtime replay baselines for public runtime artifacts.
+Tracked governed-runtime replay goldens are no longer retained in this directory.
 
-Files:
+Current governed-runtime verification is artifact-driven:
 
-- `governed-runtime-contract-golden.json`: canonical field-and-key replay contract.
-- `runtime-contract-golden.json`: curated normalized case baseline aligned to optional `host_adapter.closure_path` semantics.
+- `scripts/verify/vibe-governed-runtime-contract-gate.ps1` runs a fresh governed-runtime smoke flow
+- the gate validates required files, stage-specific artifacts, frozen `$vibe` routing, and specialist-dispatch invariants
 
-Rules:
-
-- it validates a stable semantic subset, not full JSON parity
-- dynamic values must be normalized before comparison
-- packet and manifest goldens are allowed to evolve only through governed runtime contract changes
+This keeps runtime proof aligned with the live governed runtime instead of preserving stale replay snapshots.

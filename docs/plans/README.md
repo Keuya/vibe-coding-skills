@@ -13,8 +13,8 @@
 
 ## Start Here
 
-- 当前 PR `#117` review-fix 计划：[`2026-04-05-pr117-review-fixes-execution-plan.md`](./2026-04-05-pr117-review-fixes-execution-plan.md)
-- 配套冻结需求：[`../requirements/2026-04-05-pr117-review-fixes.md`](../requirements/2026-04-05-pr117-review-fixes.md)
+- 当前 `tests/` hygiene 计划：[`2026-04-05-tests-derived-and-replay-hygiene-execution-plan.md`](./2026-04-05-tests-derived-and-replay-hygiene-execution-plan.md)
+- 配套冻结需求：[`../requirements/2026-04-05-tests-derived-and-replay-hygiene.md`](../requirements/2026-04-05-tests-derived-and-replay-hygiene.md)
 
 ## Contract-Retained Plans
 

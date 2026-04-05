@@ -126,7 +126,8 @@ $gateSpecs = @(
     @{ Gate = 'scripts/verify/vibe-router-offline-degrade-contract-gate.ps1'; SupportsArtifacts = $true },
     @{ Gate = 'scripts/verify/vibe-cross-host-route-parity-gate.ps1'; SupportsArtifacts = $true },
     @{ Gate = 'scripts/verify/vibe-cross-host-degrade-contract-gate.ps1'; SupportsArtifacts = $true },
-    @{ Gate = 'scripts/verify/vibe-cross-host-install-isolation-gate.ps1'; SupportsArtifacts = $true }
+    @{ Gate = 'scripts/verify/vibe-cross-host-install-isolation-gate.ps1'; SupportsArtifacts = $true },
+    @{ Gate = 'scripts/verify/vibe-governed-runtime-contract-gate.ps1'; SupportsArtifacts = $true }
 )
 
 foreach ($spec in $gateSpecs) {

@@ -20,12 +20,21 @@ From the repo root:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-universalization-no-regression-gate.ps1 -WriteArtifacts
 ```
 
+This aggregate command includes the governed runtime contract proof gate in its subgate closure.
+
 Artifacts are written to `outputs/verify/` when `-WriteArtifacts` is provided.
 
 ## Fixtures (Batch C Minimum Set)
 
 - `tests/replay/fixtures/host-capability-matrix.json` (host/platform truth + no-overclaim lanes)
 - `tests/replay/fixtures/provider-state-matrix.json` (provider-state truth + offline degrade contract)
+
+## Additional Retained Fixtures
+
+- `tests/replay/platform/linux-without-pwsh.json` (runtime-neutral router-bridge fixture for Linux without PowerShell degradation handling)
+- `tests/replay/route/recovery-wave-curated-prompts.json` (curated prompt pack consumed by router-bridge runtime tests)
+- `tests/replay/route/router-contract-gate-golden.json` (retained normalized route contract reference used by active docs)
+- `tests/replay/promotion/claude-code-managed-closure.json` (proof-bundle-backed promotion candidate)
 
 ## OpenClaw Runtime-Core-Preview Fixtures
 
@@ -34,7 +43,7 @@ Artifacts are written to `outputs/verify/` when `-WriteArtifacts` is provided.
 - `tests/replay/install/openclaw-runtime-core-preview-isolation.json` (install isolation boundary for runtime-core-preview)
 - `tests/replay/promotion/openclaw-runtime-core-preview.json` (promotion ceiling guardrail: stay `preview` until evidence is complete)
 
-## Governed Runtime Contract Fixtures
+## Governed Runtime Contract Proof
 
-- `tests/replay/runtime/governed-runtime-contract-golden.json` (canonical field/key contract surface for governed runtime replay)
-- `tests/replay/runtime/runtime-contract-golden.json` (curated normalized case baseline for governed runtime replay)
+Tracked runtime replay goldens are no longer part of the retained minimum set.
+Current governed-runtime proof is generated fresh by `scripts/verify/vibe-governed-runtime-contract-gate.ps1`.

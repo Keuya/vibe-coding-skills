@@ -6,8 +6,8 @@
 This document defines the **minimum, conservative, replay-based proof standard** used by
 the Task 6 harness to support a bounded claim:
 
-- We can automatically detect regressions in **routing**, **provider-missing degrade**, **install isolation**, and **platform support statements**.
-- We do **not** overclaim cross-host parity or multi-OS execution parity beyond current evidence.
+- We can automatically detect regressions in **adapter/platform contract truth**, **offline provider-state degrade behavior**, **install isolation**, and **governed runtime contract smoke**.
+- We do **not** overclaim full router-output replay parity or multi-OS execution parity beyond current evidence.
 
 ## Non-Negotiable Rule
 
@@ -35,48 +35,50 @@ If an exception window is used, it must:
 
 ## What This Harness Proves (Bounded)
 
-### Route replay (offline baseline)
+### Adapter/platform contract baseline (offline contract-only)
 
-Proves: the router still selects the **same pack/skill** for a small set of high-signal prompts.
+Proves: the repo still carries a consistent, machine-readable adapter/platform contract surface
+with explicit no-overclaim lanes and host-capability evidence.
 
 Fixture:
-- `tests/replay/route/official-runtime-golden.json`
+- `tests/replay/fixtures/host-capability-matrix.json`
 
 Gate:
 - `scripts/verify/vibe-cross-host-route-parity-gate.ps1`
 
-### Provider missing degrade (explicit abstention)
+### Provider-state degrade contract (explicit abstention)
 
-Proves: when a provider secret is missing, the relevant helper returns an **explicit abstained**
-result with a reason code (no silent behavior changes and no network call required for the missing-secret path).
+Proves: when provider state enters offline / missing-secret lanes, the relevant contract remains
+explicit and machine-readable, with no silent behavior drift.
 
 Fixture:
-- `tests/replay/degrade/provider-missing.json`
+- `tests/replay/fixtures/provider-state-matrix.json`
 
 Gate:
 - `scripts/verify/vibe-cross-host-degrade-contract-gate.ps1`
 
-### Install isolation (no repo-root pollution markers)
+### Install isolation (diff-based main-chain freeze)
 
-Proves: the harness does not create common "pollution markers" (for example `node_modules/`, `.venv/`) in the repo root,
-and validates that runtime state is written under `outputs/`.
+Proves: the official-runtime protected paths stay frozen by default, and any approved exceptions
+must be covered by the file-scoped main-chain policy window.
 
-Fixture:
-- `tests/replay/install/host-isolation.json`
+Evidence:
+- `git status --porcelain`
+- `config/official-runtime-main-chain-policy.json`
 
 Gate:
 - `scripts/verify/vibe-cross-host-install-isolation-gate.ps1`
 
-### Platform replay (contract-only, no overclaim)
+### Governed runtime contract smoke
 
-Proves: the repo includes explicit platform support statements (keywords) so docs cannot drift into overclaim.
-This does **not** prove that Linux/macOS behavior equals Windows.
+Proves: the governed runtime still emits the required stage artifacts, keeps `$vibe` as the
+frozen runtime skill, and preserves the bounded specialist-dispatch contract in a fresh smoke run.
 
-Fixture:
-- `tests/replay/platform/windows-vs-linux.json`
+Evidence:
+- fresh runtime smoke artifacts emitted under `.tmp/` or `outputs/verify/`
 
-Validated by:
-- `scripts/verify/vibe-universalization-no-regression-gate.ps1`
+Gate:
+- `scripts/verify/vibe-governed-runtime-contract-gate.ps1`
 
 ## How To Run (Task 6 Canonical)
 
@@ -86,7 +88,11 @@ From the repo root:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-cross-host-route-parity-gate.ps1 -WriteArtifacts
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-cross-host-degrade-contract-gate.ps1 -WriteArtifacts
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-cross-host-install-isolation-gate.ps1 -WriteArtifacts
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-governed-runtime-contract-gate.ps1 -WriteArtifacts
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-universalization-no-regression-gate.ps1 -WriteArtifacts
 ```
+
+The final aggregate gate transitively re-runs the governed runtime contract gate as part of the
+canonical Batch C closure.
 
 Artifacts are written under `outputs/verify/` when `-WriteArtifacts` is provided.

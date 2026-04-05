@@ -21,7 +21,7 @@ Primary policy:
 
 ## Current Entry
 
-- [`2026-04-05-pr117-review-fixes.md`](./2026-04-05-pr117-review-fixes.md): 冻结 PR `#117` review-fix 波次的修复范围、运行时约束和验收标准。
+- [`2026-04-05-tests-derived-and-replay-hygiene.md`](./2026-04-05-tests-derived-and-replay-hygiene.md): 冻结 `tests/` 派生物清理与 replay fixture 保守精简波次的范围和验收标准。
 
 ## Contract-Retained Baselines
 
