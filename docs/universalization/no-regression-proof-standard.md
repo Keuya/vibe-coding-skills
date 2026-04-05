@@ -88,7 +88,11 @@ From the repo root:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-cross-host-route-parity-gate.ps1 -WriteArtifacts
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-cross-host-degrade-contract-gate.ps1 -WriteArtifacts
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-cross-host-install-isolation-gate.ps1 -WriteArtifacts
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-governed-runtime-contract-gate.ps1 -WriteArtifacts
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-universalization-no-regression-gate.ps1 -WriteArtifacts
 ```
+
+The final aggregate gate transitively re-runs the governed runtime contract gate as part of the
+canonical Batch C closure.
 
 Artifacts are written under `outputs/verify/` when `-WriteArtifacts` is provided.

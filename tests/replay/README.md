@@ -20,6 +20,8 @@ From the repo root:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify\vibe-universalization-no-regression-gate.ps1 -WriteArtifacts
 ```
 
+This aggregate command includes the governed runtime contract proof gate in its subgate closure.
+
 Artifacts are written to `outputs/verify/` when `-WriteArtifacts` is provided.
 
 ## Fixtures (Batch C Minimum Set)

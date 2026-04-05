@@ -31,7 +31,7 @@ Tight
 
 ### Intended Scope
 
-`tests/**/__pycache__`、`tests/**/*.pyc|pyo`、`tests/replay/**` fixtures。
+`tests/**/__pycache__`、`tests/**/*.pyc`、`tests/**/*.pyo`、`tests/replay/**` fixtures。
 
 ### Abstraction Layer Target
 
