@@ -15,6 +15,7 @@
     "config/daily-dialectic-guard.json",
     "config/data-scale-overlay.json",
     "config/deep-discovery-policy.json",
+    "config/dialectic-team-policy.json",
     "config/docling-provider-policy.json",
     "config/execution-runtime-policy.json",
     "config/execution-topology-policy.json",
@@ -56,6 +57,9 @@
     "config/router-provider-defaults.json",
     "config/router-provider-registry.json",
     "config/router-thresholds.json",
+    "config/skill-alias-map.json",
+    "config/skill-keyword-index.json",
+    "config/skill-routing-rules.json",
     "config/runtime-config-manifest.json",
     "config/runtime-contract.json",
     "config/runtime-core-packaging.json",
@@ -107,6 +111,7 @@
         "config/connector-provider-policy.json",
         "config/connector-sandbox-policy.json",
         "config/deep-discovery-policy.json",
+        "config/dialectic-team-policy.json",
         "config/docling-provider-policy.json",
         "config/exploration-domain-map.json",
         "config/exploration-intent-profiles.json",
@@ -121,7 +126,10 @@
         "config/router-model-governance.json",
         "config/router-provider-defaults.json",
         "config/router-provider-registry.json",
-        "config/router-thresholds.json"
+        "config/router-thresholds.json",
+        "config/skill-alias-map.json",
+        "config/skill-keyword-index.json",
+        "config/skill-routing-rules.json"
       ],
       "memory_policy_files": [
         "config/memory-backend-adapters.json",

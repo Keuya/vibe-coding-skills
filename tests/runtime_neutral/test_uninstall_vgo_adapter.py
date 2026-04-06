@@ -234,6 +234,39 @@ class UnifiedUninstallTests(unittest.TestCase):
         self.assertIn("host-closure", payload["ownership_source"])
         self.assertNotIn("settings.json", payload["mutated_json_paths"])
 
+    def test_planner_treats_legacy_cleanup_candidates_as_target_relpaths(self) -> None:
+        legacy_root = self.target_root / "skills" / "brainstorming"
+        legacy_skill = legacy_root / "SKILL.md"
+        legacy_root.mkdir(parents=True, exist_ok=True)
+        legacy_skill.write_text("---\nname: brainstorming\n---\n", encoding="utf-8")
+        write_json(
+            self.target_root / ".vibeskills" / "install-ledger.json",
+            {
+                "schema_version": 2,
+                "host_id": "cursor",
+                "target_root": str(self.target_root.resolve()),
+                "install_mode": "preview-guidance",
+                "profile": "full",
+                "runtime_roots": [],
+                "compatibility_roots": [],
+                "sidecar_roots": [],
+                "config_rollbacks": [],
+                "legacy_cleanup_candidates": ["skills/brainstorming"],
+                "created_paths": [],
+                "owned_tree_roots": [],
+                "managed_json_paths": [],
+                "generated_from_template_if_absent": [],
+                "specialist_wrapper_paths": [],
+                "runtime_root": "skills/vibe",
+                "canonical_vibe_root": "skills/vibe",
+            },
+        )
+
+        _, payload = self.run_python_uninstall(host="cursor")
+
+        self.assertFalse(legacy_root.exists())
+        self.assertIn("skills/brainstorming", payload["deleted_paths"])
+
     def test_planner_mutates_shared_json_when_ledger_marks_it_owned(self) -> None:
         ledger_path = self.target_root / ".vibeskills" / "install-ledger.json"
         settings_path = self.target_root / "settings.json"
@@ -266,6 +299,43 @@ class UnifiedUninstallTests(unittest.TestCase):
         mutated = json.loads(settings_path.read_text(encoding="utf-8"))
         self.assertEqual({"editor.fontSize": 14}, mutated)
         self.assertIn("settings.json", payload["mutated_json_paths"])
+
+    def test_v2_ledger_does_not_fall_back_to_repo_inventory_for_unclaimed_surfaces(self) -> None:
+        managed_command = self.target_root / "commands" / "vibe.md"
+        unclaimed_config = self.target_root / "config" / "upstream-lock.json"
+        managed_command.parent.mkdir(parents=True, exist_ok=True)
+        unclaimed_config.parent.mkdir(parents=True, exist_ok=True)
+        managed_command.write_text("managed\n", encoding="utf-8")
+        unclaimed_config.write_text("{}\n", encoding="utf-8")
+        write_json(
+            self.target_root / ".vibeskills" / "install-ledger.json",
+            {
+                "schema_version": 2,
+                "host_id": "cursor",
+                "target_root": str(self.target_root.resolve()),
+                "install_mode": "preview-guidance",
+                "profile": "full",
+                "runtime_roots": [],
+                "compatibility_roots": [],
+                "sidecar_roots": [],
+                "config_rollbacks": [],
+                "legacy_cleanup_candidates": [],
+                "created_paths": [],
+                "owned_tree_roots": ["commands"],
+                "managed_json_paths": [],
+                "generated_from_template_if_absent": [],
+                "specialist_wrapper_paths": [],
+                "runtime_root": "skills/vibe",
+                "canonical_vibe_root": "skills/vibe",
+            },
+        )
+
+        _, payload = self.run_python_uninstall(host="cursor")
+
+        self.assertFalse(managed_command.exists())
+        self.assertTrue(unclaimed_config.exists())
+        self.assertIn("commands", payload["deleted_paths"])
+        self.assertNotIn("config/upstream-lock.json", payload["deleted_paths"])
 
     def test_planner_uses_legacy_owned_only_fallback_for_repo_managed_surfaces(self) -> None:
         managed_skill = self.target_root / "skills" / "vibe" / "SKILL.md"

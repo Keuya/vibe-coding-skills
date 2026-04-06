@@ -76,6 +76,10 @@ def _resolve_dependency_path(repo_root: Path, target_root: Path, skill_id: str) 
     normalized_skill_id = _normalize_text(skill_id)
     candidates = [
         target_root / "skills" / skill_id / "SKILL.md",
+        target_root / "skills" / "vibe" / "bundled" / "skills" / skill_id / "SKILL.runtime-mirror.md",
+        target_root / "skills" / "vibe" / "bundled" / "skills" / skill_id / "SKILL.md",
+        target_root / "skills" / "vibe" / "catalog" / "skills" / skill_id / "SKILL.runtime-mirror.md",
+        target_root / "skills" / "vibe" / "catalog" / "skills" / skill_id / "SKILL.md",
         target_root / "skills" / "custom" / skill_id / "SKILL.md",
         repo_root / "SKILL.md" if normalized_skill_id == "vibe" else None,
         repo_root / "bundled" / "skills" / skill_id / "SKILL.md",

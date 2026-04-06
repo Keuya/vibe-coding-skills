@@ -19,4 +19,7 @@ def resolve_repo_root(start_path: Path) -> Path:
     git_candidates = [candidate for candidate in candidates if (candidate / ".git").exists()]
     if git_candidates:
         return git_candidates[-1]
-    return candidates[-1]
+    # Installed-host layouts can contain an outer target-level config root in addition
+    # to the installed runtime root. Without a git root, prefer the nearest governed
+    # root to the executing script.
+    return candidates[0]

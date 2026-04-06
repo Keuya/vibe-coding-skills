@@ -200,6 +200,13 @@ def sanitize_skill_entrypoint_for_runtime_mirror(skill_root: Path) -> None:
         skill_md.rename(mirror_md)
 
 
+def resolve_skill_entrypoint(skill_root: Path) -> Path | None:
+    for candidate in (skill_root / "SKILL.md", skill_root / "SKILL.runtime-mirror.md"):
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8-sig") as fh:
         return json.load(fh)
@@ -239,6 +246,7 @@ def materialize_generated_nested_compatibility(
     governance: dict[str, Any],
     installed_root: Path,
     managed_skill_names: set[str] | None = None,
+    source_skills_root: Path | None = None,
     *,
     copy_file_fn: Callable[[Path, Path], None],
     copy_dir_replace_fn: Callable[[Path, Path], None],
@@ -252,12 +260,15 @@ def materialize_generated_nested_compatibility(
         return
 
     nested_skills_root = nested_root.parent
-    source_skills_root = installed_root.parent
+    effective_source_skills_root = source_skills_root or installed_root.parent
 
     if nested_skills_root.exists():
         shutil.rmtree(nested_skills_root)
 
-    for skill_dir in sorted(source_skills_root.iterdir()):
+    if not effective_source_skills_root.exists():
+        return
+
+    for skill_dir in sorted(effective_source_skills_root.iterdir()):
         if not skill_dir.is_dir() or skill_dir.name == installed_root.name:
             continue
         if managed_skill_names is not None and skill_dir.name not in managed_skill_names:
@@ -286,6 +297,17 @@ def canonical_vibe_target_relpath(packaging: dict[str, Any]) -> str:
     )
 
 
+def internal_skill_corpus(packaging: dict[str, Any]) -> dict[str, Any]:
+    corpus = dict(packaging.get("internal_skill_corpus") or {})
+    corpus.setdefault("enabled", False)
+    corpus.setdefault("source", str(packaging.get("bundled_skills_source") or "bundled/skills"))
+    corpus.setdefault("target_relpath", "skills/vibe/bundled/skills")
+    corpus.setdefault("entrypoint_filename", "SKILL.runtime-mirror.md")
+    corpus.setdefault("sanitize_entrypoints", True)
+    corpus.setdefault("exclude_skill_names", list(packaging.get("exclude_bundled_skill_names") or []))
+    return corpus
+
+
 def excluded_bundled_skill_names(packaging: dict[str, Any]) -> set[str]:
     configured = {
         str(name).strip()
@@ -308,10 +330,10 @@ def resolve_bundled_skills_root(repo_root: Path, packaging: dict[str, Any]) -> P
     if catalog_root:
         candidates.append(Path(catalog_root).expanduser() / "skills")
 
+    candidates.append(repo_root / source_rel)
     parent = repo_root.parent
     if parent.name == "skills":
         candidates.append(parent)
-    candidates.append(repo_root / source_rel)
 
     seen: list[Path] = []
     for candidate in candidates:
@@ -329,10 +351,13 @@ def materialize_allowlisted_skills(
     repo_root: Path,
     target_root: Path,
     packaging: dict[str, Any],
+    destination_root: Path | None = None,
+    hidden_entrypoints: bool = False,
     *,
     copy_dir_replace_fn: Callable[[Path, Path], None],
 ) -> None:
-    skills_allowlist = list(packaging.get("skills_allowlist") or [])
+    projections = packaging.get("compatibility_skill_projections") or {}
+    skills_allowlist = list(projections.get("projected_skill_names") or [])
     if not skills_allowlist:
         return
 
@@ -342,15 +367,80 @@ def materialize_allowlisted_skills(
 
     canonical_vibe_rel = canonical_vibe_target_relpath(packaging)
     canonical_vibe_name = Path(canonical_vibe_rel).name
+    target_skills_root = destination_root or (target_root / "skills")
     for name in sorted({str(value).strip() for value in skills_allowlist if str(value).strip()}):
         if name == canonical_vibe_name:
             continue
         source = bundled_root / name
         if not source.exists():
             raise SystemExit(f"Allowlisted skill packaging source missing: {source}")
-        destination = target_root / "skills" / name
+        destination = target_skills_root / name
         copy_dir_replace_fn(source, destination)
-        restore_skill_entrypoint_if_needed(destination)
+        if hidden_entrypoints:
+            sanitize_skill_entrypoint_for_runtime_mirror(destination)
+        else:
+            restore_skill_entrypoint_if_needed(destination)
+
+
+def materialize_internal_skill_corpus(
+    repo_root: Path,
+    target_root: Path,
+    packaging: dict[str, Any],
+    *,
+    copy_dir_replace_fn: Callable[[Path, Path], None],
+) -> Path:
+    corpus = internal_skill_corpus(packaging)
+    destination_root = target_root / str(corpus.get("target_relpath") or "skills/vibe/bundled/skills")
+    bundled_root = resolve_bundled_skills_root(repo_root, packaging)
+    if bool(corpus.get("enabled")) and not bundled_root.exists():
+        raise SystemExit(f"Bundled skills source missing for internal corpus packaging: {bundled_root}")
+    in_place_corpus = bundled_root.exists() and same_path(bundled_root, destination_root)
+
+    if destination_root.exists() and not in_place_corpus:
+        shutil.rmtree(destination_root)
+
+    if not bool(corpus.get("enabled")):
+        return destination_root
+
+    destination_root.mkdir(parents=True, exist_ok=True)
+    excluded = {
+        str(name).strip()
+        for name in corpus.get("exclude_skill_names") or []
+        if str(name).strip()
+    }
+    excluded.add(Path(canonical_vibe_target_relpath(packaging)).name)
+    selected_names: set[str] = set()
+    if bool(packaging.get("copy_bundled_skills")):
+        selected_names.update(
+            source.name
+            for source in bundled_root.iterdir()
+            if source.is_dir() and source.name not in excluded
+        )
+    else:
+        selected_names.update(
+            name
+            for name in (str(raw).strip() for raw in packaging.get("skills_allowlist") or [])
+            if name and name not in excluded
+        )
+
+    if in_place_corpus:
+        for existing in sorted(destination_root.iterdir(), key=lambda item: item.name):
+            if existing.is_dir() and existing.name not in selected_names:
+                shutil.rmtree(existing)
+
+    for name in sorted(selected_names):
+        source = bundled_root / name
+        if not source.exists():
+            raise SystemExit(f"Internal corpus skill packaging source missing: {source}")
+        destination = destination_root / source.name
+        if not same_path(source, destination):
+            copy_dir_replace_fn(source, destination)
+        if bool(corpus.get("sanitize_entrypoints", True)):
+            sanitize_skill_entrypoint_for_runtime_mirror(destination)
+        else:
+            restore_skill_entrypoint_if_needed(destination)
+
+    return destination_root
 
 
 def ensure_skill_present(
@@ -361,21 +451,26 @@ def ensure_skill_present(
     fallback_sources: Iterable[Path],
     external_used: set[str],
     missing: set[str],
+    destination_root: Path | None = None,
+    hidden_entrypoints: bool = False,
     *,
     copy_tree_fn: Callable[[Path, Path], None],
 ) -> None:
-    skill_md = target_root / "skills" / name / "SKILL.md"
-    if skill_md.exists():
+    target_skills_root = destination_root or (target_root / "skills")
+    destination = target_skills_root / name
+    if resolve_skill_entrypoint(destination) is not None:
         return
     if allow_fallback:
         for src_path in fallback_sources:
             if src_path.exists():
-                destination = target_root / "skills" / name
                 copy_tree_fn(src_path, destination)
-                restore_skill_entrypoint_if_needed(destination)
+                if hidden_entrypoints:
+                    sanitize_skill_entrypoint_for_runtime_mirror(destination)
+                else:
+                    restore_skill_entrypoint_if_needed(destination)
                 external_used.add(name)
                 break
-    if required and not skill_md.exists():
+    if required and resolve_skill_entrypoint(destination) is None:
         missing.add(name)
 
 

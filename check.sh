@@ -761,8 +761,25 @@ else
   echo "[OK] vibe release ledger skipped (not packaged into installed runtime contract)"
   PASS=$((PASS+1))
 fi
+
+resolve_skill_descriptor_path() {
+  local skill_name="$1"
+  local public_path="${TARGET_ROOT}/skills/${skill_name}/SKILL.md"
+  local hidden_runtime_mirror="${runtime_skill_root}/bundled/skills/${skill_name}/SKILL.runtime-mirror.md"
+  local hidden_plain="${runtime_skill_root}/bundled/skills/${skill_name}/SKILL.md"
+  if [[ -f "${public_path}" ]]; then
+    printf '%s\n' "${public_path}"
+    return 0
+  fi
+  if [[ -f "${hidden_runtime_mirror}" ]]; then
+    printf '%s\n' "${hidden_runtime_mirror}"
+    return 0
+  fi
+  printf '%s\n' "${hidden_plain}"
+}
+
 for n in vibe dialectic local-vco-roles spec-kit-vibe-compat superclaude-framework-compat ralph-loop cancel-ralph tdd-guide think-harder; do
-  check_path "skill/${n}" "${TARGET_ROOT}/skills/${n}/SKILL.md"
+  check_path "skill/${n}" "$(resolve_skill_descriptor_path "${n}")"
 done
 check_path "vibe router script" "${runtime_skill_root}/scripts/router/resolve-pack-route.ps1"
 check_path "vibe memory governance config" "${runtime_skill_root}/config/memory-governance.json"
@@ -800,11 +817,11 @@ else
   PASS=$((PASS+1))
 fi
 for n in brainstorming writing-plans subagent-driven-development systematic-debugging; do
-  check_path "workflow/${n}" "${TARGET_ROOT}/skills/${n}/SKILL.md"
+  check_path "workflow/${n}" "$(resolve_skill_descriptor_path "${n}")"
 done
 if [[ "${PROFILE}" == "full" ]]; then
   for n in requesting-code-review receiving-code-review verification-before-completion; do
-    check_path "optional/${n}" "${TARGET_ROOT}/skills/${n}/SKILL.md" false
+    check_path "optional/${n}" "$(resolve_skill_descriptor_path "${n}")" false
   done
 fi
 if [[ "${HOST_ID}" == "opencode" ]]; then

@@ -28,5 +28,7 @@ def test_runtime_packaging_resolver_loads_profile_projection_from_authoritative_
     assert full['profile'] == 'full'
     assert minimal['copy_bundled_skills'] is False
     assert full['copy_bundled_skills'] is True
-    assert minimal['payload_roles']['delivery_model']['bundled_skill_mode'] == 'allowlist_only_plus_canonical_vibe'
-    assert full['payload_roles']['delivery_model']['bundled_skill_mode'] == 'full_bundled_surface_minus_canonical_vibe'
+    assert minimal['payload_roles']['delivery_model']['bundled_skill_mode'] == 'hidden_allowlist_internal_corpus_plus_canonical_vibe'
+    assert full['payload_roles']['delivery_model']['bundled_skill_mode'] == 'hidden_full_internal_corpus_minus_canonical_vibe'
+    assert minimal['compatibility_skill_projections']['projected_skill_names'] == []
+    assert full['compatibility_skill_projections']['projected_skill_names'] == []

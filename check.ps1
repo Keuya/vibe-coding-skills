@@ -574,8 +574,21 @@ function Invoke-AdapterSpecificChecks {
     Check-Condition -Label "vibe release ledger skipped (not packaged into installed runtime contract)" -Condition $true
   }
 
+  function Resolve-SkillDescriptorPath {
+    param([string]$SkillName)
+    $publicPath = Join-Path $TargetRoot "skills\$SkillName\SKILL.md"
+    if (Test-Path -LiteralPath $publicPath -PathType Leaf) {
+      return $publicPath
+    }
+    $hiddenRuntimeMirror = Join-Path $RuntimeSkillRoot "bundled\skills\$SkillName\SKILL.runtime-mirror.md"
+    if (Test-Path -LiteralPath $hiddenRuntimeMirror -PathType Leaf) {
+      return $hiddenRuntimeMirror
+    }
+    return (Join-Path $RuntimeSkillRoot "bundled\skills\$SkillName\SKILL.md")
+  }
+
   foreach ($name in $requiredSkills) {
-    Check-Path -Label "skill/$name" -Path (Join-Path $TargetRoot "skills\$name\SKILL.md")
+    Check-Path -Label "skill/$name" -Path (Resolve-SkillDescriptorPath -SkillName $name)
   }
 
   Check-Path -Label "vibe router script" -Path (Join-Path $RuntimeSkillRoot 'scripts\router\resolve-pack-route.ps1')
@@ -615,12 +628,12 @@ function Invoke-AdapterSpecificChecks {
   }
 
   foreach ($name in $requiredWorkflow) {
-    Check-Path -Label "workflow skill/$name" -Path (Join-Path $TargetRoot "skills\$name\SKILL.md")
+    Check-Path -Label "workflow skill/$name" -Path (Resolve-SkillDescriptorPath -SkillName $name)
   }
 
   if ($Profile -eq 'full') {
     foreach ($name in $optionalWorkflow) {
-      Check-Path -Label "optional workflow skill/$name" -Path (Join-Path $TargetRoot "skills\$name\SKILL.md") -Required:$false
+      Check-Path -Label "optional workflow skill/$name" -Path (Resolve-SkillDescriptorPath -SkillName $name) -Required:$false
     }
   }
 

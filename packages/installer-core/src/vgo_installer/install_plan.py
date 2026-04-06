@@ -40,6 +40,9 @@ def build_install_plan(
         'profile': profile,
         'package_id': None,
         'copy_bundled_skills': False,
+        'public_skill_surface': {},
+        'internal_skill_corpus': {},
+        'compatibility_skill_projections': {},
     }
     if packaging_manifest:
         manifest.update(packaging_manifest)

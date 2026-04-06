@@ -504,6 +504,16 @@ The runtime core behind **VibeSkills** is **VCO**. This is not a single-point to
 
 _Skills keep growing — but you don't need to manage them individually._
 
+### Public topology: one visible runtime, rich internal capability
+
+The default install is intentionally narrow on the outside:
+
+- public host-visible runtime entry: `<target-root>/skills/vibe`
+- internal bundled specialist corpus: `<target-root>/skills/vibe/bundled/skills/*`
+- compatibility projections: only host-scoped, explicit, and test-backed when a host still needs them
+
+This is the key architectural split: **capability breadth is internal, public surface breadth is minimal**. A full install still carries broad routing and specialist coverage, but it no longer needs to flood `<target-root>/skills/` with 300+ peer directories just so hosts can discover `vibe`.
+
 ### Uninstall: Owned-only cleanup
 
 Running `uninstall.ps1 -HostId <host>` or `uninstall.sh --host <host>` is the partner surface to install. By default it performs a ledger-first, owned-only cleanup that only touches paths recorded in `.vibeskills/install-ledger.json`, `*.host-closure.json`, or the documented legacy surfaces. The bundled runtime keeps only the executable contract; the full governance explainer lives in the canonical repo at [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md).
@@ -527,7 +537,20 @@ This keeps host install state separate from governed workspace/runtime artifacts
 
 </div>
 
-The install surface is now registry-driven. `HostId` / `--host` selects host semantics, and the same public entry can resolve into `governed`, `preview-guidance`, or `runtime-core` depending on the adapter. If you are not sure which path matches your host, start with the [cold-start host matrix](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md) or the [multi-host command reference](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.en.md).
+The install surface is now registry-driven. `HostId` / `--host` selects host semantics, and the same public entry can resolve into `governed`, `preview-guidance`, or `runtime-core` depending on the adapter. `full` and `minimal` remain different products, but the difference is now mostly **internal capability breadth and optional compatibility payloads**, not "a few visible skills" versus "hundreds of visible skills." If you are not sure which path matches your host, start with the [cold-start host matrix](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md) or the [multi-host command reference](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.en.md).
+
+### Installed-host validation matrix
+
+The current install topology has been probe-validated against the installed runtime, not only against repo-local scripts:
+
+| Host | Installed entry kept public | Installed-runtime probes covered |
+|:---|:---|:---|
+| `codex` | `$vibe` via `skills/vibe` | planning, debug, governed execution, memory continuity |
+| `claude-code` | `/vibe` via managed closure | planning, debug, governed execution, memory continuity |
+| `openclaw` | preview/runtime-core adapter + `skills/vibe` | planning, debug, governed execution, memory continuity |
+| `opencode` | preview-guidance adapter + `skills/vibe` | planning, debug, governed execution, memory continuity |
+
+Those probes validate that installed `vibe` still owns routing authority, preserves governance stage outputs, records cleanup receipts, and keeps memory read/write continuity after installation. In a few planning-heavy scenarios, advisory gates can surface a bounded `completed_with_failures` status while runtime authority and governed delivery remain intact; that status is treated as expected only for explicitly allowlisted advisory checks.
 
 ### Customize: Add your own skills
 

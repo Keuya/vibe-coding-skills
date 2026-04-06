@@ -36,6 +36,45 @@ def load_runtime_core_packaging_base(repo_root: Path) -> dict[str, Any]:
     return load_json((repo_root / RUNTIME_CORE_BASE_MANIFEST).resolve())
 
 
+def _internal_skill_corpus_enabled(packaging: dict[str, Any]) -> bool:
+    corpus = packaging.get('internal_skill_corpus') or {}
+    return bool(corpus.get('enabled') and str(corpus.get('target_relpath') or '').strip())
+
+
+def _compatibility_projection_names(packaging: dict[str, Any]) -> list[str]:
+    projections = packaging.get('compatibility_skill_projections') or {}
+    names = projections.get('projected_skill_names') or []
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in names:
+        name = str(raw).strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        result.append(name)
+    return result
+
+
+def public_skill_projection_names(packaging: dict[str, Any]) -> list[str]:
+    surface = packaging.get('public_skill_surface') or {}
+    names = surface.get('projected_skill_names') or []
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in names:
+        name = str(raw).strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        result.append(name)
+    return result
+
+
+def internal_skill_corpus_target_relpath(packaging: dict[str, Any]) -> str:
+    corpus = packaging.get('internal_skill_corpus') or {}
+    target = str(corpus.get('target_relpath') or '').strip()
+    return target or 'skills/vibe/bundled/skills'
+
+
 def resolve_runtime_core_projection_path(repo_root: Path, profile: str) -> Path:
     base = load_runtime_core_packaging_base(repo_root)
     manifest_map = base.get('profile_manifests') or {}
@@ -57,10 +96,16 @@ def resolve_runtime_core_packaging(repo_root: Path, profile: str) -> dict[str, A
         merged.setdefault('profile', profile)
         merged.setdefault('bundled_skills_source', 'bundled/skills')
         merged.setdefault('skills_allowlist', [])
+        merged.setdefault('public_skill_surface', {})
+        merged.setdefault('internal_skill_corpus', {})
+        merged.setdefault('compatibility_skill_projections', {'projection_mode': 'explicit_projection_only', 'projected_skill_names': []})
         merged.setdefault(
             'copy_bundled_skills',
-            any(entry.get('target') == 'skills' for entry in merged.get('copy_directories') or []),
+            _internal_skill_corpus_enabled(merged)
+            or any(str(entry.get('source') or '').strip() == 'bundled/skills' for entry in merged.get('copy_directories') or []),
         )
+        if not merged.get('skills_allowlist'):
+            merged['skills_allowlist'] = _compatibility_projection_names(merged)
         return merged
 
     projection_path = resolve_runtime_core_projection_path(repo_root, profile)
@@ -68,8 +113,14 @@ def resolve_runtime_core_packaging(repo_root: Path, profile: str) -> dict[str, A
     packaging.setdefault('profile', profile)
     packaging.setdefault('bundled_skills_source', 'bundled/skills')
     packaging.setdefault('skills_allowlist', [])
+    packaging.setdefault('public_skill_surface', {})
+    packaging.setdefault('internal_skill_corpus', {})
+    packaging.setdefault('compatibility_skill_projections', {'projection_mode': 'explicit_projection_only', 'projected_skill_names': []})
     packaging.setdefault(
         'copy_bundled_skills',
-        any(entry.get('target') == 'skills' for entry in packaging.get('copy_directories') or []),
+        _internal_skill_corpus_enabled(packaging)
+        or any(str(entry.get('source') or '').strip() == 'bundled/skills' for entry in packaging.get('copy_directories') or []),
     )
+    if not packaging.get('skills_allowlist'):
+        packaging['skills_allowlist'] = _compatibility_projection_names(packaging)
     return packaging

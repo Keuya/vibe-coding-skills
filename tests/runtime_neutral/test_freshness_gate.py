@@ -337,6 +337,28 @@ class FreshnessGateTests(unittest.TestCase):
             context = self.module.load_governance_context(script_path, enforce_context=True)
             self.assertEqual(installed_context_root, context.repo_root)
 
+    def test_execution_context_prefers_nearest_installed_runtime_root_when_outer_target_also_has_config(self) -> None:
+        with tempfile.TemporaryDirectory() as isolated_dir:
+            target_root = Path(isolated_dir)
+            installed_context_root = target_root / "skills" / "vibe"
+            self.seed_tree(installed_context_root, canonical=False)
+            (installed_context_root / "config").mkdir(parents=True, exist_ok=True)
+            (installed_context_root / "config" / "version-governance.json").write_text(
+                json.dumps(self.governance, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            (target_root / "config").mkdir(parents=True, exist_ok=True)
+            (target_root / "config" / "version-governance.json").write_text(
+                json.dumps(self.governance, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            script_path = installed_context_root / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+            script_path.write_text("Write-Host 'runtime'\n", encoding="utf-8")
+
+            context = self.module.load_governance_context(script_path, enforce_context=True)
+            self.assertEqual(installed_context_root, context.repo_root)
+
     def test_execution_context_rejects_missing_git_and_incomplete_installed_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as isolated_dir:
             incomplete_root = Path(isolated_dir)

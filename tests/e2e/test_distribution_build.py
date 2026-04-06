@@ -81,7 +81,7 @@ def test_distribution_build_creates_generated_outputs(tmp_path) -> None:
     assert governance_roles['runtime_payload_roles']['notes']['flat_projection_contract']
     assert 'packages/runtime-core/src/vgo_runtime/router_bridge.py' in governance_roles['required_runtime_marker_groups']['semantic_owners']
     runtime_core_roles = payload['runtime_core_payload_roles']['payload_roles']
-    assert runtime_core_roles['delivery_model']['bundled_skill_mode'] == 'allowlist_only_plus_canonical_vibe'
+    assert runtime_core_roles['delivery_model']['bundled_skill_mode'] == 'hidden_allowlist_internal_corpus_plus_canonical_vibe'
     assert (dist_out / 'catalog' / 'profiles' / 'index.json').exists()
     assert (dist_out / 'catalog' / 'skills' / 'brainstorming' / 'SKILL.md').exists()
 
@@ -94,5 +94,5 @@ def test_distribution_build_creates_generated_outputs(tmp_path) -> None:
     assert bundle_payload['runtime_config_payload_roles']['notes']['flat_projection_contract']
     assert bundle_payload['runtime_config_payload_roles']['role_groups']['directories']['preview_host_config_roots'] == []
     assert bundle_payload['governance_runtime_roles']['required_runtime_marker_notes']['flat_projection_contract']
-    assert bundle_payload['runtime_core_payload_roles']['payload_roles']['delivery_model']['bundled_skill_mode'] == 'allowlist_only_plus_canonical_vibe'
+    assert bundle_payload['runtime_core_payload_roles']['payload_roles']['delivery_model']['bundled_skill_mode'] == 'hidden_allowlist_internal_corpus_plus_canonical_vibe'
     assert bundle['host_id'] == manifest['host_id']

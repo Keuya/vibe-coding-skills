@@ -112,7 +112,10 @@ function Resolve-VgoRepoRoot {
         return [System.IO.Path]::GetFullPath($gitCandidates[-1])
     }
 
-    return [System.IO.Path]::GetFullPath($candidates[$candidates.Count - 1])
+    # In installed-host layouts the outer target root may also carry a config directory.
+    # Without a git root, prefer the nearest governed root to the executing script so
+    # installed runtime entrypoints resolve to skills/vibe instead of the host target.
+    return [System.IO.Path]::GetFullPath($candidates[0])
 }
 
 function Get-VgoParentPath {

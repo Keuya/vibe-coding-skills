@@ -32,7 +32,12 @@ def resolve_repo_root(start_path: Path) -> Path:
         raise RuntimeError(f"Unable to resolve VCO repo root from: {start_path}")
 
     git_candidates = [candidate for candidate in candidates if (candidate / ".git").exists()]
-    return git_candidates[-1] if git_candidates else candidates[-1]
+    if git_candidates:
+        return git_candidates[-1]
+    # Installed-host layouts can place host-level config files above skills/vibe.
+    # Without a git root, prefer the nearest governed root to preserve installed
+    # runtime routing semantics.
+    return candidates[0]
 
 
 def load_json(path: Path) -> Any:
@@ -49,6 +54,35 @@ def load_router_config_bundle(config_root: Path) -> dict[str, Any]:
         "fallback_policy": load_json(config_root / "fallback-governance.json"),
         "routing_rules": load_json(config_root / "skill-routing-rules.json"),
     }
+
+
+def load_runtime_core_packaging(config_root: Path) -> dict[str, Any]:
+    path = config_root / "runtime-core-packaging.json"
+    if not path.exists():
+        return {}
+    payload = load_json(path)
+    if not isinstance(payload, dict):
+        return {}
+
+    profiles = payload.get("profiles") or {}
+    default_profile = str(payload.get("default_profile") or "full").strip() or "full"
+    overlay = profiles.get(default_profile)
+    if not isinstance(overlay, dict):
+        return payload
+
+    def _deep_merge(base: Any, extra: Any) -> Any:
+        if isinstance(base, dict) and isinstance(extra, dict):
+            merged = {key: _deep_merge(value, extra[key]) if key in extra else value for key, value in base.items()}
+            for key, value in extra.items():
+                if key not in merged:
+                    merged[key] = value
+            return merged
+        return extra
+
+    merged = dict(payload)
+    merged.pop("profiles", None)
+    merged.pop("default_profile", None)
+    return _deep_merge(merged, overlay)
 
 
 def normalize_text(value: str | None) -> str:
@@ -152,16 +186,97 @@ def resolve_requested_canonical(requested_skill: str | None, alias_map: dict[str
     return requested
 
 
-def resolve_skill_md_path(repo: RepoContext, skill: str, target_root: str | None, host_id: str | None = None) -> Path | None:
-    bundled = repo.bundled_skills_root / skill / "SKILL.md"
-    if bundled.exists():
-        return bundled
+def resolve_public_skill_surface(repo: RepoContext) -> dict[str, Any]:
+    packaging = load_runtime_core_packaging(repo.config_root)
+    surface = packaging.get("public_skill_surface") or {}
+    canonical_relpath = (
+        str(surface.get("canonical_entrypoint_relpath") or "").strip()
+        or str((packaging.get("canonical_vibe_payload") or {}).get("target_relpath") or "skills/vibe").strip()
+        or "skills/vibe"
+    )
+    root_relpath = str(surface.get("root_relpath") or "skills").strip() or "skills"
+    return {
+        "root_relpath": root_relpath,
+        "canonical_entrypoint_relpath": canonical_relpath,
+    }
+
+
+def resolve_compatibility_skill_projections(repo: RepoContext) -> dict[str, Any]:
+    packaging = load_runtime_core_packaging(repo.config_root)
+    projections = packaging.get("compatibility_skill_projections") or {}
+    resolver_roots = projections.get("resolver_roots") or [projections.get("target_root") or "skills"]
+    normalized_roots = [
+        str(root).strip()
+        for root in resolver_roots
+        if str(root).strip()
+    ] or ["skills"]
+    return {
+        "resolver_roots": normalized_roots,
+    }
+
+
+def resolve_internal_skill_corpus(repo: RepoContext) -> dict[str, Any]:
+    packaging = load_runtime_core_packaging(repo.config_root)
+    corpus = packaging.get("internal_skill_corpus") or {}
+    return {
+        "source": str(corpus.get("source") or packaging.get("bundled_skills_source") or "bundled/skills").strip() or "bundled/skills",
+        "target_relpath": str(corpus.get("target_relpath") or "skills/vibe/catalog/skills").strip() or "skills/vibe/catalog/skills",
+        "entrypoint_filename": str(corpus.get("entrypoint_filename") or "SKILL.runtime-mirror.md").strip() or "SKILL.runtime-mirror.md",
+    }
+
+
+def iter_skill_descriptor_candidates(
+    repo: RepoContext,
+    skill: str,
+    target_root: str | None,
+    host_id: str | None = None,
+) -> list[Path]:
     installed_root = resolve_target_root(target_root, host_id)
-    installed = installed_root / "skills" / skill / "SKILL.md"
-    if installed.exists():
-        return installed
-    custom_installed = installed_root / "skills" / "custom" / skill / "SKILL.md"
-    return custom_installed if custom_installed.exists() else None
+    public_surface = resolve_public_skill_surface(repo)
+    internal_corpus = resolve_internal_skill_corpus(repo)
+    compatibility_skill_projections = resolve_compatibility_skill_projections(repo)
+    canonical_root = installed_root / public_surface["canonical_entrypoint_relpath"]
+    internal_root = installed_root / internal_corpus["target_relpath"]
+    internal_entrypoint = internal_corpus["entrypoint_filename"]
+
+    repo_vibe_root = repo.repo_root
+    repo_internal_root = repo.repo_root / internal_corpus["target_relpath"]
+
+    compatibility_candidates = [
+        installed_root / rel_root / skill / "SKILL.md"
+        for rel_root in compatibility_skill_projections["resolver_roots"]
+    ]
+
+    candidates = [
+        canonical_root / "SKILL.md" if skill == Path(public_surface["canonical_entrypoint_relpath"]).name else None,
+        repo_internal_root / skill / "SKILL.md",
+        repo_internal_root / skill / internal_entrypoint,
+        internal_root / skill / internal_entrypoint,
+        internal_root / skill / "SKILL.md",
+        *compatibility_candidates,
+        installed_root / public_surface["root_relpath"] / "custom" / skill / "SKILL.md",
+        repo_vibe_root / "SKILL.md" if skill == Path(public_surface["canonical_entrypoint_relpath"]).name else None,
+        repo.bundled_skills_root / skill / "SKILL.md",
+    ]
+
+    ordered: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        normalized = candidate.resolve(strict=False)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(candidate)
+    return ordered
+
+
+def resolve_skill_md_path(repo: RepoContext, skill: str, target_root: str | None, host_id: str | None = None) -> Path | None:
+    for candidate in iter_skill_descriptor_candidates(repo, skill, target_root, host_id):
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def read_skill_descriptor(repo: RepoContext, skill: str, target_root: str | None, host_id: str | None = None) -> dict[str, Any]:

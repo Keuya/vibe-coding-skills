@@ -77,6 +77,13 @@ def collect_file_inventory(source_root: Path, target_prefix: str) -> set[str]:
     return inventory
 
 
+def collect_target_tree_inventory(target_root: Path, relpath: str) -> set[str]:
+    candidate = target_root / relpath
+    if not candidate.exists():
+        return set()
+    return collect_file_inventory(candidate, relpath)
+
+
 def generated_nested_compatibility_suffix(governance: dict) -> Path | None:
     return resolve_generated_nested_compatibility_suffix(governance)
 
@@ -103,6 +110,16 @@ def runtime_core_inventory(repo_root: Path) -> set[str]:
         inventory.update(collect_file_inventory(source_root, entry["target"]))
     for entry in packaging.get("copy_files", []):
         inventory.add(normalize_relpath(entry["target"]))
+
+    internal_corpus = packaging.get("internal_skill_corpus") or {}
+    if bool(internal_corpus.get("enabled")):
+        source_root = repo_root / str(internal_corpus.get("source") or "bundled/skills")
+        target_prefix = normalize_relpath(str(internal_corpus.get("target_relpath") or "skills/vibe/bundled/skills"))
+        if source_root.exists() and target_prefix:
+            for candidate in source_root.iterdir():
+                if not candidate.is_dir() or candidate.name in exclude_bundled_skill_names:
+                    continue
+                inventory.update(collect_file_inventory(candidate, f"{target_prefix}/{candidate.name}"))
 
     target_rel = normalize_relpath(
         (packaging.get("canonical_vibe_payload") or {}).get("target_relpath")
@@ -207,6 +224,22 @@ def parse_merged_files(values: object, target_root: Path) -> dict[str, dict[str,
     return merged
 
 
+def parse_config_rollbacks(values: object, target_root: Path) -> dict[str, dict[str, object]]:
+    managed: dict[str, dict[str, object]] = {}
+    if not isinstance(values, list):
+        return managed
+    for entry in values:
+        if not isinstance(entry, dict):
+            continue
+        rel = relativize_to_target(entry.get("path"), target_root)
+        if rel:
+            managed[rel] = {
+                "managed_key": entry.get("managed_key", "vibeskills"),
+                "created_if_absent": bool(entry.get("created_if_absent", False)),
+            }
+    return managed
+
+
 def remove_vibeskills_node(
     path: Path,
     *,
@@ -220,7 +253,7 @@ def remove_vibeskills_node(
     if not path.exists():
         return
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = load_json(path)
     except json.JSONDecodeError:
         warnings.append(f"shared JSON parse failed: {relpath}")
         return
@@ -278,6 +311,7 @@ def collect_foreign_paths(
     protected_relpaths: set[str],
 ) -> list[str]:
     top_level_roots = {entry.split("/", 1)[0] for entry in managed_files}
+    top_level_roots.update(entry.split("/", 1)[0] for entry in deleted_dirs)
     foreign: set[str] = set()
 
     for root_name in sorted(top_level_roots):
@@ -290,7 +324,7 @@ def collect_foreign_paths(
             rel = candidate.relative_to(target_root).as_posix()
             if rel in managed_files or rel in protected_relpaths:
                 continue
-            if any(rel == entry or rel.startswith(f"{entry}/") for entry in deleted_dirs):
+            if any(rel == deleted or rel.startswith(f"{deleted}/") for deleted in deleted_dirs):
                 continue
             foreign.add(rel)
     return sorted(foreign)
@@ -327,7 +361,7 @@ def workspace_sidecar_artifacts_present(target_root: Path) -> bool:
 
 def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[str, object]:
     host_id = adapter["id"]
-    managed_files = host_inventory(repo_root, host_id)
+    managed_files: set[str] = set()
     deleted_dirs: set[str] = set()
     protected_relpaths: set[str] = set()
     warnings: list[str] = []
@@ -337,6 +371,28 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
     ledger = load_json(ledger_path) if ledger_path.exists() else None
     if ledger is not None:
         ownership_source.append("ledger")
+        runtime_roots = parse_path_list(ledger.get("runtime_roots"), target_root)
+        compatibility_roots = parse_path_list(ledger.get("compatibility_roots"), target_root)
+        sidecar_roots = parse_path_list(ledger.get("sidecar_roots"), target_root)
+        legacy_cleanup_candidates = parse_path_list(ledger.get("legacy_cleanup_candidates"), target_root)
+        owned_tree_roots = parse_path_list(ledger.get("owned_tree_roots"), target_root)
+
+        def collect_owned_root(rel: str) -> None:
+            candidate = target_root / rel
+            if candidate.exists() and candidate.is_dir() and not candidate.is_symlink():
+                managed_files.update(collect_target_tree_inventory(target_root, rel))
+                deleted_dirs.add(rel)
+            else:
+                managed_files.add(rel)
+
+        if runtime_roots or compatibility_roots or sidecar_roots or legacy_cleanup_candidates:
+            ownership_source.append("ledger-v2-roots")
+            for rel in sorted(runtime_roots | compatibility_roots | legacy_cleanup_candidates):
+                collect_owned_root(rel)
+            for rel in sorted(sidecar_roots):
+                collect_owned_root(rel)
+        for rel in sorted(owned_tree_roots):
+            collect_owned_root(rel)
         for rel in sorted(parse_path_list(ledger.get("created_paths"), target_root)):
             candidate = target_root / rel
             if rel == ".vibeskills" and candidate.exists():
@@ -356,6 +412,9 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
     closure = load_json(closure_path) if closure_path.exists() else None
     if closure is not None:
         ownership_source.append("host-closure")
+
+    if ledger is None:
+        managed_files.update(host_inventory(repo_root, host_id))
 
     preserve_workspace_sidecar = workspace_sidecar_artifacts_present(target_root)
 
@@ -377,11 +436,13 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
         if path_matches_template(target_root / "mcp_config.json", mcp_template):
             template_candidates.append("mcp_config.json")
 
-    managed_json_paths = parse_managed_json_paths(ledger.get("managed_json_paths") if isinstance(ledger, dict) else None, target_root)
+    managed_json_paths = parse_config_rollbacks(ledger.get("config_rollbacks") if isinstance(ledger, dict) else None, target_root)
+    if not managed_json_paths:
+        managed_json_paths = parse_managed_json_paths(ledger.get("managed_json_paths") if isinstance(ledger, dict) else None, target_root)
     merged_files = parse_merged_files(ledger.get("merged_files") if isinstance(ledger, dict) else None, target_root)
 
     return {
-        "managed_files": {entry for entry in managed_files if entry and not any(entry == deleted or entry.startswith(f"{deleted}/") for deleted in deleted_dirs)},
+        "managed_files": {entry for entry in managed_files if entry},
         "deleted_dirs": deleted_dirs,
         "managed_json_paths": managed_json_paths,
         "merged_files": merged_files,
@@ -434,6 +495,9 @@ def apply_uninstall(
     for rel in deleted_dirs:
         path = target_root / rel
         if not path.exists():
+            continue
+        if any(foreign == rel or foreign.startswith(f"{rel}/") for foreign in skipped_foreign_paths):
+            warnings.append(f"preserved directory with foreign content: {rel}")
             continue
         if preview:
             deleted_paths.append(rel)

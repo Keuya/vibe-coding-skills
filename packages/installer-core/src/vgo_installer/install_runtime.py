@@ -39,7 +39,7 @@ from .materializer import (
     install_opencode_guidance_payload,
     install_runtime_core_mode_payload,
     materialize_allowlisted_skills,
-    materialize_generated_nested_compatibility,
+    materialize_internal_skill_corpus,
     resolve_bundled_skills_root,
     restore_skill_entrypoint_if_needed,
     sync_vibe_canonical,
@@ -73,6 +73,11 @@ ledger_state = {
     "merged_files": {},
     "template_generated": set(),
     "specialist_wrapper_paths": [],
+    "runtime_roots": set(),
+    "compatibility_roots": set(),
+    "sidecar_roots": set(),
+    "config_rollbacks": [],
+    "legacy_cleanup_candidates": set(),
 }
 
 
@@ -108,6 +113,7 @@ def record_managed_json(path: Path) -> None:
     except FileNotFoundError:
         resolved = path
     ledger_state["managed_json_paths"].add(str(resolved))
+    record_config_rollback(path, created_if_absent=False)
 
 
 def record_merged_file(path: Path, *, created_if_absent: bool) -> None:
@@ -119,6 +125,7 @@ def record_merged_file(path: Path, *, created_if_absent: bool) -> None:
         "path": str(resolved),
         "created_if_absent": bool(created_if_absent),
     }
+    record_config_rollback(path, created_if_absent=created_if_absent)
 
 
 def record_generated_from_template(path: Path) -> None:
@@ -136,6 +143,52 @@ def record_specialist_wrapper(path: Path) -> None:
         resolved = str(path)
     if resolved not in ledger_state["specialist_wrapper_paths"]:
         ledger_state["specialist_wrapper_paths"].append(resolved)
+
+
+def record_runtime_root(path: Path | str) -> None:
+    try:
+        resolved = Path(path).resolve()
+    except FileNotFoundError:
+        resolved = Path(path)
+    ledger_state["runtime_roots"].add(str(resolved))
+
+
+def record_compatibility_root(path: Path | str) -> None:
+    try:
+        resolved = Path(path).resolve()
+    except FileNotFoundError:
+        resolved = Path(path)
+    ledger_state["compatibility_roots"].add(str(resolved))
+
+
+def record_sidecar_root(path: Path | str) -> None:
+    try:
+        resolved = Path(path).resolve()
+    except FileNotFoundError:
+        resolved = Path(path)
+    ledger_state["sidecar_roots"].add(str(resolved))
+
+
+def record_config_rollback(path: Path | str, *, created_if_absent: bool, managed_key: str = "vibeskills") -> None:
+    try:
+        resolved = Path(path).resolve()
+    except FileNotFoundError:
+        resolved = Path(path)
+    entry = {
+        "path": str(resolved),
+        "created_if_absent": bool(created_if_absent),
+        "managed_key": managed_key,
+    }
+    if entry not in ledger_state["config_rollbacks"]:
+        ledger_state["config_rollbacks"].append(entry)
+
+
+def record_legacy_cleanup_candidate(path: Path | str) -> None:
+    try:
+        resolved = Path(path).resolve()
+    except FileNotFoundError:
+        resolved = Path(path)
+    ledger_state["legacy_cleanup_candidates"].add(str(resolved))
 
 
 def parent_dir(path: Path | None) -> Path | None:
@@ -174,6 +227,11 @@ def materialization_state_from_ledger_state() -> MaterializationLedgerState:
         merged_files=dict(ledger_state["merged_files"]),
         generated_from_template_if_absent=set(ledger_state["template_generated"]),
         specialist_wrapper_paths=list(ledger_state["specialist_wrapper_paths"]),
+        runtime_roots=set(ledger_state["runtime_roots"]),
+        compatibility_roots=set(ledger_state["compatibility_roots"]),
+        sidecar_roots=set(ledger_state["sidecar_roots"]),
+        config_rollbacks=list(ledger_state["config_rollbacks"]),
+        legacy_cleanup_candidates=set(ledger_state["legacy_cleanup_candidates"]),
     )
 
 
@@ -193,6 +251,19 @@ def desired_managed_skill_names(repo_root: Path, packaging: dict) -> set[str]:
     return managed
 
 
+def compatibility_projection_names(packaging: dict) -> list[str]:
+    projections = packaging.get("compatibility_skill_projections") or {}
+    seen: set[str] = set()
+    names: list[str] = []
+    for raw in projections.get("projected_skill_names") or []:
+        name = str(raw).strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        names.append(name)
+    return names
+
+
 def prune_previously_managed_skill_dirs(
     target_root: Path,
     previous_managed_skill_names: set[str],
@@ -208,13 +279,28 @@ def prune_previously_managed_skill_dirs(
             shutil.rmtree(skill_root)
 
 
+def prune_legacy_public_skill_dirs(
+    target_root: Path,
+    managed_skill_names: set[str],
+    projected_skill_names: set[str],
+) -> None:
+    skills_root = target_root / "skills"
+    if not skills_root.exists():
+        return
+    for name in sorted(managed_skill_names - projected_skill_names - {"vibe"}):
+        skill_root = skills_root / name
+        if skill_root.is_dir():
+            record_legacy_cleanup_candidate(skill_root)
+            shutil.rmtree(skill_root)
+
+
 def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow_fallback: bool, adapter: dict):
     packaging = attach_local_catalog_descriptor(repo_root, resolve_runtime_core_packaging(repo_root, profile))
-    governance = load_json(repo_root / "config" / "version-governance.json")
     excluded_skill_names = excluded_bundled_skill_names(packaging)
     previous_ledger = load_existing_install_ledger(target_root)
     skill_inventory = load_managed_skill_inventory(packaging)
     current_managed_skill_names = desired_managed_skill_names(repo_root, packaging)
+    projected_skill_names = set(compatibility_projection_names(packaging))
     include_command_surfaces = not uses_skill_only_activation(adapter["id"])
     runtime_directories = [
         rel for rel in packaging["directories"]
@@ -258,9 +344,10 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             if entry.get("optional"):
                 continue
             raise SystemExit(f"Runtime-core packaging source missing: {src}")
-        copy_file(src, target_root / entry["target"], track_created_path=track_created_path)
-
+        destination = target_root / entry["target"]
+        copy_file(src, destination, track_created_path=track_created_path)
     target_rel = canonical_vibe_target_relpath(packaging)
+    canonical_vibe_name = Path(target_rel).name
     sync_vibe_canonical(
         repo_root,
         target_root,
@@ -273,11 +360,19 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             record_owned_tree_root=record_owned_tree_root,
         ),
     )
-    prune_previously_managed_skill_dirs(
+    record_runtime_root(target_root / target_rel)
+    corpus_target = materialize_internal_skill_corpus(
+        repo_root,
         target_root,
-        derive_managed_skill_names_from_ledger(target_root, previous_ledger),
-        current_managed_skill_names,
+        packaging,
+        copy_dir_replace_fn=lambda src, dst: copy_dir_replace(
+            src,
+            dst,
+            track_created_path=track_created_path,
+            record_owned_tree_root=record_owned_tree_root,
+        ),
     )
+    record_runtime_root(corpus_target)
     materialize_allowlisted_skills(
         repo_root,
         target_root,
@@ -289,25 +384,24 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             record_owned_tree_root=record_owned_tree_root,
         ),
     )
-    materialize_generated_nested_compatibility(
-        governance,
-        target_root / target_rel,
-        current_managed_skill_names,
-        copy_file_fn=lambda src, dst: copy_file(src, dst, track_created_path=track_created_path),
-        copy_dir_replace_fn=lambda src, dst: copy_dir_replace(
-            src,
-            dst,
-            track_created_path=track_created_path,
-            record_owned_tree_root=record_owned_tree_root,
-        ),
+    prune_previously_managed_skill_dirs(
+        target_root,
+        derive_managed_skill_names_from_ledger(target_root, previous_ledger),
+        projected_skill_names | {"vibe"},
     )
+    prune_legacy_public_skill_dirs(target_root, current_managed_skill_names, projected_skill_names)
+    for name in projected_skill_names:
+        projected_root = target_root / "skills" / name
+        if projected_root.exists():
+            record_compatibility_root(projected_root)
 
     roots = skill_source_roots(repo_root)
 
     external_used = set()
-    missing = set()
-
+    missing: set[str] = set()
     for name in skill_inventory.required_runtime_skills:
+        if name == canonical_vibe_name:
+            continue
         ensure_skill_present(
             target_root,
             name,
@@ -316,6 +410,8 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             [root / name for root in roots],
             external_used,
             missing,
+            destination_root=corpus_target,
+            hidden_entrypoints=True,
             copy_tree_fn=lambda src, dst: copy_tree(
                 src,
                 dst,
@@ -332,6 +428,8 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             [root / name for root in roots[1:] + roots[:1]],
             external_used,
             missing,
+            destination_root=corpus_target,
+            hidden_entrypoints=True,
             copy_tree_fn=lambda src, dst: copy_tree(
                 src,
                 dst,
@@ -348,6 +446,8 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
             [root / name for root in roots[1:] + roots[:1]],
             external_used,
             missing,
+            destination_root=corpus_target,
+            hidden_entrypoints=True,
             copy_tree_fn=lambda src, dst: copy_tree(
                 src,
                 dst,
@@ -355,14 +455,11 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
                 record_owned_tree_root=record_owned_tree_root,
             ),
         )
-
     if missing:
         raise SystemExit("Missing required vendored skills: " + ", ".join(sorted(missing)))
 
     managed_skill_names = sorted(
-        name
-        for name in current_managed_skill_names
-        if (target_root / "skills" / name).is_dir()
+        name for name in current_managed_skill_names
     )
 
     return packaging, sorted(external_used), managed_skill_names
@@ -478,6 +575,7 @@ def main(argv: list[str] | None = None):
         record_managed_json=record_managed_json,
         record_specialist_wrapper=record_specialist_wrapper,
     )
+    record_sidecar_root(target_root / ".vibeskills")
     require_closed_ready_effective = bool(args.require_closed_ready and is_closed_ready_required(adapter))
     if require_closed_ready_effective and closure["host_closure_state"] != "closed_ready":
         raise SystemExit(
@@ -499,10 +597,16 @@ def main(argv: list[str] | None = None):
             "profile": packaging.get("profile", args.profile),
             "package_id": packaging.get("package_id"),
             "copy_bundled_skills": bool(packaging.get("copy_bundled_skills")),
+            "copy_directories": list(packaging.get("copy_directories") or []),
+            "copy_files": list(packaging.get("copy_files") or []),
+            "public_skill_surface": dict(packaging.get("public_skill_surface") or {}),
+            "internal_skill_corpus": dict(packaging.get("internal_skill_corpus") or {}),
+            "compatibility_skill_projections": dict(packaging.get("compatibility_skill_projections") or {}),
         },
     )
     ledger_path = target_root / ".vibeskills" / "install-ledger.json"
     track_created_path(ledger_path)
+    record_sidecar_root(target_root / ".vibeskills")
     write_install_ledger(
         plan=install_plan,
         state=materialization_state_from_ledger_state(),

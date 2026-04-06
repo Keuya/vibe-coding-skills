@@ -20,10 +20,29 @@ class MaterializationLedgerState:
     merged_files: dict[str, dict[str, object]] = field(default_factory=dict)
     generated_from_template_if_absent: set[Path | str] = field(default_factory=set)
     specialist_wrapper_paths: list[Path | str] = field(default_factory=list)
+    runtime_roots: set[Path | str] = field(default_factory=set)
+    compatibility_roots: set[Path | str] = field(default_factory=set)
+    sidecar_roots: set[Path | str] = field(default_factory=set)
+    config_rollbacks: list[dict[str, object]] = field(default_factory=list)
+    legacy_cleanup_candidates: set[Path | str] = field(default_factory=set)
 
 
 def _normalize_resolved_path(path: Path | str) -> str:
     return str(Path(path).resolve(strict=False))
+
+
+def _normalize_target_relpath(path: Path | str, *, target_root: Path) -> str | None:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = (target_root / candidate).resolve(strict=False)
+    else:
+        candidate = candidate.resolve(strict=False)
+    try:
+        relative = candidate.relative_to(target_root.resolve(strict=False))
+    except ValueError:
+        return None
+    normalized = relative.as_posix().strip()
+    return normalized or None
 
 
 def _normalize_skill_name(value: object) -> str | None:
@@ -44,6 +63,41 @@ def sanitize_managed_skill_names(values: list[str] | tuple[str, ...] | set[str] 
         if normalized is not None:
             safe_names.add(normalized)
     return sorted(safe_names)
+
+
+def _sorted_target_relpaths(values: set[Path | str] | list[Path | str], *, target_root: Path) -> list[str]:
+    relpaths: set[str] = set()
+    for value in values:
+        normalized = _normalize_target_relpath(value, target_root=target_root)
+        if normalized is not None:
+            relpaths.add(normalized)
+    return sorted(relpaths)
+
+
+def _sorted_config_rollbacks(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    seen: set[tuple[str, bool, str]] = set()
+    for entry in values:
+        if not isinstance(entry, dict):
+            continue
+        path = str(entry.get('path') or '').strip()
+        if not path:
+            continue
+        normalized = _normalize_resolved_path(path)
+        managed_key = str(entry.get('managed_key') or 'vibeskills')
+        created_if_absent = bool(entry.get('created_if_absent', False))
+        marker = (normalized, created_if_absent, managed_key)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        records.append(
+            {
+                'path': normalized,
+                'created_if_absent': created_if_absent,
+                'managed_key': managed_key,
+            }
+        )
+    return sorted(records, key=lambda item: item['path'])
 
 
 def load_existing_install_ledger(target_root: Path | str) -> dict | None:
@@ -85,10 +139,35 @@ def build_payload_summary(target_root: Path | str, ledger: dict) -> dict[str, ob
     target_root_path = Path(target_root).resolve()
     target_root_resolved = target_root_path.resolve(strict=False)
     managed_skill_names = derive_managed_skill_names_from_ledger(target_root_path, ledger)
+    packaging_manifest = ledger.get('packaging_manifest') if isinstance(ledger, dict) else None
+    internal_corpus = (packaging_manifest or {}).get('internal_skill_corpus') if isinstance(packaging_manifest, dict) else {}
+    internal_target_relpath = str((internal_corpus or {}).get('target_relpath') or 'skills/vibe/bundled/skills').strip() or 'skills/vibe/bundled/skills'
+    internal_skills_root = (target_root_path / internal_target_relpath).resolve(strict=False)
     installed_skill_names = sorted(
         name
         for name in managed_skill_names
+        if not name.startswith('.')
+        and (
+            (target_root_path / 'skills' / name).is_dir()
+            or (internal_skills_root / name).is_dir()
+        )
+    )
+    public_skill_names = sorted(
+        name
+        for name in managed_skill_names
         if not name.startswith('.') and (target_root_path / 'skills' / name).is_dir()
+    )
+    packaging_manifest = ledger.get('packaging_manifest') if isinstance(ledger.get('packaging_manifest'), dict) else {}
+    internal_skill_corpus = packaging_manifest.get('internal_skill_corpus') if isinstance(packaging_manifest, dict) else {}
+    internal_skill_target = None
+    if isinstance(internal_skill_corpus, dict):
+        target_relpath = str(internal_skill_corpus.get('target_relpath') or '').strip()
+        if target_relpath:
+            internal_skill_target = target_root_path / target_relpath
+    internal_skill_names = sorted(
+        candidate.name
+        for candidate in (internal_skill_target.iterdir() if internal_skill_target and internal_skill_target.exists() else [])
+        if candidate.is_dir()
     )
 
     managed_skill_roots = {
@@ -124,6 +203,15 @@ def build_payload_summary(target_root: Path | str, ledger: dict) -> dict[str, ob
         collect_owned_tree(skill_root)
 
     skills_root = (target_root_path / 'skills').resolve(strict=False)
+    for raw_path in ledger.get('runtime_roots') or []:
+        collect_owned_tree(raw_path)
+        collect_owned_file(raw_path)
+    for raw_path in ledger.get('compatibility_roots') or []:
+        collect_owned_tree(raw_path)
+        collect_owned_file(raw_path)
+    for raw_path in ledger.get('sidecar_roots') or []:
+        collect_owned_tree(raw_path)
+        collect_owned_file(raw_path)
     for raw_path in ledger.get('owned_tree_roots') or []:
         candidate = Path(str(raw_path)).resolve(strict=False)
         if candidate == target_root_resolved or candidate == skills_root:
@@ -143,10 +231,16 @@ def build_payload_summary(target_root: Path | str, ledger: dict) -> dict[str, ob
     for entry in ledger.get('merged_files') or []:
         if isinstance(entry, dict):
             collect_owned_file(str(entry.get('path') or ''))
+    for entry in ledger.get('config_rollbacks') or []:
+        if isinstance(entry, dict):
+            collect_owned_file(str(entry.get('path') or ''))
 
     return {
         'installed_skill_count': len(installed_skill_names),
         'installed_skill_names': installed_skill_names,
+        'public_skill_count': len(public_skill_names),
+        'public_skill_names': public_skill_names,
+        'internal_skill_count': len(internal_skill_names),
         'installed_file_count': len(owned_files),
     }
 
@@ -183,8 +277,32 @@ def build_install_ledger(
     external_fallback_used: list[str] | None = None,
     timestamp: str,
 ) -> dict[str, object]:
+    config_rollbacks = []
+    for entry in _sorted_config_rollbacks(state.config_rollbacks):
+        relpath = _normalize_target_relpath(entry['path'], target_root=plan.target_root)
+        if relpath is None:
+            continue
+        config_rollbacks.append(
+            {
+                'path': relpath,
+                'created_if_absent': bool(entry.get('created_if_absent', False)),
+                'managed_key': str(entry.get('managed_key') or 'vibeskills'),
+            }
+        )
+    runtime_roots = _sorted_target_relpaths(state.runtime_roots, target_root=plan.target_root)
+    compatibility_roots = _sorted_target_relpaths(state.compatibility_roots, target_root=plan.target_root)
+    sidecar_roots = _sorted_target_relpaths(state.sidecar_roots, target_root=plan.target_root)
+    legacy_cleanup_candidates = _sorted_target_relpaths(state.legacy_cleanup_candidates, target_root=plan.target_root)
+    InstallLedger(
+        managed_skill_names=list(plan.managed_skill_names),
+        runtime_roots=runtime_roots,
+        compatibility_roots=compatibility_roots,
+        sidecar_roots=sidecar_roots,
+        config_rollbacks=config_rollbacks,
+        legacy_cleanup_candidates=legacy_cleanup_candidates,
+    )
     ledger = {
-        'schema_version': 1,
+        'schema_version': 2,
         'host_id': plan.host_id,
         'install_mode': plan.install_mode,
         'profile': plan.profile,
@@ -197,6 +315,11 @@ def build_install_ledger(
         'merged_files': _sorted_merged_files(state.merged_files),
         'generated_from_template_if_absent': _sorted_paths(state.generated_from_template_if_absent),
         'specialist_wrapper_paths': _sorted_wrapper_paths(state.specialist_wrapper_paths),
+        'runtime_roots': runtime_roots,
+        'compatibility_roots': compatibility_roots,
+        'sidecar_roots': sidecar_roots,
+        'config_rollbacks': config_rollbacks,
+        'legacy_cleanup_candidates': legacy_cleanup_candidates,
         'external_fallback_used': list(external_fallback_used or []),
         'managed_skill_names': list(plan.managed_skill_names),
         'packaging_manifest': dict(plan.packaging_manifest),

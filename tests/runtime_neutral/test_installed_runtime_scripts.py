@@ -150,7 +150,13 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
             env[env_name] = bridge_path
         return env
 
-    def assert_nested_runtime_skill_entrypoints_sanitized(self, target_root: Path, *, require_nested: bool = True) -> None:
+    def assert_nested_runtime_skill_entrypoints_sanitized(
+        self,
+        target_root: Path,
+        *,
+        require_nested: bool = True,
+        expected_hidden_skills: tuple[str, ...] = ("ralph-loop", "cancel-ralph", "xan"),
+    ) -> None:
         nested_skills_root = target_root / "skills" / "vibe" / "bundled" / "skills"
         if require_nested:
             self.assertTrue(nested_skills_root.exists())
@@ -159,7 +165,7 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertEqual([], sorted(nested_skills_root.glob("*/SKILL.md")))
         if not require_nested:
             return
-        for name in ("vibe", "ralph-loop", "cancel-ralph", "xan"):
+        for name in expected_hidden_skills:
             self.assertTrue((nested_skills_root / name / "SKILL.runtime-mirror.md").exists())
 
     def test_shell_install_quarantines_legacy_agents_duplicate_for_default_codex_root(self) -> None:
@@ -339,7 +345,13 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
             for candidate in (target_root / "skills").iterdir()
             if candidate.is_dir()
         }
-        self.assertEqual(MINIMAL_REQUIRED_SKILLS, installed_skills)
+        self.assertEqual({"vibe"}, installed_skills)
+        self.assertTrue(
+            all(
+                (target_root / "skills" / "vibe" / "bundled" / "skills" / name / "SKILL.runtime-mirror.md").exists()
+                for name in MINIMAL_REQUIRED_SKILLS - {"vibe"}
+            )
+        )
         self.assertIn("Install done.", result.stdout)
         self.assertNotIn("Runtime freshness gate requires the canonical repo root", result.stdout)
 
@@ -351,7 +363,8 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
                 self.install_shell_runtime(profile=profile)
                 self.assert_nested_runtime_skill_entrypoints_sanitized(
                     self.target_root,
-                    require_nested=(profile == "full"),
+                    require_nested=True,
+                    expected_hidden_skills=("ralph-loop", "cancel-ralph") if profile == "minimal" else ("ralph-loop", "cancel-ralph", "xan"),
                 )
 
                 installed_root = self.target_root / "skills" / "vibe"

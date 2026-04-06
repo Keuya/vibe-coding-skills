@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "package_id": "runtime-core",
   "summary": "Host-neutral runtime-core payload base contract. Shared install-time semantics live here; profile manifests are compatibility projections generated from profiles.",
   "default_profile": "full",
@@ -73,13 +73,18 @@
     "notes": {
       "flat_projection_contract": "Resolved profile packaging fields remain the compatibility projection consumed by installer implementations.",
       "delivery_boundary_rule": "Base manifest owns shared delivery semantics; profile overlays own profile-specific copy and inventory differences; generated profile manifests are compatibility projections only."
+    },
+    "surface_contracts": {
+      "public_skill_surface": "Declared public skill projections are the only top-level skills intentionally exposed to host discovery.",
+      "internal_skill_corpus": "Full bundled specialist corpus may be materialized under the canonical vibe root and consumed by runtime descriptor resolution without top-level exposure.",
+      "compatibility_skill_projections": "Compatibility projections preserve selected direct-entry skill paths only when host or runtime behavior still depends on them."
     }
   },
   "profiles": {
     "minimal": {
       "package_id": "runtime-core-minimal",
       "profile": "minimal",
-      "summary": "Governed runtime foundation payload with only the canonical vibe runtime and required workflow support skills.",
+      "summary": "Governed runtime foundation payload with only the canonical vibe runtime publicly exposed and the required workflow support skills hidden inside the vibe internal corpus.",
       "copy_directories": [
         {
           "source": "commands",
@@ -101,6 +106,31 @@
         "think-harder",
         "writing-plans"
       ],
+      "public_skill_surface": {
+        "mode": "canonical_vibe_only",
+        "canonical_vibe_target_relpath": "skills/vibe",
+        "projected_skill_names": [
+          "vibe"
+        ]
+      },
+      "internal_skill_corpus": {
+        "enabled": true,
+        "source": "bundled/skills",
+        "target_relpath": "skills/vibe/bundled/skills",
+        "entrypoint_filename": "SKILL.runtime-mirror.md",
+        "sanitize_entrypoints": true,
+        "resolver_roots": [
+          "skills/vibe/bundled/skills"
+        ]
+      },
+      "compatibility_skill_projections": {
+        "mode": "explicit_projection_only",
+        "target_root": "skills",
+        "projected_skill_names": [],
+        "resolver_roots": [
+          "skills"
+        ]
+      },
       "payload_roles": {
         "copy_directories": {
           "active_sources": [
@@ -111,7 +141,7 @@
           ]
         },
         "delivery_model": {
-          "bundled_skill_mode": "allowlist_only_plus_canonical_vibe",
+          "bundled_skill_mode": "hidden_allowlist_internal_corpus_plus_canonical_vibe",
           "canonical_vibe_target_relpath": "skills/vibe",
           "skills_allowlist": [
             "brainstorming",
@@ -129,7 +159,15 @@
           ],
           "excluded_bundled_skill_names": [
             "vibe"
-          ]
+          ],
+          "public_surface_mode": "canonical_vibe_only",
+          "internal_corpus_target_relpath": "skills/vibe/bundled/skills",
+          "compatibility_skill_projections": []
+        },
+        "surface_contracts": {
+          "public_skill_surface_mode": "canonical_vibe_only",
+          "internal_skill_corpus_enabled": true,
+          "compatibility_projection_mode": "explicit_projection_only"
         }
       },
       "managed_skill_inventory": {
@@ -156,12 +194,8 @@
     "full": {
       "package_id": "runtime-core-full",
       "profile": "full",
-      "summary": "Broad bundled runtime payload with the governed runtime foundation plus the full bundled skills surface.",
+      "summary": "Governed runtime payload with only the canonical vibe skill publicly exposed while the full bundled corpus is internalized under the canonical vibe root.",
       "copy_directories": [
-        {
-          "source": "bundled/skills",
-          "target": "skills"
-        },
         {
           "source": "commands",
           "target": "commands"
@@ -169,13 +203,34 @@
       ],
       "copy_bundled_skills": true,
       "skills_allowlist": [],
+      "public_skill_surface": {
+        "mode": "canonical_vibe_only",
+        "canonical_vibe_target_relpath": "skills/vibe",
+        "projected_skill_names": [
+          "vibe"
+        ]
+      },
+      "internal_skill_corpus": {
+        "enabled": true,
+        "source": "bundled/skills",
+        "target_relpath": "skills/vibe/bundled/skills",
+        "entrypoint_filename": "SKILL.runtime-mirror.md",
+        "sanitize_entrypoints": true,
+        "resolver_roots": [
+          "skills/vibe/bundled/skills"
+        ]
+      },
+      "compatibility_skill_projections": {
+        "mode": "explicit_projection_only",
+        "target_root": "skills",
+        "projected_skill_names": [],
+        "resolver_roots": [
+          "skills"
+        ]
+      },
       "payload_roles": {
         "copy_directories": {
           "active_sources": [
-            {
-              "source": "bundled/skills",
-              "target": "skills"
-            },
             {
               "source": "commands",
               "target": "commands"
@@ -183,12 +238,20 @@
           ]
         },
         "delivery_model": {
-          "bundled_skill_mode": "full_bundled_surface_minus_canonical_vibe",
+          "bundled_skill_mode": "hidden_full_internal_corpus_minus_canonical_vibe",
           "canonical_vibe_target_relpath": "skills/vibe",
           "skills_allowlist": [],
           "excluded_bundled_skill_names": [
             "vibe"
-          ]
+          ],
+          "public_surface_mode": "canonical_vibe_only",
+          "internal_corpus_target_relpath": "skills/vibe/bundled/skills",
+          "compatibility_skill_projections": []
+        },
+        "surface_contracts": {
+          "public_skill_surface_mode": "canonical_vibe_only",
+          "internal_skill_corpus_enabled": true,
+          "compatibility_projection_mode": "explicit_projection_only"
         }
       },
       "managed_skill_inventory": {
