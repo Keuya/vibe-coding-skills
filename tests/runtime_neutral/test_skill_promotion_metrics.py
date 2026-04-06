@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -13,6 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_ENTRY = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
+PLAN_EXECUTE_SCRIPT = REPO_ROOT / "scripts" / "runtime" / "Invoke-PlanExecute.ps1"
 ML_PROMPT = (
     "Build a scikit-learn tabular classification baseline, "
     "run feature selection, and compare cross-validation metrics."
@@ -125,6 +127,36 @@ def create_fake_codex_command(directory: Path) -> Path:
     return command_path
 
 
+def run_powershell_json(script_body: str) -> dict[str, object]:
+    shell = resolve_powershell()
+    if shell is None:
+        raise unittest.SkipTest("PowerShell executable not available in PATH")
+
+    completed = subprocess.run(
+        [
+            shell,
+            "-NoLogo",
+            "-NoProfile",
+            "-Command",
+            script_body,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    return json.loads(completed.stdout)
+
+
+def extract_expression(pattern: str) -> str:
+    content = PLAN_EXECUTE_SCRIPT.read_text(encoding="utf-8")
+    match = re.search(pattern, content, re.MULTILINE)
+    if not match:
+        raise AssertionError(f"Unable to extract expression with pattern: {pattern}")
+    return match.group(1).strip()
+
+
 class SkillPromotionMetricsTests(unittest.TestCase):
     def test_metrics_capture_match_surface_dispatch_and_execute(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -159,3 +191,34 @@ class SkillPromotionMetricsTests(unittest.TestCase):
             self.assertEqual(0, int(funnel["ghost_match"]))
             self.assertGreaterEqual(int(funnel["blocked_due_to_destructive"]), 1)
             self.assertEqual(0, int(funnel["executed"]))
+
+    def test_specialist_dispatch_outcomes_do_not_duplicate_degraded_results(self) -> None:
+        degraded_expr = extract_expression(r"^\$degradedSpecialistUnits = (.+)$")
+        non_degraded_expr = extract_expression(r"^\$nonDegradedExecutedSpecialistUnits = (.+)$")
+        outcomes_expr = extract_expression(r"^\s*specialist_dispatch_outcomes = (.+)$")
+        payload = run_powershell_json(
+            (
+                "& { "
+                "$executedSpecialistUnits = @("
+                "[pscustomobject]@{ unit_id = 'exec-degraded'; skill_id = 'demo'; degraded = $true; result_path = 'exec-degraded.json' },"
+                "[pscustomobject]@{ unit_id = 'exec-ok'; skill_id = 'demo'; degraded = $false; result_path = 'exec-ok.json' }"
+                "); "
+                "$blockedSpecialistUnits = @(); "
+                "$preDispatchDegradedUnits = @("
+                "[pscustomobject]@{ unit_id = 'pre-degraded'; skill_id = 'demo'; degraded = $true; result_path = 'pre-degraded.json' }"
+                "); "
+                f"$degradedSpecialistUnits = {degraded_expr}; "
+                f"$nonDegradedExecutedSpecialistUnits = {non_degraded_expr}; "
+                f"$specialist_dispatch_outcomes = {outcomes_expr}; "
+                "[pscustomobject]@{ "
+                "result_paths = @($specialist_dispatch_outcomes | ForEach-Object { [string]$_.result_path }); "
+                "degraded_paths = @($degradedSpecialistUnits | ForEach-Object { [string]$_.result_path }) "
+                "} | ConvertTo-Json -Depth 20 }"
+            )
+        )
+
+        self.assertEqual(
+            len(payload["result_paths"]),
+            len(set(payload["result_paths"])),
+            msg=f"duplicate outcome paths: {payload['result_paths']}",
+        )

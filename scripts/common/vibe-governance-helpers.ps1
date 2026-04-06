@@ -1586,29 +1586,24 @@ function Get-VgoSkillPromotionPolicyDefaults {
         require_contract_complete = $true
         destructive_prompt_patterns = [pscustomobject]@{
             destructive_delete = @(
-                '\bdelete\b',
-                '\bremove\b',
-                '\bdrop\b',
-                '\berase\b',
-                '删除',
-                '移除',
-                '清空'
+                '\b(delete|remove|drop|erase)\b(?=[^\r\n]{0,60}\b(all|entire|branch|branches|database|db|table|tables|schema|schemas|bucket|buckets|workspace|workspaces|environment|environments|settings?|config(?:uration)?|artifacts?|files?|directories?|directory|repo(?:sitory)?|repositories|index(?:es)?|collection(?:s)?|secrets?|credentials?)\b)',
+                '\b(delete|remove|drop|erase)\b(?=[^\r\n]{0,60}(?:~\/|\/)[^\s]+)',
+                '删除.{0,20}(全部|整个|分支|数据库|数据表|表|模式|桶|工作区|环境|设置|配置|产物|文件|目录|仓库|索引|集合|密钥|凭据)',
+                '移除.{0,20}(全部|整个|分支|数据库|数据表|表|模式|桶|工作区|环境|设置|配置|产物|文件|目录|仓库|索引|集合|密钥|凭据)',
+                '清空.{0,20}(数据库|数据表|表|桶|工作区|环境|设置|配置|目录|仓库|索引|集合)'
             )
             destructive_overwrite = @(
-                '\boverwrite\b',
-                '\breplace\b',
-                '覆盖',
-                '替换'
+                '\b(overwrite|replace)\b(?=[^\r\n]{0,60}\b(all|entire|settings?|config(?:uration)?|environment|environments|provider|providers|deployment|deployments|database|db|table|tables|schema|schemas|artifacts?|files?|secrets?|credentials?)\b)',
+                '\b(overwrite|replace)\b(?=[^\r\n]{0,60}(?:~\/|\/)[^\s]+)',
+                '覆盖.{0,20}(全部|整个|设置|配置|环境|提供商|部署|数据库|数据表|表|模式|产物|文件|密钥|凭据)',
+                '替换.{0,20}(全部|整个|设置|配置|环境|提供商|部署|数据库|数据表|表|模式|产物|文件|密钥|凭据)'
             )
             destructive_reset = @(
-                '\breset\b',
-                '\buninstall\b',
-                '\bwipe\b',
-                '\bdestroy\b',
-                '\bpurge\b',
-                '重置',
-                '卸载',
-                '销毁'
+                '\b(reset|uninstall|wipe|destroy|purge)\b(?=[^\r\n]{0,60}\b(all|entire|environment|environments|workspace|workspaces|settings?|config(?:uration)?|repository|repositories|repo|repos|database|db|table|tables|schema|schemas|artifacts?|files?|branch|branches|deployment|deployments|production)\b)',
+                '\b(reset|uninstall|wipe|destroy|purge)\b(?=[^\r\n]{0,60}(?:~\/|\/)[^\s]+)',
+                '重置.{0,20}(全部|整个|环境|工作区|设置|配置|仓库|数据库|数据表|表|模式|产物|文件|分支|部署|生产)',
+                '卸载.{0,20}(全部|整个|环境|工作区|设置|配置|仓库|数据库|产物|文件|部署)',
+                '销毁.{0,20}(全部|整个|环境|工作区|设置|配置|仓库|数据库|数据表|表|模式|产物|文件|分支|部署|生产)'
             )
         }
         degraded_fallback_rules = [pscustomobject]@{

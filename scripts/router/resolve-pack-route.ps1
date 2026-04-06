@@ -328,7 +328,7 @@ $skillPromotionPolicy = if (Test-Path -LiteralPath $skillPromotionPolicyPath) {
     try {
         Get-Content -LiteralPath $skillPromotionPolicyPath -Raw -Encoding UTF8 | ConvertFrom-Json
     } catch {
-        $null
+        throw ("Failed to load skill promotion policy from {0}: {1}" -f $skillPromotionPolicyPath, $_.Exception.Message)
     }
 } else {
     $null

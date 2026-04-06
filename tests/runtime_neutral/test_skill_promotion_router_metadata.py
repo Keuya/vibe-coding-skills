@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import shutil
 import subprocess
@@ -9,10 +10,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROUTE_SCRIPT = REPO_ROOT / "scripts" / "router" / "resolve-pack-route.ps1"
+HELPER_SCRIPT = REPO_ROOT / "scripts" / "common" / "vibe-governance-helpers.ps1"
+POLICY_PATH = REPO_ROOT / "config" / "skill-promotion-policy.json"
 ML_PROMPT = (
     "Please use scikit-learn to prototype a tabular classification baseline, "
     "run feature selection, and compare cross-validation metrics."
 )
+SAFE_EDIT_PROMPT = "Remove dead imports and replace a mock in tests."
 DESTRUCTIVE_PROMPT = (
     "Delete the old generated artifacts, remove the obsolete branch, "
     "and overwrite the install settings to reset the environment."
@@ -62,12 +66,52 @@ def run_route(prompt: str) -> dict[str, object]:
     return json.loads(completed.stdout)
 
 
+def run_helper_json(script_body: str) -> dict[str, object]:
+    shell = resolve_powershell()
+    if shell is None:
+        raise unittest.SkipTest("PowerShell executable not available in PATH")
+
+    completed = subprocess.run(
+        [
+            shell,
+            "-NoLogo",
+            "-NoProfile",
+            "-Command",
+            script_body,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    return json.loads(completed.stdout)
+
+
 def as_list(value: object) -> list[object]:
     if value is None:
         return []
     if isinstance(value, list):
         return value
     return [value]
+
+
+def get_selected_option(route: dict[str, object]) -> dict[str, object]:
+    confirm_ui = route["confirm_ui"]
+    selected_skill = confirm_ui.get("selected_skill")
+    if not selected_skill and confirm_ui.get("selected"):
+        selected_skill = confirm_ui["selected"].get("skill")
+    return next(item for item in confirm_ui["options"] if item["skill"] == selected_skill)
+
+
+@contextlib.contextmanager
+def temporary_policy_text(content: str):
+    original = POLICY_PATH.read_text(encoding="utf-8")
+    POLICY_PATH.write_text(content, encoding="utf-8")
+    try:
+        yield
+    finally:
+        POLICY_PATH.write_text(original, encoding="utf-8")
 
 
 class SkillPromotionRouterMetadataTests(unittest.TestCase):
@@ -85,7 +129,7 @@ class SkillPromotionRouterMetadataTests(unittest.TestCase):
         self.assertTrue(selected["contract_complete"])
         self.assertEqual("auto_dispatch", selected["recommended_promotion_action"])
 
-        option = route["confirm_ui"]["options"][0]
+        option = get_selected_option(route)
         self.assertEqual("scikit-learn", option["skill"])
         self.assertTrue(option["promotion_eligible"])
         self.assertFalse(option["destructive"])
@@ -105,9 +149,29 @@ class SkillPromotionRouterMetadataTests(unittest.TestCase):
         self.assertEqual("require_confirmation", selected["recommended_promotion_action"])
         self.assertGreaterEqual(len(as_list(selected["destructive_reason_codes"])), 1)
 
-        option = route["confirm_ui"]["options"][0]
+        option = get_selected_option(route)
         self.assertEqual("autonomous-builder", option["skill"])
         self.assertFalse(option["promotion_eligible"])
         self.assertTrue(option["destructive"])
         self.assertTrue(option["snapshot_required"])
         self.assertEqual("require_confirmation", option["recommended_promotion_action"])
+
+    def test_routine_edit_prompt_is_not_classified_as_destructive(self) -> None:
+        assessment = run_helper_json(
+            (
+                "& { "
+                f". '{HELPER_SCRIPT}'; "
+                f"$result = Get-VgoDestructiveIntentAssessment -Prompt '{SAFE_EDIT_PROMPT}'; "
+                "$result | ConvertTo-Json -Depth 20 }"
+            )
+        )
+
+        self.assertFalse(assessment["destructive"])
+        self.assertEqual([], as_list(assessment["destructive_reason_codes"]))
+        self.assertFalse(assessment["rollback_possible"])
+        self.assertFalse(assessment["snapshot_required"])
+
+    def test_route_fails_closed_when_skill_promotion_policy_is_invalid(self) -> None:
+        with temporary_policy_text("{ invalid json"):
+            with self.assertRaises(subprocess.CalledProcessError):
+                run_route(ML_PROMPT)

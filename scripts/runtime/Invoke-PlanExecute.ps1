@@ -1146,7 +1146,8 @@ $liveAttemptedSpecialistUnits = @($executedSpecialistUnits | Where-Object { [boo
 $liveSpecialistUnits = @($liveAttemptedSpecialistUnits | Where-Object { [bool]$_.verification_passed })
 $failedLiveSpecialistUnits = @($liveAttemptedSpecialistUnits | Where-Object { -not [bool]$_.verification_passed })
 $degradedSpecialistUnits = @(@($executedSpecialistUnits | Where-Object { [bool]$_.degraded }) + @($preDispatchDegradedUnits))
-$totalSpecialistDispatchOutcomeCount = @($executedSpecialistUnits).Count + @($blockedSpecialistUnits).Count + @($preDispatchDegradedUnits).Count
+$nonDegradedExecutedSpecialistUnits = @($executedSpecialistUnits | Where-Object { -not [bool]$_.degraded })
+$totalSpecialistDispatchOutcomeCount = @($nonDegradedExecutedSpecialistUnits).Count + @($blockedSpecialistUnits).Count + @($degradedSpecialistUnits).Count
 $effectiveSpecialistExecutionStatus = if (@($liveSpecialistUnits).Count -gt 0 -and @($failedLiveSpecialistUnits).Count -eq 0) {
     'live_native_executed'
 } elseif (@($liveSpecialistUnits).Count -gt 0 -and @($failedLiveSpecialistUnits).Count -gt 0) {
@@ -1265,7 +1266,7 @@ $executionManifest = [pscustomobject]@{
         blocked_skill_ids = @($blockedSkillIds)
         degraded_skill_ids = @($degradedSkillIds)
         ghost_match_skill_ids = @($ghostMatchSkillIds)
-        specialist_dispatch_outcomes = @(@($executedSpecialistUnits) + @($blockedSpecialistUnits) + @($degradedSpecialistUnits))
+        specialist_dispatch_outcomes = @(@($nonDegradedExecutedSpecialistUnits) + @($blockedSpecialistUnits) + @($degradedSpecialistUnits))
         promotion_funnel = [pscustomobject]@{
             matched = @($matchedSkillIds).Count
             surfaced = @($surfacedSkillIds).Count

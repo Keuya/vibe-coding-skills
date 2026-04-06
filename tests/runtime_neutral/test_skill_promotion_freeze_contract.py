@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -12,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FREEZE_SCRIPT = REPO_ROOT / "scripts" / "runtime" / "Freeze-RuntimeInputPacket.ps1"
+HELPER_SCRIPT = REPO_ROOT / "scripts" / "common" / "vibe-governance-helpers.ps1"
 ML_PROMPT = (
     "Build a scikit-learn tabular classification baseline, "
     "run feature selection, and compare cross-validation metrics."
@@ -77,6 +79,40 @@ def as_list(value: object) -> list[object]:
     return [value]
 
 
+def run_powershell_json(script_body: str) -> dict[str, object]:
+    shell = resolve_powershell()
+    if shell is None:
+        raise unittest.SkipTest("PowerShell executable not available in PATH")
+
+    completed = subprocess.run(
+        [
+            shell,
+            "-NoLogo",
+            "-NoProfile",
+            "-Command",
+            script_body,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    return json.loads(completed.stdout)
+
+
+def extract_split_specialist_dispatch_function() -> str:
+    content = FREEZE_SCRIPT.read_text(encoding="utf-8")
+    match = re.search(
+        r"(function Split-VibeSpecialistDispatch \{.*?^\})\s*^\$runtime =",
+        content,
+        re.DOTALL | re.MULTILINE,
+    )
+    if not match:
+        raise AssertionError("Unable to locate Split-VibeSpecialistDispatch in Freeze-RuntimeInputPacket.ps1")
+    return match.group(1)
+
+
 class SkillPromotionFreezeContractTests(unittest.TestCase):
     def test_eligible_matched_skill_is_approved_and_not_ghosted(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -110,3 +146,39 @@ class SkillPromotionFreezeContractTests(unittest.TestCase):
 
             self.assertTrue(surfaced)
             self.assertEqual(surfaced, outcome_ids)
+
+    def test_policy_can_allow_incomplete_contract_without_forced_freeze_degrade(self) -> None:
+        split_function = extract_split_specialist_dispatch_function()
+        payload = run_powershell_json(
+            (
+                "& { "
+                f". '{HELPER_SCRIPT}'; "
+                f"{split_function} "
+                "$policy = [pscustomobject]@{ "
+                "promotion_enabled = $true; "
+                "default_mode = 'recall_first'; "
+                "allow_auto_dispatch_when_non_destructive = $true; "
+                "require_contract_complete = $false; "
+                "destructive_prompt_patterns = [pscustomobject]@{}; "
+                "degraded_fallback_rules = [pscustomobject]@{ missing_contract = 'explicit_degraded' } "
+                "}; "
+                "$recommendation = Get-VgoSkillPromotionMetadata "
+                "-Prompt 'generic prompt' "
+                "-SkillMdPath '' "
+                "-Description '' "
+                "-RequiredInputs @() "
+                "-ExpectedOutputs @() "
+                "-VerificationExpectation '' "
+                "-PromotionPolicy $policy; "
+                "$recommendation | Add-Member -NotePropertyName skill_id -NotePropertyValue 'demo-skill'; "
+                "$dispatch = Split-VibeSpecialistDispatch -GovernanceScope 'root' -Recommendations @($recommendation); "
+                "$dispatch | ConvertTo-Json -Depth 20 }"
+            )
+        )
+
+        approved_dispatch = as_list(payload["approved_dispatch"])
+        self.assertEqual(1, len(approved_dispatch))
+        self.assertEqual("demo-skill", approved_dispatch[0]["skill_id"])
+        self.assertEqual([], as_list(payload["degraded"]))
+        outcome = next(item for item in as_list(payload["promotion_outcomes"]) if item["skill_id"] == "demo-skill")
+        self.assertEqual("approved_dispatch", outcome["promotion_state"])

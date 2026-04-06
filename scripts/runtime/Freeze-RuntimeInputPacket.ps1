@@ -463,7 +463,7 @@ function Split-VibeSpecialistDispatch {
             }
             continue
         }
-        if (-not [bool]$recommendation.contract_complete -or [string]$recommendation.recommended_promotion_action -eq 'degrade_missing_contract') {
+        if ([string]$recommendation.recommended_promotion_action -eq 'degrade_missing_contract') {
             $degradedDispatch += $recommendation
             $promotionOutcomes += [pscustomobject]@{
                 skill_id = $skillId
