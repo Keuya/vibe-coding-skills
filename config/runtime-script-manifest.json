@@ -50,6 +50,7 @@
     "scripts/verify/runtime_neutral/router_bridge_gate.py",
     "scripts/verify/runtime_neutral/runtime_delivery_acceptance.py",
     "scripts/verify/runtime_neutral/workflow_acceptance_runner.py",
+    "scripts/common/python_helpers.sh",
     "scripts/common/vibe-governance-helpers.ps1",
     "scripts/common/adapter_registry_query.py",
     "scripts/common/AntiProxyGoalDrift.ps1",
@@ -107,6 +108,7 @@
         "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1"
       ],
       "runtime_support_files": [
+        "scripts/common/python_helpers.sh",
         "scripts/common/vibe-governance-helpers.ps1",
         "scripts/common/adapter_registry_query.py",
         "scripts/common/AntiProxyGoalDrift.ps1"

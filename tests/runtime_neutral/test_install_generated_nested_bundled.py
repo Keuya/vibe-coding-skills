@@ -62,6 +62,10 @@ class InstallGeneratedNestedBundledTests(unittest.TestCase):
 
     def _write_fixture(self) -> None:
         shutil.copy2(INSTALL_SCRIPT, self.repo_root / "install.sh")
+        self._write(
+            "scripts/common/python_helpers.sh",
+            (REPO_ROOT / "scripts" / "common" / "python_helpers.sh").read_text(encoding="utf-8"),
+        )
         self._write("config/adapter-registry.json", (REPO_ROOT / "config" / "adapter-registry.json").read_text(encoding="utf-8"))
         shutil.copytree(CLI_SRC / "vgo_cli", self.repo_root / "apps" / "vgo-cli" / "src" / "vgo_cli", dirs_exist_ok=True)
         shutil.copytree(CONTRACTS_SRC / "vgo_contracts", self.repo_root / "packages" / "contracts" / "src" / "vgo_contracts", dirs_exist_ok=True)

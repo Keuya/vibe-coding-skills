@@ -131,6 +131,7 @@ def test_runtime_script_manifest_avoids_broad_common_directory_projection() -> N
 
     runtime_support_files = set(file_groups["runtime_support_files"])
     assert runtime_support_files == {
+        "scripts/common/python_helpers.sh",
         "scripts/common/vibe-governance-helpers.ps1",
         "scripts/common/adapter_registry_query.py",
         "scripts/common/AntiProxyGoalDrift.ps1",
