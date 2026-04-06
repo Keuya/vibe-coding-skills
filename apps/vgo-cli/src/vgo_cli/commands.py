@@ -55,7 +55,7 @@ def install_command(args: argparse.Namespace) -> int:
         skip_runtime_freshness_gate=bool(args.skip_runtime_freshness_gate),
         include_frontmatter=args.frontend == 'powershell',
     )
-    print_install_completion_hint(args.frontend, profile=args.profile, target_root=target_root)
+    print_install_completion_hint(args.frontend, host_id=host_id, profile=args.profile, target_root=target_root)
     return 0
 
 

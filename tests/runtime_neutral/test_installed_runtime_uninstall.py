@@ -139,6 +139,37 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         self.assertTrue(sentinel.exists())
         self.assertFalse((target_root / "settings.json").exists())
 
+    def test_installed_host_uninstall_preserves_workspace_sidecar_created_after_install(self) -> None:
+        for host in ("claude-code", "cursor"):
+            with self.subTest(host=host):
+                target_root = self.root / f"{host}-workspace-sidecar"
+                self.install_host(host, target_root)
+                project_path = target_root / ".vibeskills" / "project.json"
+                requirement_path = target_root / ".vibeskills" / "docs" / "requirements" / "req.md"
+                project_path.parent.mkdir(parents=True, exist_ok=True)
+                project_path.write_text(
+                    json.dumps(
+                        {
+                            "schema_version": 1,
+                            "workspace_root": str(target_root.resolve()),
+                            "workspace_sidecar_root": str((target_root / ".vibeskills").resolve()),
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                requirement_path.parent.mkdir(parents=True, exist_ok=True)
+                requirement_path.write_text("# runtime artifact\n", encoding="utf-8")
+
+                payload = self.uninstall_host(host, target_root)
+
+                self.assertTrue(project_path.exists())
+                self.assertTrue(requirement_path.exists())
+                self.assertTrue((target_root / ".vibeskills").exists())
+                self.assertNotIn(".vibeskills", payload["deleted_paths"])
+
     def test_windsurf_uninstall_removes_runtime_core_preview_host_payload(self) -> None:
         target_root = self.root / "windsurf-root"
         self.install_host("windsurf", target_root)

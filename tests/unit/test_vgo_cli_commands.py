@@ -31,11 +31,19 @@ def test_parse_json_output_rejects_invalid_json() -> None:
         parse_json_output(result)
 
 
-def test_print_install_completion_hint_for_shell(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
-    print_install_completion_hint('shell', profile='full', target_root=tmp_path)
+def test_print_install_completion_hint_for_shell_includes_host(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    print_install_completion_hint('shell', host_id='cursor', profile='full', target_root=tmp_path)
 
     captured = capsys.readouterr()
-    assert f'Install done. Run: bash check.sh --profile full --target-root {tmp_path}' in captured.out
+    assert f'Install done. Run: bash check.sh --profile full --host cursor --target-root {tmp_path}' in captured.out
+
+
+def test_print_install_completion_hint_for_powershell_includes_host(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    print_install_completion_hint('powershell', host_id='cursor', profile='full', target_root=tmp_path)
+
+    captured = capsys.readouterr()
+    assert '-HostId cursor' in captured.out
+    assert f'-TargetRoot {tmp_path}' in captured.out
 
 
 def test_route_command_delegates_to_runtime_core_bridge(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

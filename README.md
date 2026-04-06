@@ -506,7 +506,7 @@ _Skills keep growing — but you don't need to manage them individually._
 
 ### Uninstall: Owned-only cleanup
 
-Running `uninstall.ps1` or `uninstall.sh --host <host>` is the partner surface to install. By default it performs a ledger-first, owned-only cleanup that only touches paths recorded in `.vibeskills/install-ledger.json`, `*.host-closure.json`, or the documented legacy surfaces. The bundled runtime keeps only the executable contract; the full governance explainer lives in the canonical repo at [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md).
+Running `uninstall.ps1 -HostId <host>` or `uninstall.sh --host <host>` is the partner surface to install. By default it performs a ledger-first, owned-only cleanup that only touches paths recorded in `.vibeskills/install-ledger.json`, `*.host-closure.json`, or the documented legacy surfaces. The bundled runtime keeps only the executable contract; the full governance explainer lives in the canonical repo at [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md).
 
 The `.vibeskills` brand is now split into two layers on purpose:
 

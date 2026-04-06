@@ -521,7 +521,7 @@ _Skills 越积越多——但你不需要逐个管理它们。_
 
 ### 卸载：Owned-only 清理
 
-运行 `uninstall.ps1` 或 `uninstall.sh --host <host>` 是安装的对称路径，它默认 ledger-first 执行 owned-only 清理，最多只会删除 `.vibeskills/install-ledger.json`、`.vibeskills/host-closure.json`、或已经被 `adapters/*/closure.json` 记录的 Vibe 负载。bundled 运行时包只保留可执行契约；完整治理说明见 canonical repo 中的 [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md)。
+运行 `uninstall.ps1 -HostId <host>` 或 `uninstall.sh --host <host>` 是安装的对称路径，它默认 ledger-first 执行 owned-only 清理，最多只会删除 `.vibeskills/install-ledger.json`、`.vibeskills/host-closure.json`、或已经被 `adapters/*/closure.json` 记录的 Vibe 负载。bundled 运行时包只保留可执行契约；完整治理说明见 canonical repo 中的 [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md)。
 
 `.vibeskills` 现在刻意拆成两层：
 

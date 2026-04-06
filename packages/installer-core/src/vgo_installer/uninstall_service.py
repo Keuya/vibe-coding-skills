@@ -311,6 +311,20 @@ def purge_empty_dirs(target_root: Path) -> list[str]:
     return removed
 
 
+def workspace_sidecar_artifacts_present(target_root: Path) -> bool:
+    sidecar_root = target_root / ".vibeskills"
+    if not sidecar_root.exists():
+        return False
+
+    if (sidecar_root / "project.json").exists():
+        return True
+    if (sidecar_root / "docs").exists():
+        return True
+    if (sidecar_root / "outputs").exists():
+        return True
+    return False
+
+
 def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[str, object]:
     host_id = adapter["id"]
     managed_files = host_inventory(repo_root, host_id)
@@ -343,7 +357,9 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
     if closure is not None:
         ownership_source.append("host-closure")
 
-    if ownership_source and (target_root / ".vibeskills").exists():
+    preserve_workspace_sidecar = workspace_sidecar_artifacts_present(target_root)
+
+    if ownership_source and (target_root / ".vibeskills").exists() and not preserve_workspace_sidecar:
         deleted_dirs.add(".vibeskills")
 
     if not ownership_source:

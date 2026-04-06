@@ -20,14 +20,14 @@ def parse_json_output(result: subprocess.CompletedProcess[str]) -> dict:
         raise CliError(f'Invalid JSON output from core command: {exc}') from exc
 
 
-def print_install_completion_hint(frontend: str, *, profile: str, target_root: Path) -> None:
+def print_install_completion_hint(frontend: str, *, host_id: str, profile: str, target_root: Path) -> None:
     if frontend == 'powershell':
         shell_name = 'pwsh' if shutil.which('pwsh') else 'powershell'
         print('')
         print('Installation complete.')
-        print(f'Run: {shell_name} -NoProfile -File .\\check.ps1 -Profile {profile} -TargetRoot {target_root}')
+        print(f'Run: {shell_name} -NoProfile -File .\\check.ps1 -Profile {profile} -HostId {host_id} -TargetRoot {target_root}')
         return
-    print(f'Install done. Run: bash check.sh --profile {profile} --target-root {target_root}')
+    print(f'Install done. Run: bash check.sh --profile {profile} --host {host_id} --target-root {target_root}')
 
 
 
