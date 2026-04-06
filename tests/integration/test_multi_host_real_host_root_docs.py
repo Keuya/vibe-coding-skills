@@ -43,3 +43,18 @@ def test_host_specific_docs_stop_describing_isolated_roots_as_defaults() -> None
     assert "~/.openclaw" in en_openclaw
     assert "~/.config/opencode" in zh_opencode
     assert "~/.config/opencode" in en_opencode
+
+
+def test_configuration_guides_keep_real_follow_up_paths_for_host_managed_surfaces() -> None:
+    zh_config = (REPO_ROOT / "docs/install/configuration-guide.md").read_text(encoding="utf-8")
+    en_config = (REPO_ROOT / "docs/install/configuration-guide.en.md").read_text(encoding="utf-8")
+
+    assert ".vibeskills/host-settings.json" in zh_config
+    assert ".vibeskills/host-closure.json" in zh_config
+    assert ".vibeskills/host-settings.json" in en_config
+    assert ".vibeskills/host-closure.json" in en_config
+
+    assert "~/.config/opencode/opencode.json" in zh_config
+    assert "opencode.json.example" in zh_config
+    assert "~/.config/opencode/opencode.json" in en_config
+    assert "opencode.json.example" in en_config

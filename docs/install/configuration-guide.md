@@ -105,17 +105,25 @@
 ### Windsurf
 
 - 目标根目录：`WINDSURF_HOME` 或真实宿主根目录 `~/.codeium/windsurf`
+- repo 侧可检查文件：`<target-root>/.vibeskills/host-settings.json` 与 `<target-root>/.vibeskills/host-closure.json`
+- 这些文件只用来确认 repo 写入了哪些 sidecar 状态；真正的登录、provider、模型权限仍在 Windsurf 宿主侧配置
 - 如果宿主侧没有直接使用 `<target-root>/settings.json`，就在本地环境变量里配置再做检查
 
 ### OpenClaw
 
 - 目标根目录：`OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
+- repo 侧可检查文件：`<target-root>/.vibeskills/host-settings.json` 与 `<target-root>/.vibeskills/host-closure.json`
+- 这些文件只用来确认 repo 写入了哪些 sidecar 状态；真正的登录、provider、模型和编辑器行为仍在 OpenClaw 宿主侧配置
 - 如果宿主侧没有直接使用 `<target-root>/settings.json`，就在本地环境变量里配置再做检查
 
 ### OpenCode
 
 - 目标根目录：`OPENCODE_HOME` 或真实宿主根目录 `~/.config/opencode`
 - 真实宿主配置目录仍是 `~/.config/opencode`
+- 真正手动编辑的文件是 `~/.config/opencode/opencode.json`
+- `<target-root>/opencode.json.example` 只是参考脚手架，不是 live host config
+- 打开真实宿主文件，对照 example，把你真正需要的 permission / command / provider 结构复制进去
+- provider 凭据与 MCP 信任仍在 OpenCode 宿主侧维护
 - 如果宿主侧没有直接使用 `<target-root>/settings.json`，就在本地环境变量里配置再做检查
 
 ## 快速检查命令

@@ -16,15 +16,16 @@ Rules:
 1. Reject unsupported hosts directly.
 2. If I choose the framework version, map it to the real profile `minimal`.
 3. Detect the OS first; use `bash` on Linux/macOS and `pwsh` on Windows.
-4. Execute the matching install and check commands for the selected host. For `opencode`, prefer the thinner direct install/check path by default:
-   - Windows: `pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile minimal` and `pwsh -NoProfile -File .\check.ps1 -HostId opencode -Profile minimal`
-   - Linux / macOS: `bash ./install.sh --host opencode --profile minimal` and `bash ./check.sh --host opencode --profile minimal`
-   - the default target root is `OPENCODE_HOME`, otherwise the real host root `~/.config/opencode`
-   - if I explicitly ask to keep the same wrapper across hosts, `scripts/bootstrap/one-shot-setup.* --host opencode --profile minimal` is also acceptable; do not describe one-shot as unsupported for `opencode`
-   - if the selected host is `codex` and the install must be immediately callable through `$vibe`, default to the real host root `~/.codex`:
+4. Execute the matching install and check commands for the selected host.
+For `codex`, if the install must be immediately callable through `$vibe`, default to the real host root `~/.codex`:
      - Linux / macOS: `CODEX_HOME="$HOME/.codex" bash ./install.sh --host codex --profile minimal` and `CODEX_HOME="$HOME/.codex" bash ./check.sh --host codex --profile minimal`
      - Windows: first set `CODEX_HOME` to `%USERPROFILE%\\.codex`, then run `pwsh -NoProfile -File .\\install.ps1 -HostId codex -Profile minimal` and `pwsh -NoProfile -File .\\check.ps1 -HostId codex -Profile minimal`
      - use `~/.vibeskills/targets/codex` only when I explicitly ask for an isolated target root
+For `opencode`, prefer the thinner direct install/check path by default:
+     - Windows: `pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile minimal` and `pwsh -NoProfile -File .\check.ps1 -HostId opencode -Profile minimal`
+     - Linux / macOS: `bash ./install.sh --host opencode --profile minimal` and `bash ./check.sh --host opencode --profile minimal`
+     - the default target root is `OPENCODE_HOME`, otherwise the real host root `~/.config/opencode`
+     - if I explicitly ask to keep the same wrapper across hosts, `scripts/bootstrap/one-shot-setup.* --host opencode --profile minimal` is also acceptable; do not describe one-shot as unsupported for `opencode`
 5. For host wording, default target roots, and truth-first boundaries, follow `docs/install/minimal-path.en.md` and `docs/install/installation-rules.en.md` instead of restating a second version here.
 6. Never ask me to paste secrets, URLs, or model names into chat.
 7. If I later want AI-governance online capability, you must recommend the real key names first:

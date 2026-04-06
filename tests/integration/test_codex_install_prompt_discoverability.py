@@ -52,3 +52,27 @@ def test_codex_reference_docs_prefer_real_host_root_over_isolated_fallback() -> 
     assert "$vibe" in zh_entry
     assert "~/.codex" in en_entry
     assert "$vibe" in en_entry
+
+
+def test_framework_only_english_prompt_keeps_codex_and_opencode_as_separate_host_cases() -> None:
+    framework_prompt = (REPO_ROOT / "docs/install/prompts/framework-only-install.en.md").read_text(encoding="utf-8")
+
+    assert "4. Execute the matching install and check commands for the selected host." in framework_prompt
+    assert "For `codex`, if the install must be immediately callable through `$vibe`" in framework_prompt
+    assert "For `opencode`, prefer the thinner direct install/check path by default:" in framework_prompt
+    assert 'CODEX_HOME="$HOME/.codex" bash ./install.sh --host codex --profile minimal' in framework_prompt
+    assert 'bash ./install.sh --host opencode --profile minimal' in framework_prompt
+
+
+def test_framework_only_english_prompt_keeps_codex_outside_opencode_branch() -> None:
+    en_prompt = (REPO_ROOT / "docs/install/prompts/framework-only-install.en.md").read_text(encoding="utf-8")
+
+    assert "4. Execute the matching install and check commands for the selected host." in en_prompt
+    assert (
+        "For `codex`, if the install must be immediately callable through `$vibe`, "
+        "default to the real host root `~/.codex`:"
+    ) in en_prompt
+    assert "For `opencode`, prefer the thinner direct install/check path by default:" in en_prompt
+    assert en_prompt.index("For `codex`, if the install must be immediately callable through `$vibe`") < en_prompt.index(
+        "For `opencode`, prefer the thinner direct install/check path by default:"
+    )

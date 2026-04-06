@@ -100,17 +100,25 @@ In that setup:
 ### Windsurf
 
 - target root: `WINDSURF_HOME` or the real host root `~/.codeium/windsurf`
+- repo-side files you can inspect: `<target-root>/.vibeskills/host-settings.json` and `<target-root>/.vibeskills/host-closure.json`
+- use those files to confirm repo-owned sidecar state only; Windsurf-native login, provider, and model-permission settings still belong on the Windsurf side
 - if the host does not use `<target-root>/settings.json`, set local environment variables before running the check
 
 ### OpenClaw
 
 - target root: `OPENCLAW_HOME` or the real host root `~/.openclaw`
+- repo-side files you can inspect: `<target-root>/.vibeskills/host-settings.json` and `<target-root>/.vibeskills/host-closure.json`
+- use those files to confirm repo-owned sidecar state only; OpenClaw-native login, provider, model, and editor behavior still belong on the OpenClaw side
 - if the host does not use `<target-root>/settings.json`, set local environment variables before running the check
 
 ### OpenCode
 
 - target root: `OPENCODE_HOME` or the real host root `~/.config/opencode`
 - the real host config directory remains `~/.config/opencode`
+- the real file you edit manually is `~/.config/opencode/opencode.json`
+- `<target-root>/opencode.json.example` is only a reference scaffold, not the live host config
+- open the real host file, compare it with the example, and copy in only the permission / command / provider structure you actually need
+- provider credentials and MCP trust remain host-managed on the OpenCode side
 - if the host does not use `<target-root>/settings.json`, set local environment variables before running the check
 
 ## Quick-check commands
