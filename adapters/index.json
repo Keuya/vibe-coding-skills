@@ -14,8 +14,8 @@
       "bootstrap_summary": "strongest governed lane",
       "default_target_root": {
         "env": "CODEX_HOME",
-        "rel": ".vibeskills/targets/codex",
-        "kind": "isolated-home"
+        "rel": ".codex",
+        "kind": "host-home"
       },
       "host_profile": "adapters/codex/host-profile.json",
       "settings_map": "adapters/codex/settings-map.json",
@@ -31,8 +31,8 @@
       "bootstrap_summary": "supported install/use path",
       "default_target_root": {
         "env": "CLAUDE_HOME",
-        "rel": ".vibeskills/targets/claude-code",
-        "kind": "isolated-home"
+        "rel": ".claude",
+        "kind": "host-home"
       },
       "host_profile": "adapters/claude-code/host-profile.json",
       "settings_map": "adapters/claude-code/settings-map.json",
@@ -48,8 +48,8 @@
       "bootstrap_summary": "supported install/use path",
       "default_target_root": {
         "env": "CURSOR_HOME",
-        "rel": ".vibeskills/targets/cursor",
-        "kind": "isolated-home"
+        "rel": ".cursor",
+        "kind": "host-home"
       },
       "host_profile": "adapters/cursor/host-profile.json",
       "settings_map": "adapters/cursor/settings-map.json",
@@ -65,8 +65,8 @@
       "bootstrap_summary": "supported path + runtime adapter",
       "default_target_root": {
         "env": "WINDSURF_HOME",
-        "rel": ".vibeskills/targets/windsurf",
-        "kind": "isolated-home"
+        "rel": ".codeium/windsurf",
+        "kind": "host-home"
       },
       "host_profile": "adapters/windsurf/host-profile.json",
       "settings_map": "adapters/windsurf/settings-map.json",
@@ -82,8 +82,8 @@
       "bootstrap_summary": "preview runtime-core adapter",
       "default_target_root": {
         "env": "OPENCLAW_HOME",
-        "rel": ".vibeskills/targets/openclaw",
-        "kind": "isolated-home"
+        "rel": ".openclaw",
+        "kind": "host-home"
       },
       "host_profile": "adapters/openclaw/host-profile.json",
       "settings_map": "adapters/openclaw/settings-map.json",
@@ -99,8 +99,8 @@
       "bootstrap_summary": "preview guidance adapter",
       "default_target_root": {
         "env": "OPENCODE_HOME",
-        "rel": ".vibeskills/targets/opencode",
-        "kind": "isolated-home"
+        "rel": ".config/opencode",
+        "kind": "host-home"
       },
       "host_profile": "adapters/opencode/host-profile.json",
       "settings_map": "adapters/opencode/settings-map.json",

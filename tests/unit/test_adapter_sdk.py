@@ -28,9 +28,9 @@ def test_adapter_sdk_descriptors_match_registry_default_target_roots() -> None:
 def test_descriptor_loader_supports_registry_aliases() -> None:
     descriptor = load_descriptor('claude')
     assert descriptor.id == 'claude-code'
-    assert descriptor.default_target_root == '.vibeskills/targets/claude-code'
+    assert descriptor.default_target_root == '.claude'
     assert descriptor.default_target_root_env == 'CLAUDE_HOME'
-    assert descriptor.default_target_root_kind == 'isolated-home'
+    assert descriptor.default_target_root_kind == 'host-home'
 
 
 def test_target_root_resolver_uses_env_when_available() -> None:
@@ -39,7 +39,37 @@ def test_target_root_resolver_uses_env_when_available() -> None:
     assert resolved == '/tmp/codex-home'
 
 
-def test_target_root_resolver_falls_back_to_home_relative_path() -> None:
+def test_target_root_resolver_defaults_codex_to_real_home_root() -> None:
+    descriptor = load_descriptor('codex')
+    resolved = resolve_default_target_root(descriptor, env={}, home='/home/tester')
+    assert resolved == '/home/tester/.codex'
+
+
+def test_target_root_resolver_defaults_claude_code_to_real_home_root() -> None:
+    descriptor = load_descriptor('claude-code')
+    resolved = resolve_default_target_root(descriptor, env={}, home='/home/tester')
+    assert resolved == '/home/tester/.claude'
+
+
+def test_target_root_resolver_defaults_cursor_to_real_home_root() -> None:
+    descriptor = load_descriptor('cursor')
+    resolved = resolve_default_target_root(descriptor, env={}, home='/home/tester')
+    assert resolved == '/home/tester/.cursor'
+
+
+def test_target_root_resolver_defaults_windsurf_to_real_home_root() -> None:
+    descriptor = load_descriptor('windsurf')
+    resolved = resolve_default_target_root(descriptor, env={}, home='/home/tester')
+    assert resolved == '/home/tester/.codeium/windsurf'
+
+
+def test_target_root_resolver_defaults_openclaw_to_real_home_root() -> None:
+    descriptor = load_descriptor('openclaw')
+    resolved = resolve_default_target_root(descriptor, env={}, home='/home/tester')
+    assert resolved == '/home/tester/.openclaw'
+
+
+def test_target_root_resolver_defaults_opencode_to_real_home_root() -> None:
     descriptor = load_descriptor('opencode')
     resolved = resolve_default_target_root(descriptor, env={}, home='/home/tester')
-    assert resolved == '/home/tester/.vibeskills/targets/opencode'
+    assert resolved == '/home/tester/.config/opencode'

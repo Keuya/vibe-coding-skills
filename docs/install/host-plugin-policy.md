@@ -22,9 +22,9 @@
 - 先把仓库分发内容安装好
 - 再按真实需求补宿主侧配置
 - 没有被仓库稳定、公开、可验证接管的能力，不要写成默认安装要求
-- OpenClaw 默认目标根目录必须写清：`OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
+- OpenClaw 默认目标根目录必须写清：`OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
 - OpenClaw 更细的安装路径说明放在宿主专页
-- OpenCode 默认目标根目录必须写清：`OPENCODE_HOME` 或 `~/.vibeskills/targets/opencode`
+- OpenCode 默认目标根目录必须写清：`OPENCODE_HOME` 或真实宿主根目录 `~/.config/opencode`
 - 同时必须写清真实宿主配置目录仍是 `~/.config/opencode`
 - OpenCode 必须写清它走 direct install/check，不接管真实 `opencode.json`
 - 如需查看更细的宿主契约和 proof 信息，继续看宿主专页或 `dist/*` / `adapters/*`
@@ -45,6 +45,7 @@
 ## Cursor
 
 - 提供支持的安装与使用路径
+- 默认目标根目录是 `CURSOR_HOME`，否则是真实宿主根目录 `~/.cursor`
 - 不覆盖真实 `~/.cursor/settings.json`
 - Cursor 宿主原生插件、设置与扩展面仍按 Cursor 自身方式管理
 - hook 当前冻结；这不是安装失败
@@ -52,21 +53,21 @@
 ## Windsurf
 
 - 提供支持的安装与使用路径
-- 默认目标根目录是 `WINDSURF_HOME`，否则是 `~/.vibeskills/targets/windsurf`
+- 默认目标根目录是 `WINDSURF_HOME`，否则是真实宿主根目录 `~/.codeium/windsurf`
 - 当前仓库只负责共享安装内容，以及 `.vibeskills/host-settings.json` / `.vibeskills/host-closure.json` 这类 sidecar 状态
 - Windsurf 宿主本地设置仍按 Windsurf 自身方式管理
 
 ## OpenClaw
 
 - 提供支持的安装与使用路径
-- 默认目标根目录是 `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
+- 默认目标根目录是 `OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
 - 更细的 attach / copy / bundle 路径放在 [`openclaw-path.md`](./openclaw-path.md)
 - 宿主侧本地配置仍按 OpenClaw 自身方式管理
 
 ## OpenCode
 
 - 提供支持的安装与使用路径
-- 默认目标根目录是 `OPENCODE_HOME` 或 `~/.vibeskills/targets/opencode`
+- 默认目标根目录是 `OPENCODE_HOME` 或真实宿主根目录 `~/.config/opencode`
 - direct install/check 会写入 skills、`.vibeskills/*` sidecar 与 `opencode.json.example`
 - 真实 `opencode.json`、provider 凭据、plugin 安装与 MCP 信任仍按宿主自身方式管理
 
@@ -76,8 +77,8 @@
 - `codex` 是默认推荐路径
 - `claude-code` / `cursor` 提供支持的安装与使用路径
 - `windsurf` 提供支持的安装与使用路径
-- `openclaw` 提供支持的安装与使用路径，默认目标根目录是 `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
-- `opencode` 提供支持的安装与使用路径，默认目标根目录是 `OPENCODE_HOME` 或 `~/.vibeskills/targets/opencode`
+- `openclaw` 提供支持的安装与使用路径，默认目标根目录是 `OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
+- `opencode` 提供支持的安装与使用路径，默认目标根目录是 `OPENCODE_HOME` 或真实宿主根目录 `~/.config/opencode`
 - `opencode` 的真实宿主配置目录 `~/.config/opencode` 仍由宿主侧管理
 - `opencode` 走 direct install/check，且不接管真实 `opencode.json`
 - hooks 在当前公开支持面里不是一刀切：Codex/Cursor 仍冻结，而 Claude 当前仅保留受约束的受管 settings 面

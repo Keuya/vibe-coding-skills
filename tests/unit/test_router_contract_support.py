@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = REPO_ROOT / "packages" / "runtime-core" / "src" / "vgo_runtime" / "router_contract_support.py"
@@ -76,3 +78,81 @@ def test_resolve_repo_root_prefers_nearest_config_root_without_git(tmp_path: Pat
     resolved = module.resolve_repo_root(script_path)
 
     assert resolved == installed_root
+
+
+def test_resolve_target_root_defaults_codex_to_real_home_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_module()
+    monkeypatch.delenv("CODEX_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+    resolved = module.resolve_target_root(host_id="codex")
+
+    assert resolved == (tmp_path / ".codex").resolve()
+
+
+def test_resolve_target_root_defaults_claude_code_to_real_home_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_module()
+    monkeypatch.delenv("CLAUDE_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+    resolved = module.resolve_target_root(host_id="claude-code")
+
+    assert resolved == (tmp_path / ".claude").resolve()
+
+
+def test_resolve_target_root_defaults_cursor_to_real_home_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_module()
+    monkeypatch.delenv("CURSOR_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+    resolved = module.resolve_target_root(host_id="cursor")
+
+    assert resolved == (tmp_path / ".cursor").resolve()
+
+
+def test_resolve_target_root_defaults_windsurf_to_real_home_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_module()
+    monkeypatch.delenv("WINDSURF_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+    resolved = module.resolve_target_root(host_id="windsurf")
+
+    assert resolved == (tmp_path / ".codeium" / "windsurf").resolve()
+
+
+def test_resolve_target_root_defaults_openclaw_to_real_home_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_module()
+    monkeypatch.delenv("OPENCLAW_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+    resolved = module.resolve_target_root(host_id="openclaw")
+
+    assert resolved == (tmp_path / ".openclaw").resolve()
+
+
+def test_resolve_target_root_defaults_opencode_to_real_home_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_module()
+    monkeypatch.delenv("OPENCODE_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+    resolved = module.resolve_target_root(host_id="opencode")
+
+    assert resolved == (tmp_path / ".config" / "opencode").resolve()

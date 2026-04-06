@@ -19,12 +19,12 @@ Public Linux / macOS prerequisites:
 
 | Host | Default command surface | Default root | Current wording |
 | --- | --- | --- | --- |
-| `codex` | one-shot setup + check | `CODEX_HOME` or `~/.vibeskills/targets/codex` | strongest governed lane |
-| `claude-code` | one-shot setup + check | `CLAUDE_HOME` or `~/.vibeskills/targets/claude-code` | supported install/use path with bounded managed closure |
-| `cursor` | one-shot setup + check | `CURSOR_HOME` or `~/.vibeskills/targets/cursor` | preview-guidance path |
-| `windsurf` | one-shot setup + check | `WINDSURF_HOME` or `~/.vibeskills/targets/windsurf` | runtime-core path |
-| `openclaw` | one-shot setup + check | `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw` | preview runtime-core adapter path |
-| `opencode` | direct install + check (thinner) or one-shot wrapper | `OPENCODE_HOME` or `~/.vibeskills/targets/opencode` | preview-guidance adapter path |
+| `codex` | one-shot setup + check | real `~/.codex` by default through `CODEX_HOME`; use `~/.vibeskills/targets/codex` only for explicit isolation | strongest governed lane |
+| `claude-code` | one-shot setup + check | real `~/.claude` by default through `CLAUDE_HOME` | supported install/use path with bounded managed closure |
+| `cursor` | one-shot setup + check | real `~/.cursor` by default through `CURSOR_HOME` | preview-guidance path |
+| `windsurf` | one-shot setup + check | `WINDSURF_HOME` or the real host root `~/.codeium/windsurf` | runtime-core path |
+| `openclaw` | one-shot setup + check | `OPENCLAW_HOME` or the real host root `~/.openclaw` | preview runtime-core adapter path |
+| `opencode` | direct install + check (thinner) or one-shot wrapper | `OPENCODE_HOME` or the real host root `~/.config/opencode` | preview-guidance adapter path |
 
 `TargetRoot` is only a path.
 `HostId` / `--host` decides host semantics.
@@ -35,41 +35,53 @@ Default full install:
 
 ### Codex
 
+If the goal is to install and let the current Codex discover `$vibe` directly, the default target root must be the real host root `~/.codex`.
+Switch to `~/.vibeskills/targets/codex` only when you explicitly want an isolated install, or the current Codex is already pointed there on purpose.
+
 ```powershell
+$env:CODEX_HOME="$HOME\\.codex"
 pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId codex -Profile full
 pwsh -File .\check.ps1 -HostId codex -Profile full -Deep
 ```
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
-bash ./check.sh --host codex --profile full --deep
+CODEX_HOME="$HOME/.codex" bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
+CODEX_HOME="$HOME/.codex" bash ./check.sh --host codex --profile full --deep
 ```
 
 ### Claude Code
 
+If the goal is to install into the real Claude host root, the default target should be `~/.claude`.
+
 ```powershell
+$env:CLAUDE_HOME="$HOME\\.claude"
 pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId claude-code -Profile full
 pwsh -File .\check.ps1 -HostId claude-code -Profile full -Deep
 ```
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
-bash ./check.sh --host claude-code --profile full --deep
+CLAUDE_HOME="$HOME/.claude" bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
+CLAUDE_HOME="$HOME/.claude" bash ./check.sh --host claude-code --profile full --deep
 ```
 
 ### Cursor
 
+If the goal is to install into the real Cursor host root, the default target should be `~/.cursor`.
+
 ```powershell
+$env:CURSOR_HOME="$HOME\\.cursor"
 pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId cursor -Profile full
 pwsh -File .\check.ps1 -HostId cursor -Profile full -Deep
 ```
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host cursor --profile full
-bash ./check.sh --host cursor --profile full --deep
+CURSOR_HOME="$HOME/.cursor" bash ./scripts/bootstrap/one-shot-setup.sh --host cursor --profile full
+CURSOR_HOME="$HOME/.cursor" bash ./check.sh --host cursor --profile full --deep
 ```
 
 ### Windsurf
+
+The default target root is `~/.codeium/windsurf` unless you explicitly set `WINDSURF_HOME`.
 
 ```powershell
 pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId windsurf -Profile full
@@ -82,6 +94,8 @@ bash ./check.sh --host windsurf --profile full --deep
 ```
 
 ### OpenClaw
+
+The default target root is `~/.openclaw` unless you explicitly set `OPENCLAW_HOME`.
 
 ```powershell
 pwsh -File .\scripts\bootstrap\one-shot-setup.ps1 -HostId openclaw -Profile full
@@ -96,6 +110,8 @@ bash ./check.sh --host openclaw --profile full --deep
 ### OpenCode
 
 The thinner default path is:
+
+The default target root is `~/.config/opencode` unless you explicitly set `OPENCODE_HOME`.
 
 ```powershell
 pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile full
@@ -136,88 +152,45 @@ git fetch --tags --force
 git checkout vX.Y.Z
 ```
 
-## Manual Settings Paths and Edit Pattern
-
-When a follow-up step says "configure locally", it should name the real file or path below instead of telling operators only to "set it manually".
-
-| Host | Real path to edit or inspect | How to set it |
-| --- | --- | --- |
-| `codex` | `<target-root>/settings.json`, default `~/.codex/settings.json` | edit the top-level `env` object and add `VCO_INTENT_ADVICE_*`; add `VCO_VECTOR_DIFF_*` only when you want vector diff embeddings |
-| `claude-code` | `~/.claude/settings.json` | merge the needed keys into the existing `env` object; keep unrelated Claude settings intact |
-| `cursor` | `~/.cursor/settings.json` | merge the needed keys into the real settings file; the repo may materialize a bounded minimal Vibe surface there, but it does not take over unrelated Cursor settings |
-| `windsurf` | inspect `<target-root>/.vibeskills/host-settings.json`; default target root is `WINDSURF_HOME` or `~/.vibeskills/targets/windsurf` | treat this as repo-owned sidecar state only; host-native login, provider, and model-permission settings still need to be configured on the Windsurf side |
-| `openclaw` | inspect `<target-root>/.vibeskills/host-settings.json`; default target root is `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw` | treat this as repo-owned sidecar state only; host-native login, provider, model, and editor settings still need to be configured on the OpenClaw side |
-| `opencode` | edit the real host file `~/.config/opencode/opencode.json`; use `<target-root>/opencode.json.example` only as a scaffold | copy only the needed permission / command / provider structure from the example into the real host file; the repository does not overwrite the real `opencode.json` |
-
-For hosts that use an `env` object, the intended edit pattern is:
-
-```json
-{
-  "env": {
-    "VCO_INTENT_ADVICE_API_KEY": "<your-intent-advice-api-key>",
-    "VCO_INTENT_ADVICE_BASE_URL": "https://your-openai-compatible-endpoint/v1",
-    "VCO_INTENT_ADVICE_MODEL": "your-intent-advice-model-id",
-    "VCO_VECTOR_DIFF_API_KEY": "<optional-vector-diff-api-key>",
-    "VCO_VECTOR_DIFF_BASE_URL": "https://your-openai-compatible-endpoint/v1",
-    "VCO_VECTOR_DIFF_MODEL": "your-vector-diff-model-id"
-  }
-}
-```
-
-Notes:
-
-- `VCO_VECTOR_DIFF_*` is optional; if it is absent, diff falls back to plain text
-- old `OPENAI_*` values are not auto-migrated into `VCO_*`; move them explicitly in the local file or local environment
-- do not paste secrets into chat; keep them in the local settings file or local environment variables
-
 ## What You Still Handle Locally After Install
 
 ### Codex
 
 - hooks remain frozen; that is not an install failure
-- edit `<target-root>/settings.json`, default `~/.codex/settings.json`
-- put the values under the top-level `env` object instead of creating a second custom block
 - for the built-in governance-advice path, prefer:
   - `VCO_INTENT_ADVICE_API_KEY`
   - optional `VCO_INTENT_ADVICE_BASE_URL`
   - `VCO_INTENT_ADVICE_MODEL`
 - add `VCO_VECTOR_DIFF_*` only when you also want vector diff embeddings
-- old `OPENAI_*` values do not backfill these keys automatically
 
 ### Claude Code
 
 - it preserves the real `~/.claude/settings.json` while merging a bounded managed `vibeskills` settings surface
-- edit the existing `env` object in `~/.claude/settings.json`; do not replace the whole file
 - broader Claude plugins, MCP registration, credentials, and host behavior remain host-managed
 - AI governance advice uses `VCO_INTENT_ADVICE_*`, with optional `VCO_VECTOR_DIFF_*`
 
 ### Cursor
 
 - this host is currently a preview-guidance path
-- when local follow-up is needed, edit the real `~/.cursor/settings.json`
-- the repo may materialize a bounded minimal Vibe-managed surface there, but it does not take over unrelated Cursor settings
-- when you add local provider or governance keys, merge them into the existing settings file instead of replacing unrelated Cursor settings
+- it does not overwrite the real `~/.cursor/settings.json`
 - Cursor-native settings and extension surfaces remain managed on the Cursor side
 
 ### Windsurf
 
-- the default target root is `WINDSURF_HOME`, otherwise `~/.vibeskills/targets/windsurf`
-- inspect `<target-root>/.vibeskills/host-settings.json` and `<target-root>/.vibeskills/host-closure.json` for repo-owned state
-- the repo does not claim an authoritative global `settings.json` path for Windsurf
+- the default target root is `WINDSURF_HOME`, otherwise the real host root `~/.codeium/windsurf`
+- the repo currently owns only shared runtime payload plus sidecar state such as `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - Windsurf-native local settings remain managed on the Windsurf side
 
 ### OpenClaw
 
-- the default target root is `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
-- inspect `<target-root>/.vibeskills/host-settings.json` and `<target-root>/.vibeskills/host-closure.json` for repo-owned state
+- the default target root is `OPENCLAW_HOME` or the real host root `~/.openclaw`
 - the dedicated host guide expands attach / copy / bundle details
-- OpenClaw-local configuration remains managed on the OpenClaw side; do not invent an undocumented repo-owned `settings.json` path
+- OpenClaw-local configuration remains managed on the OpenClaw side
 
 ### OpenCode
 
-- the default target root is `OPENCODE_HOME`, otherwise `~/.vibeskills/targets/opencode`
+- the default target root is `OPENCODE_HOME`, otherwise the real host root `~/.config/opencode`
 - the real host config directory `~/.config/opencode` remains host-managed
 - both direct install/check and the one-shot wrapper keep host-managed boundaries intact
 - the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain host-managed
-- edit the real file `~/.config/opencode/opencode.json` yourself, and use `<target-root>/opencode.json.example` only as the reference scaffold
 - use `--target-root ./.opencode` when you want project-local isolation

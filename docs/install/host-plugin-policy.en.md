@@ -22,9 +22,9 @@ Other agents should not currently be described as having a supported install pat
 - install the repo-distributed content first
 - add host-local configuration only as needed
 - if a capability is not stably, publicly, and verifiably owned by the repo, do not write it as a default install requirement
-- for OpenClaw, make the default target root explicit: `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
+- for OpenClaw, make the default target root explicit: `OPENCLAW_HOME` or the real host root `~/.openclaw`
 - keep deeper OpenClaw path details in the dedicated host guide
-- for OpenCode, make the default target root explicit: `OPENCODE_HOME` or `~/.vibeskills/targets/opencode`
+- for OpenCode, make the default target root explicit: `OPENCODE_HOME` or the real host root `~/.config/opencode`
 - also make it explicit that the real host config directory remains `~/.config/opencode`
 - for OpenCode, make it explicit that direct install/check does not take ownership of the real `opencode.json`
 - for deeper host contracts and proof details, point readers to the host guides or `dist/*` / `adapters/*`
@@ -45,6 +45,7 @@ Other agents should not currently be described as having a supported install pat
 ## Cursor
 
 - supported install-and-use path
+- default target root is `CURSOR_HOME`, otherwise the real host root `~/.cursor`
 - does not overwrite the real `~/.cursor/settings.json`
 - Cursor-native plugins, settings, and extension surfaces remain managed on the Cursor side
 - hooks remain frozen; that is not an install failure
@@ -52,21 +53,21 @@ Other agents should not currently be described as having a supported install pat
 ## Windsurf
 
 - supported install-and-use path
-- default target root is `WINDSURF_HOME`, otherwise `~/.vibeskills/targets/windsurf`
+- default target root is `WINDSURF_HOME`, otherwise the real host root `~/.codeium/windsurf`
 - the repo currently owns only shared install content plus sidecar state such as `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - Windsurf-native local settings remain managed on the Windsurf side
 
 ## OpenClaw
 
 - supported install-and-use path
-- default target root is `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
+- default target root is `OPENCLAW_HOME` or the real host root `~/.openclaw`
 - deeper attach / copy / bundle guidance lives in [`openclaw-path.en.md`](./openclaw-path.en.md)
 - OpenClaw-local configuration remains managed on the OpenClaw side
 
 ## OpenCode
 
 - supported install-and-use path
-- default target root is `OPENCODE_HOME` or `~/.vibeskills/targets/opencode`
+- default target root is `OPENCODE_HOME` or the real host root `~/.config/opencode`
 - direct install/check writes skills, `.vibeskills/*` sidecars, and `opencode.json.example`
 - the real `opencode.json`, provider credentials, plugin installation, and MCP trust remain managed on the OpenCode side
 
@@ -76,8 +77,8 @@ Other agents should not currently be described as having a supported install pat
 - `codex` is the default recommended path
 - `claude-code` and `cursor` have a supported install-and-use path
 - `windsurf` has a supported install-and-use path
-- `openclaw` has a supported install-and-use path, with default target root from `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
-- `opencode` has a supported install-and-use path, with default target root from `OPENCODE_HOME` or `~/.vibeskills/targets/opencode`
+- `openclaw` has a supported install-and-use path, with default target root from `OPENCLAW_HOME` or the real host root `~/.openclaw`
+- `opencode` has a supported install-and-use path, with default target root from `OPENCODE_HOME` or the real host root `~/.config/opencode`
 - the real `~/.config/opencode` directory remains host-managed
 - `opencode` uses direct install/check and does not take ownership of the real `opencode.json`
 - hooks are not one-size-fits-all across the current public surface: Codex/Cursor still keep hooks frozen, while Claude now exposes only a bounded managed settings surface

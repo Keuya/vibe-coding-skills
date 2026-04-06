@@ -29,9 +29,12 @@
 ## Codex
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
-bash ./check.sh --host codex --profile full --deep
+CODEX_HOME="$HOME/.codex" bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
+CODEX_HOME="$HOME/.codex" bash ./check.sh --host codex --profile full --deep
 ```
+
+如果你的目标是安装后当前 Codex 能直接发现 `$vibe`，这里默认就是把目标根设到真实 `~/.codex`。
+只有在你明确要求隔离安装时，才改用 `~/.vibeskills/targets/codex`。
 
 你会得到：
 
@@ -47,8 +50,8 @@ bash ./check.sh --host codex --profile full --deep
 ## Claude Code
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
-bash ./check.sh --host claude-code --profile full --deep
+CLAUDE_HOME="$HOME/.claude" bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
+CLAUDE_HOME="$HOME/.claude" bash ./check.sh --host claude-code --profile full --deep
 ```
 
 你会得到：
@@ -91,7 +94,7 @@ bash ./check.sh --host windsurf --profile full --deep
 你会得到：
 
 - shared runtime payload
-- `~/.codeium/windsurf` 下的 runtime-core 安装结果
+- 真实宿主根目录 `~/.codeium/windsurf` 下的 runtime-core 安装结果
 - `.vibeskills/host-settings.json` 与 `.vibeskills/host-closure.json`
 - 只在显式调用 Vibe skill 时生效的 skill-only activation 路径
 
@@ -155,7 +158,7 @@ bash ./check.sh --host opencode --profile full --deep
 
 后续动作：
 
-- 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.config/opencode`
+- 默认目标根目录是 `OPENCODE_HOME`，否则是实际宿主根目录 `~/.config/opencode`
 - 如果你要项目内隔离安装，改用 `--target-root ./.opencode`
 - 继续看 [`install/opencode-path.md`](./install/opencode-path.md)
 

@@ -61,7 +61,9 @@
 如果用户选择 `codex`：
 
 - 运行 `--host codex`
-- 明确说明这是当前默认推荐路径
+- 在 Linux / macOS 上默认使用 `CODEX_HOME="$HOME/.codex"`，在 Windows 上默认把 `CODEX_HOME` 设为真实宿主根目录 `%USERPROFILE%\\.codex`
+- 明确说明这是当前最完整的 governed 路径；如果目标是安装后就能被当前 Codex 直接发现 `$vibe`，默认必须落到真实 `~/.codex`
+- `~/.vibeskills/targets/codex` 只能在用户显式要求隔离安装，或 Codex 已经明确指向该目录时使用
 - hook 当前因兼容性问题被冻结；这不是安装失败
 - 如需 AI 治理 advice 的常见配置路径，去本地 `~/.codex/settings.json` 的 `env` 或本地环境变量配置：
   - `VCO_INTENT_ADVICE_API_KEY`
@@ -76,6 +78,7 @@
 
 - 运行 `--host claude-code`
 - 明确说明当前提供支持的安装与使用路径
+- 在 Linux / macOS 上默认使用 `CLAUDE_HOME="$HOME/.claude"`，在 Windows 上默认把 `CLAUDE_HOME` 设为真实宿主根目录 `%USERPROFILE%\\.claude`
 - 明确说明安装器会在保留现有 `~/.claude/settings.json` 内容的前提下，补入受约束的 `vibeskills` 节点
 - 不要宣传成 official runtime、Codex 满血等价或跨平台 proof 已闭环
 - 引导用户继续把 `env`、plugin enablement、MCP 注册和 provider credentials 放在 Claude 宿主侧本地维护
@@ -86,6 +89,7 @@
 
 - 运行 `--host cursor`
 - 明确说明当前提供支持的安装与使用路径
+- 在 Linux / macOS 上默认使用 `CURSOR_HOME="$HOME/.cursor"`，在 Windows 上默认把 `CURSOR_HOME` 设为真实宿主根目录 `%USERPROFILE%\\.cursor`
 - 当前不接管 Cursor 的真实 settings 与宿主原生扩展面
 - 引导用户自己检查和维护 `~/.cursor/settings.json`
 
@@ -95,7 +99,7 @@
 
 - 运行 `--host windsurf`
 - 明确说明当前提供支持的安装与使用路径
-- 默认目标根目录是 `WINDSURF_HOME`，否则是 `~/.vibeskills/targets/windsurf`
+- 默认目标根目录是 `WINDSURF_HOME`，否则是实际宿主根目录 `~/.codeium/windsurf`
 - 当前仓库只负责共享安装内容，以及 `.vibeskills/host-settings.json` / `.vibeskills/host-closure.json` 这类 sidecar 状态
 - Windsurf 宿主本地设置仍由用户在宿主侧完成
 
@@ -105,7 +109,7 @@
 
 - 运行 `--host openclaw`
 - 明确说明当前提供支持的安装与使用路径
-- 默认目标根目录是 `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
+- 默认目标根目录是 `OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
 - 如果用户需要 attach / copy / bundle 等更细路径，继续看 [`openclaw-path.md`](./openclaw-path.md)
 - 宿主侧本地配置仍按 OpenClaw 方式完成
 
@@ -115,8 +119,8 @@
 
 - 运行 `--host opencode`
 - 明确说明当前提供支持的安装与使用路径
-- 默认目标根目录是 `OPENCODE_HOME`，否则是 `~/.vibeskills/targets/opencode`
-- 真实宿主配置目录 `~/.config/opencode` 仍由宿主侧本地完成
+- 默认目标根目录是 `OPENCODE_HOME`，否则是实际宿主根目录 `~/.config/opencode`
+- 真实宿主配置目录就是 `~/.config/opencode`
 - direct install/check 会写入 skills、`.vibeskills/*` sidecar 与 `opencode.json.example`
 - 真实 `opencode.json`、provider 凭据、plugin 安装和 MCP 信任仍由宿主侧本地完成
 

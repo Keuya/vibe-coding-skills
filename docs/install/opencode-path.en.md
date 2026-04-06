@@ -22,23 +22,6 @@
 - plugin installation
 - MCP trust decisions
 
-## Manual Settings Paths
-
-When OpenCode follow-up steps say "configure it locally", use these exact files:
-
-- real host-managed file: `~/.config/opencode/opencode.json`
-- repo-written reference scaffold: `<target-root>/opencode.json.example`
-- repo-written sidecar metadata: `<target-root>/.vibeskills/host-settings.json` and `<target-root>/.vibeskills/host-closure.json`
-
-How to set it:
-
-1. open the real host file `~/.config/opencode/opencode.json`
-2. compare it with `<target-root>/opencode.json.example`
-3. copy only the permission / command / provider structure you actually need into the real host file
-4. keep provider credentials and MCP trust decisions on the OpenCode side
-
-The repository does not overwrite the real `opencode.json`, so docs should not imply that a direct install has already finished native OpenCode configuration for you.
-
 ## Global Install
 
 Shell:
@@ -58,9 +41,9 @@ pwsh -NoProfile -File ./check.ps1 -HostId opencode
 Default target root:
 
 - `OPENCODE_HOME` when set
-- otherwise `~/.vibeskills/targets/opencode`
+- otherwise the real host root `~/.config/opencode`
 
-This default target root is an isolated install root, not the real host config directory at `~/.config/opencode`.
+This default target root is the real host config directory `~/.config/opencode`.
 
 The default examples omit `--profile`, which is equivalent to `full`.
 If you need the “Framework Only + Customizable Governance” variant, append `--profile minimal` to install/check explicitly.

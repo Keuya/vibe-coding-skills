@@ -19,15 +19,20 @@ Rules:
 2. If the target remains the framework version, map it to the real profile `minimal`.
 3. Remind me that `skills/custom/` and `config/custom-workflows.json` are usually retained, while edits under official managed paths may be overwritten.
 4. Update the repo first, then rerun the matching install/check commands per host.
-5. Keep `claude-code` described as a supported install-and-use path, `cursor` as a preview-guidance path, `windsurf` as a runtime-core path, and `openclaw` as a preview runtime-core adapter path with `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw` plus the attach / copy / bundle paths.
-6. If the host is `opencode`, prefer the thinner direct install/check path by default:
+5. If the host is `codex`, keep the update on the real `~/.codex` host root so `$vibe` remains callable after the upgrade:
+   - Linux / macOS: `CODEX_HOME="$HOME/.codex" bash ./install.sh --host codex --profile minimal` and `CODEX_HOME="$HOME/.codex" bash ./check.sh --host codex --profile minimal`
+   - Windows: first set `CODEX_HOME` to `%USERPROFILE%\\.codex`, then run `pwsh -NoProfile -File .\\install.ps1 -HostId codex -Profile minimal` and `pwsh -NoProfile -File .\\check.ps1 -HostId codex -Profile minimal`
+   - use `~/.vibeskills/targets/codex` only when I explicitly ask for an isolated update path
+6. Keep `claude-code` described as a supported install-and-use path that still defaults to the real `~/.claude`, `cursor` as a preview-guidance path that still defaults to the real `~/.cursor`, `windsurf` as a runtime-core path with `WINDSURF_HOME` or the real host root `~/.codeium/windsurf`, and `openclaw` as a preview runtime-core adapter path with `OPENCLAW_HOME` or the real host root `~/.openclaw` plus the attach / copy / bundle paths.
+7. If the host is `opencode`, prefer the thinner direct install/check path by default:
    - Windows: `pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile minimal` and `pwsh -NoProfile -File .\check.ps1 -HostId opencode -Profile minimal`
    - Linux / macOS: `bash ./install.sh --host opencode --profile minimal` and `bash ./check.sh --host opencode --profile minimal`
+   - the default target root is `OPENCODE_HOME`, otherwise the real host root `~/.config/opencode`
    - if I explicitly ask to keep the same wrapper across hosts, `scripts/bootstrap/one-shot-setup.* --host opencode --profile minimal` is also acceptable; do not describe one-shot as unsupported for `opencode`
-7. Never ask me to paste secrets, URLs, or model names into chat.
-8. If I later want AI-governance online capability, you must recommend the real key names first:
+8. Never ask me to paste secrets, URLs, or model names into chat.
+9. If I later want AI-governance online capability, you must recommend the real key names first:
    - built-in intent advice: `VCO_INTENT_ADVICE_API_KEY`, optional `VCO_INTENT_ADVICE_BASE_URL`, plus `VCO_INTENT_ADVICE_MODEL`
    - optional vector diff embeddings: `VCO_VECTOR_DIFF_API_KEY`, optional `VCO_VECTOR_DIFF_BASE_URL`, plus `VCO_VECTOR_DIFF_MODEL`
    - the built-in AI governance layer supports OpenAI-compatible integration only
-9. Remind me that the result is still the governance-foundation mode, not the complete default workflow-core experience.
+10. Remind me that the result is still the governance-foundation mode, not the complete default workflow-core experience.
 ```

@@ -15,7 +15,7 @@ RESOLVER = REPO_ROOT / "scripts" / "common" / "resolve_vgo_adapter.py"
 
 
 class OpenCodePreviewParityTests(unittest.TestCase):
-    def test_adapter_registry_exposes_isolated_default_target_root_for_opencode(self) -> None:
+    def test_adapter_registry_exposes_real_host_root_default_for_opencode(self) -> None:
         result = subprocess.run(
             [
                 sys.executable,
@@ -33,8 +33,8 @@ class OpenCodePreviewParityTests(unittest.TestCase):
         )
         payload = json.loads(result.stdout)
         self.assertEqual("opencode", payload["id"])
-        self.assertEqual(".vibeskills/targets/opencode", payload["default_target_root"]["rel"])
-        self.assertEqual("isolated-home", payload["default_target_root"]["kind"])
+        self.assertEqual(".config/opencode", payload["default_target_root"]["rel"])
+        self.assertEqual("host-home", payload["default_target_root"]["kind"])
 
     def test_python_installer_materializes_opencode_preview_wrappers(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

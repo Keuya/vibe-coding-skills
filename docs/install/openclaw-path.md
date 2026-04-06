@@ -10,23 +10,9 @@
 
 ## 默认安装信息
 
-- 默认目标根目录：`OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
+- 默认目标根目录：`OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
 - 默认安装方式：one-shot setup + check
 - 宿主侧本地配置仍按 OpenClaw 自身方式完成
-
-## 手动设置与 sidecar 路径
-
-当 follow-up 提示你“继续本地配置 OpenClaw”时，请明确使用下面这些路径：
-
-- repo 维护的 sidecar 状态：`<target-root>/.vibeskills/host-settings.json`
-- repo 维护的 closure 状态：`<target-root>/.vibeskills/host-closure.json`
-- 默认 `<target-root>`：`OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
-
-理解方式：
-
-- 先查看 `host-settings.json` 和 `host-closure.json`，确认 repo 实际物化了哪些内容
-- 不要在 Vibe-Skills 文档里凭空写出一个 repo 接管的 `~/.openclaw/settings.json`
-- 登录态、provider 凭据、模型权限和编辑器行为，继续在 OpenClaw 宿主侧配置
 
 ## 常见安装路径
 
@@ -37,12 +23,12 @@
 示例：
 
 ```bash
-bash ./check.sh --host openclaw --target-root "${OPENCLAW_HOME:-$HOME/.vibeskills/targets/openclaw}" --profile full --deep
+bash ./check.sh --host openclaw --target-root "${OPENCLAW_HOME:-$HOME/.openclaw}" --profile full --deep
 ```
 
 ### copy 路径
 
-目标：通过安装入口把仓库分发内容复制到 `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`。
+目标：通过安装入口把仓库分发内容复制到 `OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`。
 
 示例：
 
@@ -62,7 +48,7 @@ bash ./check.sh --host openclaw --profile full --deep
 
 ## 当前重点
 
-- 目标根目录统一为 `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
+- 目标根目录统一为 `OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
 - 重点覆盖仓库分发内容的安装、校验与分发
 - 宿主侧本地配置按 OpenClaw 自身方式完成
 

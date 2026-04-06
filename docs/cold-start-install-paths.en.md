@@ -29,9 +29,12 @@ Note: `one-shot-setup.*` is now a registry-driven wrapper across all six public 
 ## Codex
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
-bash ./check.sh --host codex --profile full --deep
+CODEX_HOME="$HOME/.codex" bash ./scripts/bootstrap/one-shot-setup.sh --host codex --profile full
+CODEX_HOME="$HOME/.codex" bash ./check.sh --host codex --profile full --deep
 ```
+
+If the goal is to install and let the current Codex discover `$vibe` immediately, this default path intentionally targets the real `~/.codex`.
+Switch to `~/.vibeskills/targets/codex` only when you explicitly want an isolated install.
 
 What you get:
 
@@ -47,8 +50,8 @@ What you do not get:
 ## Claude Code
 
 ```bash
-bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
-bash ./check.sh --host claude-code --profile full --deep
+CLAUDE_HOME="$HOME/.claude" bash ./scripts/bootstrap/one-shot-setup.sh --host claude-code --profile full
+CLAUDE_HOME="$HOME/.claude" bash ./check.sh --host claude-code --profile full --deep
 ```
 
 What you get:
@@ -91,7 +94,7 @@ bash ./check.sh --host windsurf --profile full --deep
 What you get:
 
 - shared runtime payload
-- a runtime-core install under `~/.codeium/windsurf`
+- a runtime-core install under the real host root `~/.codeium/windsurf`
 - `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - a skills-only activation path that stays dormant until Vibe is explicitly invoked
 
@@ -155,7 +158,7 @@ What you do not get:
 
 Next actions:
 
-- the default target root is `OPENCODE_HOME`, otherwise `~/.config/opencode`
+- the default target root is `OPENCODE_HOME`, otherwise the real host root `~/.config/opencode`
 - for project-local isolation, use `--target-root ./.opencode`
 - read [`install/opencode-path.en.md`](./install/opencode-path.en.md)
 

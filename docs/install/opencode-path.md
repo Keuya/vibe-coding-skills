@@ -22,23 +22,6 @@
 - plugin 安装
 - MCP 信任决策
 
-## 手动设置路径
-
-当 OpenCode 的 follow-up 提示你“继续本地配置”时，请明确使用下面这些文件：
-
-- 真实宿主文件：`~/.config/opencode/opencode.json`
-- repo 写出的参考脚手架：`<target-root>/opencode.json.example`
-- repo 写出的 sidecar 元数据：`<target-root>/.vibeskills/host-settings.json` 与 `<target-root>/.vibeskills/host-closure.json`
-
-正确做法：
-
-1. 打开真实宿主文件 `~/.config/opencode/opencode.json`
-2. 对照 `<target-root>/opencode.json.example`
-3. 只把你真正需要的 permission / command / provider 结构复制到真实宿主文件
-4. provider 凭据与 MCP 信任仍留在 OpenCode 宿主侧处理
-
-repo 不会覆盖真实 `opencode.json`，所以文档不应该把 direct install 描述成“已经自动完成 OpenCode 原生配置”。
-
 ## 全局安装
 
 Shell：
@@ -58,9 +41,9 @@ pwsh -NoProfile -File ./check.ps1 -HostId opencode
 默认目标根目录：
 
 - 若设置了 `OPENCODE_HOME`，使用该目录
-- 否则使用 `~/.vibeskills/targets/opencode`
+- 否则使用真实宿主根目录 `~/.config/opencode`
 
-这里的默认目标根目录是隔离安装根，不等于真实宿主配置目录 `~/.config/opencode`。
+这里的默认目标根目录就是 OpenCode 的真实宿主目录 `~/.config/opencode`。
 
 默认示例省略 `--profile`，等价于 `full`。
 如果你要安装“仅核心框架 + 可自定义添加治理”，请在 install/check 命令后显式追加 `--profile minimal`。

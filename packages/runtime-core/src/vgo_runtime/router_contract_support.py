@@ -158,12 +158,12 @@ def resolve_target_root(target_root: str | None = None, host_id: str | None = No
         return Path(target_root).expanduser().resolve()
     resolved_host_id = resolve_host_id(host_id)
     env_map = {
-        "codex": ("CODEX_HOME", Path(".vibeskills") / "targets" / "codex"),
-        "claude-code": ("CLAUDE_HOME", Path(".vibeskills") / "targets" / "claude-code"),
-        "cursor": ("CURSOR_HOME", Path(".vibeskills") / "targets" / "cursor"),
-        "windsurf": ("WINDSURF_HOME", Path(".vibeskills") / "targets" / "windsurf"),
-        "openclaw": ("OPENCLAW_HOME", Path(".vibeskills") / "targets" / "openclaw"),
-        "opencode": ("OPENCODE_HOME", Path(".vibeskills") / "targets" / "opencode"),
+        "codex": ("CODEX_HOME", Path(".codex")),
+        "claude-code": ("CLAUDE_HOME", Path(".claude")),
+        "cursor": ("CURSOR_HOME", Path(".cursor")),
+        "windsurf": ("WINDSURF_HOME", Path(".codeium") / "windsurf"),
+        "openclaw": ("OPENCLAW_HOME", Path(".openclaw")),
+        "opencode": ("OPENCODE_HOME", Path(".config") / "opencode"),
         "generic": ("", Path(".vibe-skills") / "generic"),
     }
     env_name, default_rel = env_map[resolved_host_id]

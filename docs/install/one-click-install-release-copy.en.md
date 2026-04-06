@@ -93,12 +93,12 @@ If PowerShell 7 is already installed on your machine, you can replace `powershel
 
 Common default target roots:
 
-- `codex` -> `CODEX_HOME` or `~/.vibeskills/targets/codex`
-- `claude-code` -> `CLAUDE_HOME` or `~/.vibeskills/targets/claude-code`
-- `cursor` -> `CURSOR_HOME` or `~/.vibeskills/targets/cursor`
-- `windsurf` -> `WINDSURF_HOME` or `~/.vibeskills/targets/windsurf`
-- `openclaw` -> `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
-- `opencode` -> `OPENCODE_HOME` or `~/.vibeskills/targets/opencode`
+- `codex` -> default `CODEX_HOME` to the real `~/.codex` so the current Codex can discover `$vibe` immediately after install; use `~/.vibeskills/targets/codex` only for explicit isolation
+- `claude-code` -> default `CLAUDE_HOME` to the real `~/.claude`
+- `cursor` -> default `CURSOR_HOME` to the real `~/.cursor`
+- `windsurf` -> `WINDSURF_HOME` or the real host root `~/.codeium/windsurf`
+- `openclaw` -> `OPENCLAW_HOME` or the real host root `~/.openclaw`
+- `opencode` -> `OPENCODE_HOME` or the real host root `~/.config/opencode`
 
 Result hints:
 

@@ -92,12 +92,12 @@
 
 常见默认目标根目录：
 
-- `codex` -> `CODEX_HOME` 或 `~/.vibeskills/targets/codex`
-- `claude-code` -> `CLAUDE_HOME` 或 `~/.vibeskills/targets/claude-code`
-- `cursor` -> `CURSOR_HOME` 或 `~/.vibeskills/targets/cursor`
-- `windsurf` -> `WINDSURF_HOME` 或 `~/.vibeskills/targets/windsurf`
-- `openclaw` -> `OPENCLAW_HOME` 或 `~/.vibeskills/targets/openclaw`
-- `opencode` -> `OPENCODE_HOME` 或 `~/.vibeskills/targets/opencode`
+- `codex` -> 默认把 `CODEX_HOME` 指到真实 `~/.codex`，这样安装后当前 Codex 能直接发现 `$vibe`；只有显式要求隔离安装时才改用 `~/.vibeskills/targets/codex`
+- `claude-code` -> 默认把 `CLAUDE_HOME` 指到真实 `~/.claude`
+- `cursor` -> 默认把 `CURSOR_HOME` 指到真实 `~/.cursor`
+- `windsurf` -> `WINDSURF_HOME` 或真实宿主根目录 `~/.codeium/windsurf`
+- `openclaw` -> `OPENCLAW_HOME` 或真实宿主根目录 `~/.openclaw`
+- `opencode` -> `OPENCODE_HOME` 或真实宿主根目录 `~/.config/opencode`
 
 结果说明：
 

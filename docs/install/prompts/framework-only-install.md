@@ -19,7 +19,12 @@
 4. 按我选择的宿主执行对应命令；如果宿主是 `opencode`，默认优先使用更薄的 direct install/check：
    - Windows：`pwsh -NoProfile -File .\install.ps1 -HostId opencode -Profile minimal` 与 `pwsh -NoProfile -File .\check.ps1 -HostId opencode -Profile minimal`
    - Linux / macOS：`bash ./install.sh --host opencode --profile minimal` 与 `bash ./check.sh --host opencode --profile minimal`
+   - 默认目标根目录是 `OPENCODE_HOME`，否则是真实宿主根目录 `~/.config/opencode`
    - 如果我明确要求沿用统一 wrapper，也可以改用 `scripts/bootstrap/one-shot-setup.* --host opencode --profile minimal`，但不要把 one-shot 说成不支持
+   - 如果宿主是 `codex` 且目标是安装完成后可直接调用 `$vibe`，默认把真实宿主根目录固定到 `~/.codex`：
+     - Linux / macOS：`CODEX_HOME="$HOME/.codex" bash ./install.sh --host codex --profile minimal` 与 `CODEX_HOME="$HOME/.codex" bash ./check.sh --host codex --profile minimal`
+     - Windows：先把 `CODEX_HOME` 设为 `%USERPROFILE%\\.codex`，再运行 `pwsh -NoProfile -File .\\install.ps1 -HostId codex -Profile minimal` 与 `pwsh -NoProfile -File .\\check.ps1 -HostId codex -Profile minimal`
+     - 只有在我显式要求隔离安装时，才允许改用 `~/.vibeskills/targets/codex`
 5. 宿主支持边界、默认目标根目录和 truth-first 口径，统一遵循 `docs/install/minimal-path.md` 与 `docs/install/installation-rules.md`，不要在这里重复发明另一套说法。
 6. 不要要求我把密钥、URL 或 model 粘贴到聊天里。
 7. 如果我后续要补 AI 治理 online 能力，你必须优先告诉我真实推荐键名：

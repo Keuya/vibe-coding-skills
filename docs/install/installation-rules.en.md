@@ -61,7 +61,9 @@ Do not keep pretending the framework version is `framework-only`; the current sc
 If the user chooses `codex`:
 
 - run `--host codex`
-- describe it as the default recommended path today
+- on Linux / macOS, default to `CODEX_HOME="$HOME/.codex"`; on Windows, default `CODEX_HOME` to the real host root `%USERPROFILE%\\.codex`
+- describe it as the strongest governed path today; if the goal is to install and have the current Codex discover `$vibe` directly, the default target must be the real `~/.codex`
+- only use `~/.vibeskills/targets/codex` when the user explicitly asks for an isolated target root, or Codex is already intentionally pointed there
 - explain that hook installation is currently frozen because of compatibility issues; that is not an install failure
 - if the common governance-advice path is needed, point the user to local configuration for:
   - `VCO_INTENT_ADVICE_API_KEY`
@@ -77,6 +79,7 @@ If the user chooses `claude-code`:
 
 - run `--host claude-code`
 - state clearly that it has a supported install-and-use path
+- on Linux / macOS, default to `CLAUDE_HOME="$HOME/.claude"`; on Windows, default `CLAUDE_HOME` to the real host root `%USERPROFILE%\\.claude`
 - explain that the installer preserves existing `~/.claude/settings.json` content while adding a bounded managed `vibeskills` node
 - do not claim official-runtime ownership, full Codex parity, or cross-platform proof that has not been frozen
 - guide the user to keep `env`, plugin enablement, MCP registration, and provider credentials on the Claude host-managed side
@@ -87,6 +90,7 @@ If the user chooses `cursor`:
 
 - run `--host cursor`
 - state clearly that it has a supported install-and-use path
+- on Linux / macOS, default to `CURSOR_HOME="$HOME/.cursor"`; on Windows, default `CURSOR_HOME` to the real host root `%USERPROFILE%\\.cursor`
 - do not claim the repo takes over Cursor settings or Cursor-native extension surfaces
 - guide the user to maintain `~/.cursor/settings.json` locally
 
@@ -96,7 +100,7 @@ If the user chooses `windsurf`:
 
 - run `--host windsurf`
 - state clearly that it has a supported install-and-use path
-- the default target root is `WINDSURF_HOME`, otherwise `~/.vibeskills/targets/windsurf`
+- the default target root is `WINDSURF_HOME`, otherwise the real host root `~/.codeium/windsurf`
 - the repo currently owns only shared install content plus sidecar state such as `.vibeskills/host-settings.json` and `.vibeskills/host-closure.json`
 - make it clear that Windsurf-local settings still need to be managed on the Windsurf side
 
@@ -106,7 +110,7 @@ If the user chooses `openclaw`:
 
 - run `--host openclaw`
 - state clearly that it has a supported install-and-use path
-- the default target root is `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
+- the default target root is `OPENCLAW_HOME` or the real host root `~/.openclaw`
 - if the user needs attach / copy / bundle details, point them to [`openclaw-path.en.md`](./openclaw-path.en.md)
 - leave host-local configuration on the OpenClaw side
 
@@ -116,8 +120,8 @@ If the user chooses `opencode`:
 
 - run `--host opencode`
 - state clearly that it has a supported install-and-use path
-- the default target root is `OPENCODE_HOME`, otherwise `~/.vibeskills/targets/opencode`
-- the real host config directory `~/.config/opencode` remains host-managed
+- the default target root is `OPENCODE_HOME`, otherwise the real host root `~/.config/opencode`
+- the real host config directory is `~/.config/opencode`
 - direct install/check writes skills, `.vibeskills/*` sidecars, and `opencode.json.example`
 - do not claim ownership of the real `opencode.json`
 - keep provider credentials, plugin installation, and MCP trust on the host-managed side

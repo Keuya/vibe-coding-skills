@@ -29,4 +29,5 @@ def test_resolve_adapter_entry_returns_raw_registry_entry() -> None:
     registry = load_adapter_registry(ROOT)
     entry = resolve_adapter_entry(registry, 'windsurf')
     assert entry['id'] == 'windsurf'
-    assert entry['default_target_root']['rel'] == '.vibeskills/targets/windsurf'
+    assert entry['default_target_root']['rel'] == '.codeium/windsurf'
+    assert entry['default_target_root']['kind'] == 'host-home'

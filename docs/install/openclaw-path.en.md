@@ -10,23 +10,9 @@ This document summarizes the most common commands, default target root, and foll
 
 ## Default Install Information
 
-- default target root: `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
+- default target root: `OPENCLAW_HOME` or the real host root `~/.openclaw`
 - default install style: one-shot setup + check
 - host-local configuration still stays on the OpenClaw side
-
-## Manual Settings and Sidecar Paths
-
-When a follow-up step says "configure OpenClaw locally", use the paths below explicitly:
-
-- repo-owned sidecar state: `<target-root>/.vibeskills/host-settings.json`
-- repo-owned closure state: `<target-root>/.vibeskills/host-closure.json`
-- default `<target-root>`: `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
-
-How to interpret them:
-
-- inspect `host-settings.json` and `host-closure.json` to confirm what the repository materialized
-- do not invent an undocumented `~/.openclaw/settings.json` contract in Vibe-Skills docs
-- continue to configure login, provider credentials, model permissions, and editor-specific behavior on the OpenClaw side
 
 ## Common Install Paths
 
@@ -37,12 +23,12 @@ Goal: connect and validate an existing OpenClaw root.
 Example:
 
 ```bash
-bash ./check.sh --host openclaw --target-root "${OPENCLAW_HOME:-$HOME/.vibeskills/targets/openclaw}" --profile full --deep
+bash ./check.sh --host openclaw --target-root "${OPENCLAW_HOME:-$HOME/.openclaw}" --profile full --deep
 ```
 
 ### Copy Path
 
-Goal: copy the repo-distributed content into `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw` through the install entrypoint.
+Goal: copy the repo-distributed content into `OPENCLAW_HOME` or the real host root `~/.openclaw` through the install entrypoint.
 
 Example:
 
@@ -62,7 +48,7 @@ Manifest entrypoints:
 
 ## Current Focus
 
-- keep the target root consistent as `OPENCLAW_HOME` or `~/.vibeskills/targets/openclaw`
+- keep the target root consistent as `OPENCLAW_HOME` or the real host root `~/.openclaw`
 - focus on install, validation, and distribution of the repo-distributed content
 - keep host-local configuration on the OpenClaw side
 
