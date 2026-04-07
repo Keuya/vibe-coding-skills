@@ -300,6 +300,36 @@ raise SystemExit(1)
 PY
 }
 
+print_mcp_auto_provision_summary() {
+  local python_bin=""
+  python_bin="$(pick_python || true)"
+  if [[ -z "${python_bin}" ]]; then
+    return 0
+  fi
+  "${python_bin}" - "${TARGET_ROOT}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+target_root = Path(sys.argv[1])
+receipt_path = target_root / ".vibeskills" / "mcp-auto-provision.json"
+print("MCP auto-provision summary")
+if not receipt_path.exists():
+    print("- receipt: missing")
+    sys.exit(0)
+
+payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+print(f"- installed_locally: {payload.get('install_state') == 'installed_locally'}")
+print(f"- mcp_auto_provision_attempted: {bool(payload.get('mcp_auto_provision_attempted'))}")
+manual_follow_up = []
+for item in payload.get("mcp_results") or []:
+    print(f"- {item.get('name')}: status={item.get('status')} next_step={item.get('next_step')}")
+    if item.get("status") != "ready":
+        manual_follow_up.append(str(item.get("name")))
+print(f"- manual_follow_up: {', '.join(manual_follow_up) if manual_follow_up else 'none'}")
+PY
+}
+
 seed_settings_env_with_python() {
   local codex_root="$1"
   local surface="$2"
@@ -450,7 +480,7 @@ fi
 
 echo
 echo "[1/5] Installing adapter payload..."
-bash "${INSTALL_SH}" "${install_args[@]}"
+VGO_SUPPRESS_INSTALL_COMPLETION_REPORT=1 bash "${INSTALL_SH}" "${install_args[@]}"
 
 if [[ "${ADAPTER_BOOTSTRAP_MODE}" == "governed" ]]; then
   resolved_intent_advice_api_key="${INTENT_ADVICE_API_KEY_INPUT:-${VCO_INTENT_ADVICE_API_KEY:-}}"
@@ -504,6 +534,7 @@ else
 fi
 
 echo
+print_mcp_auto_provision_summary
 echo "One-shot setup completed."
 echo "- Re-run deep doctor anytime with: bash ./check.sh --profile ${PROFILE} --host ${HOST_ID} --target-root \"${TARGET_ROOT}\" --deep"
 if [[ "${ADAPTER_BOOTSTRAP_MODE}" == "governed" ]]; then
