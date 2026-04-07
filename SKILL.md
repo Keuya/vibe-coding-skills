@@ -290,7 +290,7 @@ The governed runtime should leave behind:
 ## Maintenance
 
 - Runtime family: governed-runtime-first
-- Version: 2.3.56
-- Updated: 2026-04-04
+- Version: 3.0.0
+- Updated: 2026-04-07
 - Canonical router: `scripts/router/resolve-pack-route.ps1`
 - Primary contract metadata: `core/skill-contracts/v1/vibe.json`
