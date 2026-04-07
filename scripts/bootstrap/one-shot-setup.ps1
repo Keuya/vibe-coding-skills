@@ -105,6 +105,32 @@ function Get-ExistingSettingEnvValue {
     return $null
 }
 
+function Write-McpAutoProvisionSummary {
+    param(
+        [Parameter(Mandatory)] [string]$TargetRoot
+    )
+
+    $receiptPath = Join-Path $TargetRoot '.vibeskills\mcp-auto-provision.json'
+    Write-Host 'MCP auto-provision summary'
+    if (-not (Test-Path -LiteralPath $receiptPath)) {
+        Write-Host '- receipt: missing' -ForegroundColor Yellow
+        return
+    }
+
+    $payload = Get-Content -LiteralPath $receiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    Write-Host ("- installed_locally: {0}" -f ([string]($payload.install_state -eq 'installed_locally')).ToLowerInvariant())
+    Write-Host ("- mcp_auto_provision_attempted: {0}" -f ([string][bool]$payload.mcp_auto_provision_attempted).ToLowerInvariant())
+    $manualFollowUp = @()
+    foreach ($item in @($payload.mcp_results)) {
+        if ($null -eq $item) { continue }
+        Write-Host ("- {0}: status={1} next_step={2}" -f [string]$item.name, [string]$item.status, [string]$item.next_step)
+        if ([string]$item.status -ne 'ready') {
+            $manualFollowUp += [string]$item.name
+        }
+    }
+    Write-Host ("- manual_follow_up: {0}" -f $(if ($manualFollowUp.Count -gt 0) { $manualFollowUp -join ', ' } else { 'none' }))
+}
+
 $installPath = Join-Path $repoRoot 'install.ps1'
 $checkPath = Join-Path $repoRoot 'check.ps1'
 $materializePath = Join-Path $repoRoot 'scripts\setup\materialize-codex-mcp-profile.ps1'
@@ -140,7 +166,17 @@ if ($StrictOffline) {
 
 Write-Host ''
 Write-Host '[1/5] Installing adapter payload...' -ForegroundColor Yellow
-& $installPath @installArgs
+$previousInstallReportSuppression = $env:VGO_SUPPRESS_INSTALL_COMPLETION_REPORT
+$env:VGO_SUPPRESS_INSTALL_COMPLETION_REPORT = '1'
+try {
+    & $installPath @installArgs
+} finally {
+    if ([string]::IsNullOrWhiteSpace($previousInstallReportSuppression)) {
+        Remove-Item Env:VGO_SUPPRESS_INSTALL_COMPLETION_REPORT -ErrorAction SilentlyContinue
+    } else {
+        $env:VGO_SUPPRESS_INSTALL_COMPLETION_REPORT = $previousInstallReportSuppression
+    }
+}
 
 switch ([string]$Adapter.bootstrap_mode) {
     'governed' {
@@ -196,6 +232,7 @@ switch ([string]$Adapter.bootstrap_mode) {
 }
 
 Write-Host ''
+Write-McpAutoProvisionSummary -TargetRoot $TargetRoot
 Write-Host 'One-shot setup completed.' -ForegroundColor Green
 $checkShellPath = Get-VgoPowerShellCommand
 $checkShellLeaf = [System.IO.Path]::GetFileName($checkShellPath).ToLowerInvariant()
