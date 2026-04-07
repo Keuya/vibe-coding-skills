@@ -13,7 +13,7 @@ from .hosts import (
     resolve_target_root,
 )
 from .install_support import reconcile_install_postconditions
-from .output import parse_json_output, print_install_banner, print_install_completion_hint
+from .output import parse_json_output, print_install_banner, print_install_completion_hint, print_install_completion_report
 from .process import print_process_output, run_powershell_file, run_subprocess
 from .repo import get_installed_runtime_config
 
@@ -50,6 +50,9 @@ def install_command(args: argparse.Namespace) -> int:
         repo_root,
         target_root,
         host_id,
+        profile=args.profile,
+        install_external=bool(args.install_external),
+        frontend=args.frontend,
         external_fallback_used=external_fallback_used,
         strict_offline=bool(args.strict_offline),
         skip_runtime_freshness_gate=bool(args.skip_runtime_freshness_gate),

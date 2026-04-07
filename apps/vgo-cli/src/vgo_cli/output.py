@@ -6,6 +6,7 @@ import shutil
 import subprocess
 
 from .errors import CliError
+from .mcp_provision import manual_follow_up_servers
 from .process import print_process_output
 
 
@@ -28,6 +29,33 @@ def print_install_completion_hint(frontend: str, *, host_id: str, profile: str, 
         print(f'Run: {shell_name} -NoProfile -File .\\check.ps1 -Profile {profile} -HostId {host_id} -TargetRoot {target_root}')
         return
     print(f'Install done. Run: bash check.sh --profile {profile} --host {host_id} --target-root {target_root}')
+
+
+def print_install_completion_report(
+    frontend: str,
+    *,
+    host_id: str,
+    profile: str,
+    target_root: Path,
+    install_receipt: dict[str, object],
+    mcp_receipt: dict[str, object],
+) -> None:
+    follow_up = manual_follow_up_servers(mcp_receipt)
+    print('')
+    print('MCP auto-provision summary')
+    print(f'- host: {host_id}')
+    print(f'- profile: {profile}')
+    print(f'- target_root: {target_root}')
+    print(f'- installed_locally: {mcp_receipt.get("install_state") == "installed_locally"}')
+    print(f'- mcp_auto_provision_attempted: {bool(mcp_receipt.get("mcp_auto_provision_attempted"))}')
+    print('- completed_parts: runtime payload installed; post-install gates reconciled; MCP outcomes summarized once at completion')
+    for item in mcp_receipt.get('mcp_results') or []:
+        print(
+            f'- {item["name"]}: status={item["status"]} '
+            f'provision_path={item["provision_path"]} next_step={item["next_step"]}'
+        )
+    print(f'- online_ready: verify separately with the router connectivity probe for {target_root}')
+    print(f'- manual_follow_up: {", ".join(follow_up) if follow_up else "none"}')
 
 
 
