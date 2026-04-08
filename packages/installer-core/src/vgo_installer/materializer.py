@@ -23,6 +23,7 @@ from vgo_contracts.mirror_topology_contract import (
 )
 
 from .ledger_service import MaterializationLedgerState
+from .discoverable_wrappers import materialize_host_visible_wrappers as _materialize_host_visible_wrappers
 
 TrackCreatedPath = Callable[[Path | str], None]
 RecordOwnedTreeRoot = Callable[[Path | str], None]
@@ -472,6 +473,26 @@ def ensure_skill_present(
                 break
     if required and resolve_skill_entrypoint(destination) is None:
         missing.add(name)
+
+
+def materialize_host_visible_wrappers(
+    *,
+    repo_root: Path,
+    target_root: Path,
+    host_id: str,
+    surface: dict[str, Any],
+) -> list[Path]:
+    from vgo_contracts.discoverable_entry_surface import load_discoverable_entry_surface
+
+    discoverable_entry_surface = str(surface.get("discoverable_entry_surface") or "").strip()
+    if not discoverable_entry_surface:
+        return []
+    entry_surface = load_discoverable_entry_surface(repo_root)
+    return _materialize_host_visible_wrappers(
+        target_root=target_root,
+        host_id=host_id,
+        surface=entry_surface,
+    )
 
 
 def install_codex_payload(

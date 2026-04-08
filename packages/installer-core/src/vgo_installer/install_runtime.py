@@ -39,6 +39,7 @@ from .materializer import (
     install_opencode_guidance_payload,
     install_runtime_core_mode_payload,
     materialize_allowlisted_skills,
+    materialize_host_visible_wrappers,
     materialize_internal_skill_corpus,
     resolve_bundled_skills_root,
     restore_skill_entrypoint_if_needed,
@@ -567,6 +568,15 @@ def main(argv: list[str] | None = None):
         )
     else:
         raise SystemExit(f"Unsupported adapter install mode: {mode}")
+
+    for wrapper_path in materialize_host_visible_wrappers(
+        repo_root=repo_root,
+        target_root=target_root,
+        host_id=adapter["id"],
+        surface=dict(packaging.get("public_skill_surface") or {}),
+    ):
+        track_created_path(wrapper_path)
+        record_specialist_wrapper(wrapper_path)
 
     closure_path, closure = materialize_host_closure(
         target_root,

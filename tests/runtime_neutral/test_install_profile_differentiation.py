@@ -92,6 +92,10 @@ class InstallProfileDifferentiationTests(unittest.TestCase):
             self.assertEqual(["vibe"], ledger["payload_summary"]["public_skill_names"])
             # In a fresh temp target, every file should be installer-owned.
             self.assertEqual(count_files(target_root), ledger["payload_summary"]["installed_file_count"])
+            self.assertTrue((target_root / "commands" / "vibe.md").exists())
+            self.assertTrue((target_root / "commands" / "vibe-want.md").exists())
+            self.assertTrue((target_root / "commands" / "vibe-how.md").exists())
+            self.assertTrue((target_root / "commands" / "vibe-do.md").exists())
 
     def test_full_install_extends_minimal_payload_and_records_larger_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
