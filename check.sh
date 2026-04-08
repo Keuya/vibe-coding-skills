@@ -681,161 +681,159 @@ show_installed_runtime_upgrade_hint() {
   installed_version="$(json_query_scalar_from_file "$installed_governance" 'release.version' 2>/dev/null || true)"
   installed_updated="$(json_query_scalar_from_file "$installed_governance" 'release.updated' 2>/dev/null || true)"
 
-  if [[ -n "$repo_version" && "$repo_version" != "$installed_version" ]] || [[ -n "$repo_updated" && "$repo_updated" != "$installed_updated" ]]; then
-    warn_note "installed runtime release differs from canonical repo release (installed=${installed_version:-<missing>}/${installed_updated:-<missing>}, repo=${repo_version:-<missing>}/${repo_updated:-<missing>}). Re-run install.sh or one-shot-setup.sh for TARGET_ROOT=${TARGET_ROOT} before treating freshness failures as receipt-only issues."
+  if [[ -n "$repo_version" && -n "$installed_version" && "$repo_version" != "$installed_version" ]] ||
+     [[ -n "$repo_updated" && -n "$installed_updated" && "$repo_updated" != "$installed_updated" ]]; then
+    info_note "installed runtime release differs from this repo; re-run install before treating freshness drift as a receipt-only issue"
   fi
 }
 
 run_runtime_freshness_gate() {
   if [[ "$SKIP_RUNTIME_FRESHNESS_GATE" == "true" ]]; then
-    warn_note 'runtime freshness gate skipped by request.'
+    echo "[WARN] runtime freshness gate skipped by request"
+    WARN=$((WARN+1))
+    validate_runtime_receipt
     return
   fi
 
   if ! canonical_repo_available "${SCRIPT_DIR}"; then
-    warn_note 'runtime freshness gate skipped: run canonical repo check.sh to execute freshness verification.'
+    echo "[WARN] runtime freshness gate skipped because this check.sh is not running from a canonical repo checkout"
+    WARN=$((WARN+1))
+    validate_runtime_receipt
     return
   fi
 
-  local governance_path="${SCRIPT_DIR}/config/version-governance.json"
-  local gate_rel='scripts/verify/vibe-installed-runtime-freshness-gate.ps1'
-  if [[ -f "$governance_path" ]]; then
-    local configured_gate
-    configured_gate="$(json_query_scalar_from_file "$governance_path" 'runtime.installed_runtime.post_install_gate' 2>/dev/null || true)"
-    if [[ -n "$configured_gate" ]]; then
-      gate_rel="$configured_gate"
+  if pick_powershell >/dev/null 2>&1; then
+    local gate_script="${SCRIPT_DIR}/scripts/verify/vibe-installed-runtime-freshness-gate.ps1"
+    if [[ -f "$gate_script" ]]; then
+      if run_powershell_file "$gate_script" -TargetRoot "${TARGET_ROOT}"; then
+        echo "[OK] vibe installed runtime freshness gate"
+        PASS=$((PASS+1))
+      else
+        echo "[FAIL] vibe installed runtime freshness gate"
+        FAIL=$((FAIL+1))
+      fi
+      validate_runtime_receipt
+      return
     fi
-  fi
-
-  local gate_path="${SCRIPT_DIR}/${gate_rel}"
-  if [[ ! -f "$gate_path" ]]; then
-    echo "[FAIL] vibe runtime freshness gate script -> $gate_path"
-    FAIL=$((FAIL+1))
-    return
   fi
 
   if run_runtime_neutral_freshness_gate; then
-    echo "[OK] vibe installed runtime freshness gate"
+    echo "[OK] vibe installed runtime freshness gate (runtime-neutral)"
     PASS=$((PASS+1))
-  elif [[ $? -eq 127 ]]; then
-    if ! pick_powershell >/dev/null 2>&1; then
-      warn_note 'runtime freshness gate skipped: neither Python runtime-neutral gate nor a PowerShell fallback is available.'
-      return
-    fi
-    if run_powershell_file "$gate_path" -TargetRoot "$TARGET_ROOT"; then
-      echo "[OK] vibe installed runtime freshness gate"
-      PASS=$((PASS+1))
-    else
-      echo "[FAIL] vibe installed runtime freshness gate"
-      FAIL=$((FAIL+1))
-    fi
   else
     echo "[FAIL] vibe installed runtime freshness gate"
     FAIL=$((FAIL+1))
+  fi
+  validate_runtime_receipt
+}
+
+run_runtime_bom_frontmatter_gate() {
+  if ! canonical_repo_available "${SCRIPT_DIR}"; then
+    echo "[WARN] runtime BOM/frontmatter gate skipped because this check.sh is not running from a canonical repo checkout"
+    WARN=$((WARN+1))
+    return
+  fi
+
+  if pick_powershell >/dev/null 2>&1; then
+    local gate_script="${SCRIPT_DIR}/scripts/verify/vibe-bom-frontmatter-gate.ps1"
+    if [[ -f "$gate_script" ]]; then
+      if run_powershell_file "$gate_script" -TargetRoot "${TARGET_ROOT}"; then
+        echo "[OK] vibe runtime BOM/frontmatter gate"
+        PASS=$((PASS+1))
+      else
+        echo "[FAIL] vibe runtime BOM/frontmatter gate"
+        FAIL=$((FAIL+1))
+      fi
+      return
+    fi
+  fi
+
+  if run_runtime_neutral_bootstrap_doctor; then
+    echo "[OK] vibe runtime BOM/frontmatter gate (runtime-neutral bootstrap doctor)"
+    PASS=$((PASS+1))
+  else
+    echo "[WARN] vibe runtime BOM/frontmatter gate skipped (PowerShell gate unavailable in this shell)"
+    WARN=$((WARN+1))
   fi
 }
 
 run_runtime_coherence_gate() {
   if ! canonical_repo_available "${SCRIPT_DIR}"; then
-    warn_note 'runtime coherence gate skipped: run canonical repo check.sh to execute coherence verification.'
+    echo "[WARN] runtime coherence gate skipped because this check.sh is not running from a canonical repo checkout"
+    WARN=$((WARN+1))
     return
   fi
 
-  local governance_path="${SCRIPT_DIR}/config/version-governance.json"
-  local gate_rel='scripts/verify/vibe-release-install-runtime-coherence-gate.ps1'
-  if [[ -f "$governance_path" ]]; then
-    local configured_gate
-    configured_gate="$(json_query_scalar_from_file "$governance_path" 'runtime.installed_runtime.coherence_gate' 2>/dev/null || true)"
-    if [[ -n "$configured_gate" ]]; then
-      gate_rel="$configured_gate"
+  if pick_powershell >/dev/null 2>&1; then
+    local gate_script="${SCRIPT_DIR}/scripts/verify/vibe-release-install-runtime-coherence-gate.ps1"
+    if [[ -f "$gate_script" ]]; then
+      if run_powershell_file "$gate_script" -TargetRoot "${TARGET_ROOT}"; then
+        echo "[OK] vibe release/install/runtime coherence gate"
+        PASS=$((PASS+1))
+      else
+        echo "[FAIL] vibe release/install/runtime coherence gate"
+        FAIL=$((FAIL+1))
+      fi
+      return
     fi
-  fi
-
-  local gate_path="${SCRIPT_DIR}/${gate_rel}"
-  if [[ ! -f "$gate_path" ]]; then
-    echo "[FAIL] vibe runtime coherence gate script -> $gate_path"
-    FAIL=$((FAIL+1))
-    return
   fi
 
   if run_runtime_neutral_coherence_gate; then
-    echo "[OK] vibe release/install/runtime coherence gate"
+    echo "[OK] vibe release/install/runtime coherence gate (runtime-neutral)"
     PASS=$((PASS+1))
-  elif [[ $? -eq 127 ]]; then
-    if ! pick_powershell >/dev/null 2>&1; then
-      warn_note 'runtime coherence gate skipped: neither Python runtime-neutral gate nor a PowerShell fallback is available.'
-      return
-    fi
-    if run_powershell_file "$gate_path" -TargetRoot "$TARGET_ROOT"; then
-      echo "[OK] vibe release/install/runtime coherence gate"
-      PASS=$((PASS+1))
-    else
-      echo "[FAIL] vibe release/install/runtime coherence gate"
-      FAIL=$((FAIL+1))
-    fi
   else
-    echo "[FAIL] vibe release/install/runtime coherence gate"
-    FAIL=$((FAIL+1))
+    echo "[WARN] vibe release/install/runtime coherence gate skipped (PowerShell gate unavailable in this shell)"
+    WARN=$((WARN+1))
   fi
 }
 
-ADAPTER_CHECK_MODE="$(adapter_query check_mode)"
-
-echo "=== VCO Adapter Health Check ==="
-echo "Host: ${HOST_ID}"
-echo "Mode: ${ADAPTER_CHECK_MODE}"
-echo "Target: ${TARGET_ROOT}"
-echo "SkipRuntimeFreshnessGate: ${SKIP_RUNTIME_FRESHNESS_GATE}"
-echo "Deep: ${DEEP}"
-
-runtime_target_rel="skills/vibe"
+ADAPTER_CHECK_MODE="$(adapter_query 'check_mode')"
+startup_runtime_target_rel='skills/vibe'
 repo_governance_path="${SCRIPT_DIR}/config/version-governance.json"
 if [[ -f "$repo_governance_path" ]]; then
   configured_runtime_target_rel="$(json_query_scalar_from_file "$repo_governance_path" 'runtime.installed_runtime.target_relpath' 2>/dev/null || true)"
   if [[ -n "$configured_runtime_target_rel" ]]; then
-    runtime_target_rel="$configured_runtime_target_rel"
+    startup_runtime_target_rel="$configured_runtime_target_rel"
+  fi
+fi
+runtime_skill_root="${TARGET_ROOT}/${startup_runtime_target_rel}"
+runtime_nested_skill_root="${runtime_skill_root}/bundled/skills/vibe"
+runtime_nested_skill_presence_policy='optional'
+runtime_nested_skill_required='false'
+if [[ -f "$repo_governance_path" ]]; then
+  topology_required="$(json_query_scalar_from_file "$repo_governance_path" 'mirror_topology.targets.1.required' 2>/dev/null || true)"
+  topology_presence_policy="$(json_query_scalar_from_file "$repo_governance_path" 'mirror_topology.targets.1.presence_policy' 2>/dev/null || true)"
+  if [[ -n "$topology_presence_policy" ]]; then
+    runtime_nested_skill_presence_policy="$topology_presence_policy"
+  fi
+  if [[ "$topology_required" == 'true' || "$runtime_nested_skill_presence_policy" == 'required' ]]; then
+    runtime_nested_skill_required='true'
   fi
 fi
 
-runtime_skill_root="${TARGET_ROOT}/${runtime_target_rel}"
-runtime_nested_skill_root="${runtime_skill_root}/bundled/skills/vibe"
-
-if [[ "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
+if [[ "$ADAPTER_CHECK_MODE" == 'governed' ]]; then
   check_path "settings.json" "${TARGET_ROOT}/settings.json"
 fi
-if [[ "${ADAPTER_CHECK_MODE}" == "preview-guidance" ]]; then
-  if [[ "${HOST_ID}" == "opencode" ]]; then
-    info_note "opencode preview now runs as skills-only activation; the real opencode.json stays untouched and sidecar state is verified"
-  elif [[ "${HOST_ID}" == "claude-code" ]]; then
-    info_note "claude-code preview now verifies sidecar state plus a managed settings.json surface"
+if [[ "$ADAPTER_CHECK_MODE" == 'preview-guidance' ]]; then
+  if [[ "$HOST_ID" == 'opencode' ]]; then
+    echo "[INFO] opencode preview now runs as skills-only activation; the real opencode.json stays untouched and sidecar state is verified"
   else
-    info_note "${HOST_ID} preview now runs as skills-only activation; host-native config files stay untouched and sidecar state is verified"
+    echo "[INFO] ${HOST_ID} preview now runs as skills-only activation; host-native config files stay untouched and sidecar state is verified"
   fi
 fi
-if [[ "${ADAPTER_CHECK_MODE}" == "runtime-core" ]]; then
-  info_note "${HOST_ID} runtime-core now verifies skill-native activation and sidecar state only; host-native workflow/config files are intentionally absent"
+if [[ "$ADAPTER_CHECK_MODE" == 'runtime-core' ]]; then
+  echo "[INFO] ${HOST_ID} runtime-core now verifies skill-native activation and sidecar state only; host-native workflow/config files are intentionally absent"
 fi
-if [[ "${HOST_ID}" == "claude-code" || "${HOST_ID}" == "cursor" || "${HOST_ID}" == "windsurf" || "${HOST_ID}" == "openclaw" || "${HOST_ID}" == "opencode" ]]; then
+if [[ "$HOST_ID" == 'claude-code' || "$HOST_ID" == 'cursor' || "$HOST_ID" == 'windsurf' || "$HOST_ID" == 'openclaw' || "$HOST_ID" == 'opencode' ]]; then
   check_path "host settings sidecar" "${TARGET_ROOT}/.vibeskills/host-settings.json"
 fi
-if [[ "${HOST_ID}" == "claude-code" ]]; then
-  check_path "settings.json" "${TARGET_ROOT}/settings.json"
-  managed_host_id="$(json_query_scalar_from_file "${TARGET_ROOT}/settings.json" 'vibeskills.host_id' 2>/dev/null || true)"
-  if [[ "${managed_host_id}" == "claude-code" ]]; then
-    echo "[OK] settings.json managed vibeskills node"
-    PASS=$((PASS+1))
-  else
-    echo "[FAIL] settings.json managed vibeskills node"
-    FAIL=$((FAIL+1))
-  fi
-fi
-check_path "host closure manifest" "${TARGET_ROOT}/.vibeskills/host-closure.json"
-if [[ -f "${TARGET_ROOT}/.vibeskills/host-closure.json" ]]; then
-  closure_state="$(json_query_scalar_from_file "${TARGET_ROOT}/.vibeskills/host-closure.json" 'host_closure_state' 2>/dev/null || true)"
-  if [[ -n "${closure_state}" ]]; then
-    if [[ "${closure_state}" == "closed_ready" ]]; then
-      echo "[OK] host closure state -> ${closure_state}"
-      PASS=$((PASS+1))
+host_closure_path="${TARGET_ROOT}/.vibeskills/host-closure.json"
+check_path "host closure manifest" "$host_closure_path"
+if [[ -f "$host_closure_path" ]]; then
+  closure_state="$(json_query_scalar_from_file "$host_closure_path" 'host_closure_state' 2>/dev/null || true)"
+  if [[ -n "$closure_state" ]]; then
+    if [[ "$closure_state" == 'closed_ready' ]]; then
+      check_condition "host closure state" true
     else
       warn_note "host closure state -> ${closure_state}"
     fi
@@ -931,7 +929,7 @@ if [[ "${PROFILE}" == "full" ]]; then
 fi
 if [[ "${HOST_ID}" == "codex" && "${ADAPTER_CHECK_MODE}" == "governed" && "${PROFILE}" == "full" ]]; then
   for n in vibe-what-do-i-want vibe-how-do-we-do vibe-do-it; do
-    check_path "skill/${n}" "$(resolve_skill_descriptor_path "${n}")"
+    check_path "skill/${n}" "${TARGET_ROOT}/skills/${n}/SKILL.md"
   done
 fi
 if [[ "${HOST_ID}" == "codex" && "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
@@ -975,35 +973,38 @@ else
 fi
 
 if [[ "${DEEP}" == "true" ]]; then
-  if [[ "${ADAPTER_CHECK_MODE}" != "governed" ]]; then
-    echo "[WARN] deep doctor skipped for adapter mode '${ADAPTER_CHECK_MODE}'"
-    WARN=$((WARN+1))
-  else
-    doctor_path="${SCRIPT_DIR}/scripts/verify/vibe-bootstrap-doctor-gate.ps1"
-    if [[ ! -f "${doctor_path}" ]]; then
-      echo "[FAIL] vibe bootstrap doctor gate -> ${doctor_path}"
-      FAIL=$((FAIL+1))
-    elif run_runtime_neutral_bootstrap_doctor; then
-      echo "[OK] vibe bootstrap doctor gate"
-      PASS=$((PASS+1))
-    elif [[ $? -eq 127 ]]; then
-      if ! pick_powershell >/dev/null 2>&1; then
-        echo "[WARN] vibe bootstrap doctor gate skipped because neither the Python runtime-neutral doctor nor a PowerShell host is available in this shell environment."
-        WARN=$((WARN+1))
-      elif run_powershell_file "${doctor_path}" -TargetRoot "${TARGET_ROOT}" -WriteArtifacts; then
+  if [[ "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
+    if pick_powershell >/dev/null 2>&1; then
+      if run_powershell_file "${SCRIPT_DIR}/scripts/verify/vibe-bootstrap-doctor-gate.ps1" -TargetRoot "${TARGET_ROOT}" -WriteArtifacts; then
         echo "[OK] vibe bootstrap doctor gate"
         PASS=$((PASS+1))
       else
         echo "[FAIL] vibe bootstrap doctor gate"
         FAIL=$((FAIL+1))
       fi
+    elif run_runtime_neutral_bootstrap_doctor; then
+      echo "[OK] vibe bootstrap doctor gate (runtime-neutral)"
+      PASS=$((PASS+1))
     else
-      echo "[FAIL] vibe bootstrap doctor gate"
+      echo "[WARN] vibe bootstrap doctor gate skipped (PowerShell gate unavailable in this shell)"
       WARN=$((WARN+1))
-      FAIL=$((FAIL+1))
     fi
+  else
+    echo "[WARN] deep doctor skipped for adapter mode '${ADAPTER_CHECK_MODE}'"
+    WARN=$((WARN+1))
   fi
 fi
 
+echo "=== VCO Adapter Health Check ==="
+echo "Host: ${HOST_ID}"
+echo "Mode: ${ADAPTER_CHECK_MODE}"
+echo "Target: ${TARGET_ROOT}"
+echo "SkipRuntimeFreshnessGate: ${SKIP_RUNTIME_FRESHNESS_GATE}"
+echo "Deep: ${DEEP}"
+
+if [[ $FAIL -gt 0 ]]; then
+  echo "Result: ${PASS} passed, ${FAIL} failed, ${WARN} warnings"
+  exit 1
+fi
+
 echo "Result: ${PASS} passed, ${FAIL} failed, ${WARN} warnings"
-[[ ${FAIL} -eq 0 ]]

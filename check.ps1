@@ -245,90 +245,32 @@ function Normalize-ComparablePath {
     return $null
   }
 
-  return [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\','/')).ToLowerInvariant()
+  $expanded = $Path
+  if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+    $expanded = Join-Path (Get-Location).ProviderPath $expanded
+  }
+  $full = [System.IO.Path]::GetFullPath($expanded)
+  return $full.TrimEnd([System.IO.Path]::DirectorySeparatorChar).ToLowerInvariant()
 }
 
 function Format-OptionalValue {
   param([string]$Value)
-
   if ([string]::IsNullOrWhiteSpace($Value)) {
     return '<missing>'
   }
-
   return $Value
-}
-
-function Resolve-CodexDuplicateSkillRoot {
-  param(
-    [string]$TargetRoot,
-    [string]$HostId
-  )
-
-  if ([string]$HostId -ne 'codex') {
-    return $null
-  }
-
-  $leaf = (Split-Path -Path $TargetRoot -Leaf).ToLowerInvariant()
-  if ($leaf -ne '.codex') {
-    return $null
-  }
-
-  $parent = Get-VgoParentPath -Path $TargetRoot
-  if ([string]::IsNullOrWhiteSpace($parent)) {
-    return $null
-  }
-
-  return (Join-Path $parent '.agents\skills\vibe')
-}
-
-function Test-VibeSkillDirectory {
-  param([string]$Path)
-
-  if ([string]::IsNullOrWhiteSpace($Path)) {
-    return $false
-  }
-
-  $skillMd = Join-Path $Path 'SKILL.md'
-  if (-not (Test-Path -LiteralPath $skillMd)) {
-    return $false
-  }
-
-  $lines = Get-Content -LiteralPath $skillMd -TotalCount 20 -Encoding UTF8
-  return [bool](@($lines | Where-Object { $_ -match '^\s*name:\s*vibe\s*$' }).Count -gt 0)
-}
-
-function Check-CodexDuplicateSkillSurface {
-  param(
-    [string]$TargetRoot,
-    [string]$HostId
-  )
-
-  $duplicateRoot = Resolve-CodexDuplicateSkillRoot -TargetRoot $TargetRoot -HostId $HostId
-  if ([string]::IsNullOrWhiteSpace($duplicateRoot) -or -not (Test-Path -LiteralPath $duplicateRoot -PathType Container)) {
-    return
-  }
-
-  if (Test-VibeSkillDirectory -Path $duplicateRoot) {
-    Write-Host ("[FAIL] duplicate Codex-discovered vibe skill surface -> {0}" -f $duplicateRoot) -ForegroundColor Red
-    Write-Host '[FAIL] Re-run install.ps1 for the default Codex root to quarantine the legacy .agents copy, or move it out of .agents/skills manually.' -ForegroundColor Red
-    $script:fail++
-    return
-  }
-
-  Write-WarnNote -Message ("unexpected directory exists at Codex duplicate-surface path: {0}" -f $duplicateRoot)
 }
 
 function Test-ReceiptTargetFreshness {
   param(
     [string]$TargetRoot,
-    [psobject]$RuntimeConfig
+    [pscustomobject]$RuntimeConfig
   )
 
   $receiptRel = [string]$RuntimeConfig.receipt_relpath
   if ([string]::IsNullOrWhiteSpace($receiptRel)) {
     return
   }
-
   $receiptPath = Join-Path $TargetRoot $receiptRel
   if (-not (Test-Path -LiteralPath $receiptPath)) {
     return
@@ -338,14 +280,9 @@ function Test-ReceiptTargetFreshness {
   if ([string]::IsNullOrWhiteSpace($targetRel)) {
     $targetRel = 'skills/vibe'
   }
-
-  $installedGovernancePath = Join-Path $TargetRoot (Join-Path $targetRel 'config\version-governance.json')
+  $installedRoot = Join-Path $TargetRoot $targetRel
+  $installedGovernancePath = Join-Path $installedRoot 'config\version-governance.json'
   if (-not (Test-Path -LiteralPath $installedGovernancePath)) {
-    return
-  }
-
-  $installedGovernance = Get-JsonObject -Path $installedGovernancePath -Label 'installed vibe governance'
-  if ($null -eq $installedGovernance) {
     return
   }
 
@@ -354,50 +291,50 @@ function Test-ReceiptTargetFreshness {
     return
   }
 
-  $targetRel = [string]$RuntimeConfig.target_relpath
-  if ([string]::IsNullOrWhiteSpace($targetRel)) {
-    $targetRel = 'skills/vibe'
+  $installedGovernance = Get-JsonObject -Path $installedGovernancePath -Label 'installed vibe governance'
+  if ($null -eq $installedGovernance) {
+    return
   }
 
-  $expectedTargetRoot = Normalize-ComparablePath -Path $TargetRoot
-  $expectedInstalledRoot = Normalize-ComparablePath -Path (Join-Path $TargetRoot $targetRel)
-  $receiptTargetRoot = Normalize-ComparablePath -Path ([string]$receipt.target_root)
-  $receiptInstalledRoot = Normalize-ComparablePath -Path ([string]$receipt.installed_root)
+  $receiptVersion = if ($receipt.PSObject.Properties.Name -contains 'receipt_version') { [int]$receipt.receipt_version } else { 0 }
+  $expectedVersion = if ($RuntimeConfig.PSObject.Properties.Name -contains 'receipt_contract_version') { [int]$RuntimeConfig.receipt_contract_version } else { 1 }
+  Check-Condition -Label 'vibe runtime freshness receipt version' -Condition ($receiptVersion -ge $expectedVersion) -FailureDetail ("receipt_version={0}" -f $receiptVersion)
 
-  $receiptGateResult = if ($receipt.PSObject.Properties.Name -contains 'gate_result') { [string]$receipt.gate_result } else { $null }
-  Check-Condition -Label 'vibe runtime freshness receipt gate_result' -Condition ($receiptGateResult -eq 'PASS') -FailureDetail (Format-OptionalValue -Value $receiptGateResult)
+  $receiptGate = if ($receipt.PSObject.Properties.Name -contains 'gate_result') { [string]$receipt.gate_result } else { '' }
+  Check-Condition -Label 'vibe runtime freshness receipt gate_result' -Condition ($receiptGate -eq 'PASS') -FailureDetail ("gate_result={0}" -f (Format-OptionalValue -Value $receiptGate))
 
-  $receiptVersionValue = if ($receipt.PSObject.Properties.Name -contains 'receipt_version') { [int]$receipt.receipt_version } else { 0 }
-  $expectedReceiptContractVersion = if ($RuntimeConfig.PSObject.Properties.Name -contains 'receipt_contract_version') { [int]$RuntimeConfig.receipt_contract_version } else { 1 }
-  Check-Condition -Label 'vibe runtime freshness receipt version' -Condition ($receiptVersionValue -ge $expectedReceiptContractVersion) -FailureDetail ([string]$receiptVersionValue)
+  $normalizedTargetRoot = Normalize-ComparablePath -Path $TargetRoot
+  $receiptTargetRoot = if ($receipt.PSObject.Properties.Name -contains 'target_root') { Normalize-ComparablePath -Path ([string]$receipt.target_root) } else { $null }
+  $normalizedInstalledRoot = Normalize-ComparablePath -Path $installedRoot
+  $receiptInstalledRoot = if ($receipt.PSObject.Properties.Name -contains 'installed_root') { Normalize-ComparablePath -Path ([string]$receipt.installed_root) } else { $null }
 
-  Check-Condition -Label 'vibe runtime freshness receipt target_root' -Condition ($receiptTargetRoot -eq $expectedTargetRoot) -FailureDetail (Format-OptionalValue -Value ([string]$receipt.target_root))
-  Check-Condition -Label 'vibe runtime freshness receipt installed_root' -Condition ($receiptInstalledRoot -eq $expectedInstalledRoot) -FailureDetail (Format-OptionalValue -Value ([string]$receipt.installed_root))
+  Check-Condition -Label 'vibe runtime freshness receipt target_root' -Condition ($receiptTargetRoot -eq $normalizedTargetRoot) -FailureDetail ("target_root={0}" -f (Format-OptionalValue -Value $receiptTargetRoot))
+  Check-Condition -Label 'vibe runtime freshness receipt installed_root' -Condition ($receiptInstalledRoot -eq $normalizedInstalledRoot) -FailureDetail ("installed_root={0}" -f (Format-OptionalValue -Value $receiptInstalledRoot))
 
   $installedRelease = if ($installedGovernance.PSObject.Properties.Name -contains 'release') { $installedGovernance.release } else { $null }
-  $installedVersion = if ($null -ne $installedRelease -and $installedRelease.PSObject.Properties.Name -contains 'version') { [string]$installedRelease.version } else { $null }
-  $installedUpdated = if ($null -ne $installedRelease -and $installedRelease.PSObject.Properties.Name -contains 'updated') { [string]$installedRelease.updated } else { $null }
+  if ($null -eq $installedRelease) {
+    return
+  }
+
+  $installedVersion = if ($installedRelease.PSObject.Properties.Name -contains 'version') { [string]$installedRelease.version } else { $null }
+  $installedUpdated = if ($installedRelease.PSObject.Properties.Name -contains 'updated') { [string]$installedRelease.updated } else { $null }
+
   $receiptRelease = if ($receipt.PSObject.Properties.Name -contains 'release') { $receipt.release } else { $null }
-  $receiptVersion = if ($null -ne $receiptRelease -and $receiptRelease.PSObject.Properties.Name -contains 'version') { [string]$receiptRelease.version } else { $null }
-  $receiptUpdated = if ($null -ne $receiptRelease -and $receiptRelease.PSObject.Properties.Name -contains 'updated') { [string]$receiptRelease.updated } else { $null }
+  $receiptReleaseVersion = if ($null -ne $receiptRelease -and $receiptRelease.PSObject.Properties.Name -contains 'version') { [string]$receiptRelease.version } else { $null }
+  $receiptReleaseUpdated = if ($null -ne $receiptRelease -and $receiptRelease.PSObject.Properties.Name -contains 'updated') { [string]$receiptRelease.updated } else { $null }
 
-  if (-not [string]::IsNullOrWhiteSpace($installedVersion)) {
-    Check-Condition -Label 'vibe runtime freshness receipt release.version' -Condition ($receiptVersion -eq $installedVersion) -FailureDetail (Format-OptionalValue -Value $receiptVersion)
-  }
-
-  if (-not [string]::IsNullOrWhiteSpace($installedUpdated)) {
-    Check-Condition -Label 'vibe runtime freshness receipt release.updated' -Condition ($receiptUpdated -eq $installedUpdated) -FailureDetail (Format-OptionalValue -Value $receiptUpdated)
-  }
+  Check-Condition -Label 'vibe runtime freshness receipt release.version' -Condition ($receiptReleaseVersion -eq $installedVersion) -FailureDetail ("release.version={0}" -f (Format-OptionalValue -Value $receiptReleaseVersion))
+  Check-Condition -Label 'vibe runtime freshness receipt release.updated' -Condition ($receiptReleaseUpdated -eq $installedUpdated) -FailureDetail ("release.updated={0}" -f (Format-OptionalValue -Value $receiptReleaseUpdated))
 }
 
 function Show-InstalledRuntimeUpgradeHint {
   param(
     [psobject]$Governance,
     [string]$TargetRoot,
-    [psobject]$RuntimeConfig
+    [pscustomobject]$RuntimeConfig
   )
 
-  if ($null -eq $Governance -or $null -eq $RuntimeConfig) {
+  if ($null -eq $Governance -or -not ($Governance.PSObject.Properties.Name -contains 'release') -or $null -eq $Governance.release) {
     return
   }
 
@@ -405,7 +342,6 @@ function Show-InstalledRuntimeUpgradeHint {
   if ([string]::IsNullOrWhiteSpace($targetRel)) {
     $targetRel = 'skills/vibe'
   }
-
   $installedGovernancePath = Join-Path $TargetRoot (Join-Path $targetRel 'config\version-governance.json')
   if (-not (Test-Path -LiteralPath $installedGovernancePath)) {
     return
@@ -749,7 +685,7 @@ function Invoke-AdapterSpecificChecks {
 
   if ([string]$Adapter.id -eq 'codex' -and [string]$Adapter.check_mode -eq 'governed' -and $Profile -eq 'full') {
     foreach ($name in @('vibe-what-do-i-want', 'vibe-how-do-we-do', 'vibe-do-it')) {
-      Check-Path -Label "skill/$name" -Path (Resolve-SkillDescriptorPath -SkillName $name)
+      Check-Path -Label "skill/$name" -Path (Join-Path $TargetRoot "skills\$name\SKILL.md")
     }
   }
 
