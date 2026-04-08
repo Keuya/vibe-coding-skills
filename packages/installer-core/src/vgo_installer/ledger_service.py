@@ -157,6 +157,16 @@ def build_payload_summary(target_root: Path | str, ledger: dict) -> dict[str, ob
         for name in managed_skill_names
         if not name.startswith('.') and (target_root_path / 'skills' / name).is_dir()
     )
+    host_visible_entry_names = sorted(
+        {
+            candidate.stem
+            for raw_path in ledger.get('specialist_wrapper_paths') or []
+            for candidate in [Path(str(raw_path)).resolve(strict=False)]
+            if candidate.is_file()
+            and candidate.suffix == '.md'
+            and candidate.parent.resolve(strict=False) != (target_root_path / 'skills').resolve(strict=False)
+        }
+    )
     packaging_manifest = ledger.get('packaging_manifest') if isinstance(ledger.get('packaging_manifest'), dict) else {}
     internal_skill_corpus = packaging_manifest.get('internal_skill_corpus') if isinstance(packaging_manifest, dict) else {}
     internal_skill_target = None
@@ -246,6 +256,8 @@ def build_payload_summary(target_root: Path | str, ledger: dict) -> dict[str, ob
         'installed_skill_names': installed_skill_names,
         'public_skill_count': len(public_skill_names),
         'public_skill_names': public_skill_names,
+        'host_visible_entry_count': len(host_visible_entry_names),
+        'host_visible_entry_names': host_visible_entry_names,
         'internal_skill_count': len(internal_skill_names),
         'installed_file_count': len(owned_files),
     }

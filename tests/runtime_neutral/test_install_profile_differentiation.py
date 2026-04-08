@@ -90,6 +90,8 @@ class InstallProfileDifferentiationTests(unittest.TestCase):
             self.assertEqual("minimal", ledger["profile"])
             self.assertEqual(sorted(MINIMAL_REQUIRED_SKILLS), ledger["payload_summary"]["installed_skill_names"])
             self.assertEqual(["vibe"], ledger["payload_summary"]["public_skill_names"])
+            self.assertEqual(["vibe", "vibe-do", "vibe-how", "vibe-want"], ledger["payload_summary"]["host_visible_entry_names"])
+            self.assertEqual(4, ledger["payload_summary"]["host_visible_entry_count"])
             # In a fresh temp target, every file should be installer-owned.
             self.assertEqual(count_files(target_root), ledger["payload_summary"]["installed_file_count"])
             self.assertTrue((target_root / "commands" / "vibe.md").exists())
@@ -128,6 +130,8 @@ class InstallProfileDifferentiationTests(unittest.TestCase):
             )
             self.assertEqual(1, full_ledger["payload_summary"]["public_skill_count"])
             self.assertEqual(["vibe"], full_ledger["payload_summary"]["public_skill_names"])
+            self.assertEqual(["vibe", "vibe-do", "vibe-how", "vibe-want"], full_ledger["payload_summary"]["host_visible_entry_names"])
+            self.assertEqual(4, full_ledger["payload_summary"]["host_visible_entry_count"])
             self.assertIn(REPRESENTATIVE_NON_CORE_SKILL, full_ledger["payload_summary"]["installed_skill_names"])
             self.assertGreater(
                 full_ledger["payload_summary"]["installed_file_count"],
