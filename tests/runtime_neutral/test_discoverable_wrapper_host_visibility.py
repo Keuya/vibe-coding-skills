@@ -274,6 +274,58 @@ class DiscoverableWrapperHostVisibilityTests(unittest.TestCase):
 
             self.assertIn("[OK] host-visible discoverable entries", result.stdout)
 
+    def test_powershell_check_treats_null_host_visible_entry_names_as_empty_inventory(self) -> None:
+        if shutil.which("pwsh") is None:
+            self.skipTest("pwsh not available")
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            target_root = Path(tempdir) / "codex-root"
+            subprocess.run(
+                [
+                    "pwsh",
+                    "-NoProfile",
+                    "-File",
+                    str(REPO_ROOT / "install.ps1"),
+                    "-HostId",
+                    "codex",
+                    "-Profile",
+                    "full",
+                    "-TargetRoot",
+                    str(target_root),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            ledger_path = target_root / ".vibeskills" / "install-ledger.json"
+            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+            ledger["payload_summary"]["host_visible_entry_names"] = None
+            ledger["payload_summary"]["host_visible_entry_count"] = None
+            ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    "pwsh",
+                    "-NoProfile",
+                    "-File",
+                    str(REPO_ROOT / "check.ps1"),
+                    "-HostId",
+                    "codex",
+                    "-Profile",
+                    "full",
+                    "-TargetRoot",
+                    str(target_root),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("[OK] host-visible discoverable entries", result.stdout)
+            self.assertNotIn("PropertyNotFoundException", result.stderr)
+            self.assertNotIn("Check-CodexDuplicateSkillSurface", result.stderr)
+
     def test_powershell_check_rejects_wrapper_inventory_outside_target_root(self) -> None:
         if shutil.which("pwsh") is None:
             self.skipTest("pwsh not available")

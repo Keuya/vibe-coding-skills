@@ -34,6 +34,69 @@ function Test-CanonicalRepoExecution {
   return (Test-VgoCanonicalRepoExecution -StartPath $RepoRoot)
 }
 
+function Resolve-CodexDuplicateSkillRoot {
+  param(
+    [string]$TargetRoot,
+    [string]$HostId
+  )
+
+  if ([string](Resolve-VgoHostId -HostId $HostId) -ne 'codex') {
+    return $null
+  }
+
+  $leaf = [System.IO.Path]::GetFileName([System.IO.Path]::GetFullPath($TargetRoot)).ToLowerInvariant()
+  if ($leaf -ne '.codex') {
+    return $null
+  }
+
+  $parent = Get-VgoParentPath -Path $TargetRoot
+  if ([string]::IsNullOrWhiteSpace($parent)) {
+    return $null
+  }
+
+  return [System.IO.Path]::GetFullPath((Join-Path $parent '.agents\skills\vibe'))
+}
+
+function Test-VibeSkillDir {
+  param([string]$Root)
+
+  if ([string]::IsNullOrWhiteSpace($Root)) {
+    return $false
+  }
+
+  $skillMd = Join-Path $Root 'SKILL.md'
+  if (-not (Test-Path -LiteralPath $skillMd -PathType Leaf)) {
+    return $false
+  }
+
+  try {
+    return [bool](Select-String -LiteralPath $skillMd -Pattern '^[\s]*name:[\s]*vibe[\s]*$' -CaseSensitive:$false -Quiet)
+  } catch {
+    return $false
+  }
+}
+
+function Check-CodexDuplicateSkillSurface {
+  param(
+    [string]$TargetRoot,
+    [string]$HostId
+  )
+
+  $duplicateRoot = Resolve-CodexDuplicateSkillRoot -TargetRoot $TargetRoot -HostId $HostId
+  if ([string]::IsNullOrWhiteSpace($duplicateRoot) -or -not (Test-Path -LiteralPath $duplicateRoot -PathType Container)) {
+    return
+  }
+
+  if (Test-VibeSkillDir -Root $duplicateRoot) {
+    Write-Host ("[FAIL] duplicate Codex-discovered vibe skill surface -> {0}" -f $duplicateRoot) -ForegroundColor Red
+    Write-Host '[FAIL] Re-run install.ps1 for the default Codex root to quarantine the legacy .agents copy, or move it out of .agents/skills manually.' -ForegroundColor Red
+    $script:fail++
+    return
+  }
+
+  Write-WarnNote -Message ("unexpected directory exists at Codex duplicate-surface path: {0}" -f $duplicateRoot)
+}
+
 function Get-CheckGovernance {
   param([string]$RepoRoot)
 
@@ -129,6 +192,29 @@ function Get-JsonObject {
   }
 }
 
+function ConvertTo-VgoStringArray {
+  param($Value)
+
+  $items = New-Object System.Collections.Generic.List[string]
+  foreach ($item in @($Value)) {
+    if ($null -eq $item) {
+      continue
+    }
+    [void]$items.Add([string]$item)
+  }
+  return ,([string[]]$items.ToArray())
+}
+
+function Get-VgoCollectionCount {
+  param($Value)
+
+  if ($null -eq $Value) {
+    return 0
+  }
+
+  return @($Value).Count
+}
+
 function Check-HostVisibleDiscoverableEntries {
   param(
     [string]$TargetRoot,
@@ -148,11 +234,26 @@ function Check-HostVisibleDiscoverableEntries {
   }
 
   $payloadSummary = if ($ledger.PSObject.Properties.Name -contains 'payload_summary') { $ledger.payload_summary } else { $null }
-  $entryNames = if ($null -ne $payloadSummary -and $payloadSummary.PSObject.Properties.Name -contains 'host_visible_entry_names') { @($payloadSummary.host_visible_entry_names | ForEach-Object { [string]$_ }) } else { @() }
-  $wrapperPaths = if ($ledger.PSObject.Properties.Name -contains 'specialist_wrapper_paths') { @($ledger.specialist_wrapper_paths | ForEach-Object { [string]$_ }) } else { @() }
-  $compatibilityRoots = if ($ledger.PSObject.Properties.Name -contains 'compatibility_roots') { @($ledger.compatibility_roots | ForEach-Object { [string]$_ }) } else { @() }
+  $entryNames = if ($null -ne $payloadSummary -and $payloadSummary.PSObject.Properties.Name -contains 'host_visible_entry_names') {
+    ConvertTo-VgoStringArray -Value $payloadSummary.host_visible_entry_names
+  } else {
+    @()
+  }
+  $wrapperPaths = if ($ledger.PSObject.Properties.Name -contains 'specialist_wrapper_paths') {
+    ConvertTo-VgoStringArray -Value $ledger.specialist_wrapper_paths
+  } else {
+    @()
+  }
+  $compatibilityRoots = if ($ledger.PSObject.Properties.Name -contains 'compatibility_roots') {
+    ConvertTo-VgoStringArray -Value $ledger.compatibility_roots
+  } else {
+    @()
+  }
+  $entryNameCount = Get-VgoCollectionCount -Value $entryNames
+  $wrapperPathCount = Get-VgoCollectionCount -Value $wrapperPaths
+  $compatibilityRootCount = Get-VgoCollectionCount -Value $compatibilityRoots
 
-  if ($entryNames.Count -eq 0 -or ($wrapperPaths.Count -eq 0 -and $compatibilityRoots.Count -eq 0)) {
+  if ($entryNameCount -eq 0 -and ($wrapperPathCount -eq 0 -and $compatibilityRootCount -eq 0)) {
     if ($HostId -in @('codex', 'claude-code', 'cursor', 'windsurf', 'openclaw', 'opencode')) {
       Write-Host '[FAIL] host-visible discoverable entries -> missing wrapper inventory' -ForegroundColor Red
       $script:fail++
@@ -217,8 +318,8 @@ function Check-HostVisibleDiscoverableEntries {
     }
   }
 
-  $wrappersReady = ($wrapperPaths.Count -gt 0 -and $missingPaths.Count -eq 0)
-  $compatibilityReady = ($compatibilityRoots.Count -gt 0 -and $missingCompatibilityRoots.Count -eq 0)
+  $wrappersReady = ($wrapperPathCount -gt 0 -and $missingPaths.Count -eq 0)
+  $compatibilityReady = ($compatibilityRootCount -gt 0 -and $missingCompatibilityRoots.Count -eq 0)
 
   if ($invalidWrapperPaths.Count -gt 0) {
     Write-Host ("[FAIL] host-visible discoverable entries -> {0}" -f $invalidWrapperPaths[0]) -ForegroundColor Red
