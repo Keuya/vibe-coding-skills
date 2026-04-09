@@ -218,8 +218,7 @@ function Resolve-VibeSpecialistVisibilityClass {
     $installedSkillsRoot = Resolve-VgoInstalledSkillsRoot -TargetRoot $TargetRoot -HostId $HostId
     if (-not [string]::IsNullOrWhiteSpace([string]$installedSkillsRoot)) {
         try {
-            $installedFullPath = [System.IO.Path]::GetFullPath([string]$installedSkillsRoot)
-            if ($fullPath.StartsWith($installedFullPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+            if (Test-VibePathWithinRoot -RootPath ([string]$installedSkillsRoot) -CandidatePath $fullPath) {
                 return 'installed_surface_path_resolved'
             }
         } catch {

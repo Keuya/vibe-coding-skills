@@ -17,6 +17,30 @@ function Expand-VibeExecutionTemplate {
     return $value
 }
 
+function New-VibeExecutedSpecialistUnitSummary {
+    param(
+        [Parameter(Mandatory)] [object]$UnitReceipt,
+        [AllowNull()] [object]$LaneEntry = $null
+    )
+
+    return [pscustomobject]@{
+        unit_id = [string]$UnitReceipt.unit_id
+        skill_id = [string]$UnitReceipt.skill_id
+        dispatch_phase = if ($UnitReceipt.PSObject.Properties.Name -contains 'dispatch_phase') { [string]$UnitReceipt.dispatch_phase } else { $null }
+        binding_profile = if ($UnitReceipt.PSObject.Properties.Name -contains 'binding_profile') { [string]$UnitReceipt.binding_profile } else { $null }
+        lane_policy = if ($UnitReceipt.PSObject.Properties.Name -contains 'lane_policy') { [string]$UnitReceipt.lane_policy } else { $null }
+        parallelizable = [bool]$(if ($null -ne $LaneEntry -and $LaneEntry.PSObject.Properties.Name -contains 'parallelizable') { $LaneEntry.parallelizable } else { $false })
+        result_path = [string]$UnitReceipt.result_path
+        verification_passed = [bool]$UnitReceipt.verification_passed
+        execution_driver = [string]$UnitReceipt.execution_driver
+        live_native_execution = [bool]$UnitReceipt.live_native_execution
+        degraded = [bool]$UnitReceipt.degraded
+        prompt_injection_complete = [bool]$(if ($UnitReceipt.PSObject.Properties.Name -contains 'prompt_injection_complete') { $UnitReceipt.prompt_injection_complete } else { $false })
+        missing_prompt_injection_fields = @($(if ($UnitReceipt.PSObject.Properties.Name -contains 'missing_prompt_injection_fields') { $UnitReceipt.missing_prompt_injection_fields } else { @() }))
+        lane_receipt_path = if ($UnitReceipt.lane_receipt_path) { [string]$UnitReceipt.lane_receipt_path } else { $null }
+    }
+}
+
 function Invoke-VibeCapturedProcess {
     param(
         [Parameter(Mandatory)] [string]$Command,

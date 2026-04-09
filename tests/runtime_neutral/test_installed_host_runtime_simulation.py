@@ -18,19 +18,23 @@ DEBUG_TASK = "I have a failing test and a stack trace. Help me debug systematica
 EXECUTION_TASK = "Implement a bounded runtime enhancement with verification and cleanup $vibe"
 MEMORY_TASK_FIRST = "Record that hidden skill topology must stay under vibe and planner depends on this decision. $vibe"
 MEMORY_TASK_SECOND = "Follow up on the hidden skill topology decision and recall planner dependency before proposing the next step. $vibe"
-HOSTS = ("codex", "claude-code", "openclaw", "opencode")
+HOSTS = ("codex", "claude-code", "cursor", "windsurf", "openclaw", "opencode")
 INSTALLED_RUNTIME_ADVISORY_FAILURE_UNITS = {
     "runtime-neutral-freshness-gate-tests",
     "version-consistency-gate",
 }
 HOST_BRIDGE_ENV = {
     "claude-code": "VGO_CLAUDE_CODE_SPECIALIST_BRIDGE_COMMAND",
+    "cursor": "VGO_CURSOR_SPECIALIST_BRIDGE_COMMAND",
+    "windsurf": "VGO_WINDSURF_SPECIALIST_BRIDGE_COMMAND",
     "openclaw": "VGO_OPENCLAW_SPECIALIST_BRIDGE_COMMAND",
     "opencode": "VGO_OPENCODE_SPECIALIST_BRIDGE_COMMAND",
 }
 HOST_HOME_ENV = {
     "codex": "CODEX_HOME",
     "claude-code": "CLAUDE_HOME",
+    "cursor": "CURSOR_HOME",
+    "windsurf": "WINDSURF_HOME",
     "openclaw": "OPENCLAW_HOME",
     "opencode": "OPENCODE_HOME",
 }

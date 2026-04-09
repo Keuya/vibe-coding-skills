@@ -337,6 +337,8 @@ function ConvertTo-VibeExecutedUnitReceipt {
         execution_driver = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'execution_driver') { [string]$Outcome.lane_result.execution_driver } else { $null }
         live_native_execution = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'live_native_execution') { [bool]$Outcome.lane_result.live_native_execution } else { $false }
         degraded = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'degraded') { [bool]$Outcome.lane_result.degraded } else { $false }
+        prompt_injection_complete = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'prompt_injection_complete') { [bool]$Outcome.lane_result.prompt_injection_complete } else { $false }
+        missing_prompt_injection_fields = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'missing_prompt_injection_fields') { @($Outcome.lane_result.missing_prompt_injection_fields) } else { @() }
     }
 }
 
@@ -1063,20 +1065,7 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             }
 
             if ([string]$unitReceipt.lane_kind -eq 'specialist_dispatch') {
-                $executedSpecialistUnits += [pscustomobject]@{
-                    unit_id = [string]$unitReceipt.unit_id
-                    skill_id = [string]$unitReceipt.skill_id
-                    dispatch_phase = if ($unitReceipt.PSObject.Properties.Name -contains 'dispatch_phase') { [string]$unitReceipt.dispatch_phase } else { $null }
-                    binding_profile = if ($unitReceipt.PSObject.Properties.Name -contains 'binding_profile') { [string]$unitReceipt.binding_profile } else { $null }
-                    lane_policy = if ($unitReceipt.PSObject.Properties.Name -contains 'lane_policy') { [string]$unitReceipt.lane_policy } else { $null }
-                    parallelizable = [bool]$outcome.lane_entry.parallelizable
-                    result_path = [string]$unitReceipt.result_path
-                    verification_passed = [bool]$unitReceipt.verification_passed
-                    execution_driver = [string]$unitReceipt.execution_driver
-                    live_native_execution = [bool]$unitReceipt.live_native_execution
-                    degraded = [bool]$unitReceipt.degraded
-                    lane_receipt_path = if ($unitReceipt.lane_receipt_path) { [string]$unitReceipt.lane_receipt_path } else { $null }
-                }
+                $executedSpecialistUnits += New-VibeExecutedSpecialistUnitSummary -UnitReceipt $unitReceipt -LaneEntry $outcome.lane_entry
             }
         }
 

@@ -201,6 +201,36 @@ class RuntimeEntrypointHelperTests(unittest.TestCase):
             self.assertEqual("scripts/runtime/custom-entry.ps1", payload["runtime_entrypoint"])
             self.assertEqual(str((root / "scripts" / "runtime" / "custom-entry.ps1").resolve()), payload["resolved"])
 
+    def test_path_within_root_requires_directory_boundary(self) -> None:
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell not available")
+
+        helper_path = REPO_ROOT / "scripts" / "runtime" / "VibeRuntime.Common.ps1"
+        root = str((REPO_ROOT / "dist" / "host-codex").resolve())
+        inside_candidate = str((REPO_ROOT / "dist" / "host-codex" / "bundled" / "skills" / "pdf" / "SKILL.md").resolve())
+        sibling_candidate = str((REPO_ROOT / "dist" / "host-codex-shadow" / "bundled" / "skills" / "pdf" / "SKILL.md").resolve())
+
+        ps_script = (
+            "& { "
+            f". '{helper_path}'; "
+            f"$inside = Test-VibePathWithinRoot -RootPath '{root}' -CandidatePath '{inside_candidate}'; "
+            f"$sibling = Test-VibePathWithinRoot -RootPath '{root}' -CandidatePath '{sibling_candidate}'; "
+            "[pscustomobject]@{ inside = $inside; sibling = $sibling } | ConvertTo-Json -Depth 5 }"
+        )
+
+        completed = subprocess.run(
+            [powershell, "-NoLogo", "-NoProfile", "-Command", ps_script],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload["inside"])
+        self.assertFalse(payload["sibling"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -64,6 +64,32 @@ function Get-VibeRelativePathCompat {
     return $relative.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
 }
 
+function Test-VibePathWithinRoot {
+    param(
+        [Parameter(Mandatory)] [string]$RootPath,
+        [Parameter(Mandatory)] [string]$CandidatePath
+    )
+
+    $rootFull = [System.IO.Path]::GetFullPath($RootPath).TrimEnd('\', '/')
+    $candidateFull = [System.IO.Path]::GetFullPath($CandidatePath).TrimEnd('\', '/')
+
+    if ($rootFull.Length -eq 0 -or $candidateFull.Length -eq 0) {
+        return $false
+    }
+
+    if ($rootFull.Equals($candidateFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    $rootWithDirectorySeparator = $rootFull + [System.IO.Path]::DirectorySeparatorChar
+    $rootWithAltDirectorySeparator = $rootFull + [System.IO.Path]::AltDirectorySeparatorChar
+
+    return (
+        $candidateFull.StartsWith($rootWithDirectorySeparator, [System.StringComparison]::OrdinalIgnoreCase) -or
+        $candidateFull.StartsWith($rootWithAltDirectorySeparator, [System.StringComparison]::OrdinalIgnoreCase)
+    )
+}
+
 function Test-VibeObjectHasProperty {
     param(
         [AllowNull()] [object]$InputObject,

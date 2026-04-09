@@ -730,7 +730,8 @@ class NativeExecutionTopologyTests(unittest.TestCase):
                 )
                 self.assertIsNotNone(dispatch)
                 native_entrypoint = str((dispatch or {}).get("native_skill_entrypoint") or "").strip()
-                if "/bundled/skills/" not in native_entrypoint:
+                normalized_entrypoint = native_entrypoint.replace("\\", "/")
+                if "/bundled/skills/" not in normalized_entrypoint:
                     continue
                 skill_root = str(Path(native_entrypoint).parent)
                 self.assertIn(f"native_skill_entrypoint: {native_entrypoint}", prompt)
