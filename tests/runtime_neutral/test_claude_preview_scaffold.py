@@ -57,7 +57,7 @@ def run_package_install(*, host: str, target_root: Path, profile: str = "full") 
 
 
 class ClaudePreviewScaffoldTests(unittest.TestCase):
-    EXPECTED_WRAPPER_SKILLS = ("vibe", "vibe-want", "vibe-how", "vibe-do")
+    EXPECTED_WRAPPER_SKILLS = ("vibe", "vibe-want", "vibe-how", "vibe-do", "vibe-upgrade")
 
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
@@ -172,7 +172,8 @@ class ClaudePreviewScaffoldTests(unittest.TestCase):
         result = subprocess.run(check_cmd, capture_output=True, text=True, check=True)
 
         self.assertIn('[OK] host closure manifest', result.stdout)
-        self.assertIn('[OK] settings.json managed vibeskills node', result.stdout)
+        self.assertIn('[OK] host settings sidecar', result.stdout)
+        self.assertIn('skills-only activation', result.stdout)
         settings = json.loads((self.target_root / 'settings.json').read_text(encoding='utf-8'))
         self.assertEqual(self.existing_settings['env'], settings['env'])
         self.assertEqual(self.existing_settings['model'], settings['model'])
