@@ -16,6 +16,7 @@ from .install_support import reconcile_install_postconditions
 from .output import parse_json_output, print_install_banner, print_install_completion_hint, print_install_completion_report
 from .process import print_process_output, run_powershell_file, run_subprocess
 from .repo import get_installed_runtime_config
+from .upgrade_service import upgrade_runtime
 
 
 def install_command(args: argparse.Namespace) -> int:
@@ -83,6 +84,28 @@ def uninstall_command(args: argparse.Namespace) -> int:
     result = run_uninstaller_core(repo_root, command)
     print_process_output(result)
     return int(result.returncode)
+
+
+def upgrade_command(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve()
+    host_id = normalize_host_id(args.host)
+    target_root = resolve_target_root(host_id, args.target_root)
+    assert_target_root_matches_host_intent(target_root, host_id)
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    upgrade_runtime(
+        repo_root=repo_root,
+        target_root=target_root,
+        host_id=host_id,
+        profile=args.profile,
+        frontend=args.frontend,
+        install_external=bool(args.install_external),
+        strict_offline=bool(args.strict_offline),
+        require_closed_ready=bool(args.require_closed_ready),
+        allow_external_skill_fallback=bool(args.allow_external_skill_fallback),
+        skip_runtime_freshness_gate=bool(args.skip_runtime_freshness_gate),
+    )
+    return 0
 
 
 def route_command(args: argparse.Namespace) -> int:

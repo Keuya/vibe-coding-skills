@@ -257,6 +257,48 @@ function Get-VibeHostClosureRecord {
     }
 }
 
+function Get-VibeUpgradeReminder {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot,
+        [AllowNull()] [object]$HostAdapter
+    )
+
+    if ($null -eq $HostAdapter) {
+        return $null
+    }
+
+    $targetRoot = Resolve-VibeHostTargetRoot -HostAdapter $HostAdapter
+    if ([string]::IsNullOrWhiteSpace($targetRoot)) {
+        return $null
+    }
+
+    $identity = Get-VibeHostAdapterIdentityProjection -HostAdapter $HostAdapter
+    $hostId = if (-not [string]::IsNullOrWhiteSpace([string]$identity.id)) { [string]$identity.id } else { [string]$identity.requested_id }
+    if ([string]::IsNullOrWhiteSpace($hostId)) {
+        return $null
+    }
+
+    $scriptPath = Join-Path $RepoRoot 'apps\vgo-cli\src\vgo_cli\version_reminder.py'
+    if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $python = Get-VgoPythonCommand
+        $output = & $python $scriptPath --repo-root $RepoRoot --target-root $targetRoot --host $hostId 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return $null
+        }
+        $lines = @($output | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+        if ($lines.Count -eq 0) {
+            return $null
+        }
+        return [string]$lines[-1]
+    } catch {
+        return $null
+    }
+}
+
 function Get-VibeRuntimeContext {
     param(
         [Parameter(Mandatory)] [string]$ScriptPath

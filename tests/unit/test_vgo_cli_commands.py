@@ -13,8 +13,9 @@ CLI_SRC = REPO_ROOT / 'apps' / 'vgo-cli' / 'src'
 if str(CLI_SRC) not in sys.path:
     sys.path.insert(0, str(CLI_SRC))
 
-from vgo_cli.commands import route_command, runtime_command, verify_command
+from vgo_cli.commands import route_command, runtime_command, upgrade_command, verify_command
 from vgo_cli.errors import CliError
+from vgo_cli.main import build_parser
 from vgo_cli.output import parse_json_output, print_install_completion_hint, print_json_payload
 
 
@@ -161,3 +162,52 @@ def test_runtime_command_uses_runtime_contract_for_powershell_dispatch(monkeypat
     assert recorded['shell_script'] == 'check.sh'
     assert recorded['powershell_script'] == 'scripts/runtime/custom-runtime-entrypoint.ps1'
     assert recorded['rest'] == ['--task', 'smoke']
+
+
+def test_build_parser_exposes_upgrade_subcommand() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(
+        [
+            'upgrade',
+            '--repo-root',
+            '/tmp/repo',
+            '--host',
+            'codex',
+        ]
+    )
+
+    assert args.command == 'upgrade'
+    assert args.host == 'codex'
+    assert args.handler is upgrade_command
+
+
+def test_upgrade_command_delegates_to_upgrade_service(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import vgo_cli.commands as cli_commands
+
+    recorded: dict[str, object] = {}
+
+    def fake_upgrade_runtime(**kwargs: object) -> dict[str, object]:
+        recorded.update(kwargs)
+        return {'changed': False}
+
+    monkeypatch.setattr(cli_commands, 'upgrade_runtime', fake_upgrade_runtime)
+
+    args = argparse.Namespace(
+        repo_root=str(tmp_path),
+        frontend='shell',
+        profile='full',
+        host='codex',
+        target_root='',
+        install_external=False,
+        strict_offline=False,
+        require_closed_ready=False,
+        allow_external_skill_fallback=False,
+        skip_runtime_freshness_gate=False,
+    )
+
+    assert upgrade_command(args) == 0
+    assert recorded['repo_root'] == tmp_path.resolve()
+    assert recorded['host_id'] == 'codex'
+    assert recorded['profile'] == 'full'
+    assert recorded['frontend'] == 'shell'

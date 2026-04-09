@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import sys
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -11,6 +14,8 @@ if str(CLI_SRC) not in sys.path:
 
 from vgo_cli.repo import (
     get_installed_runtime_config,
+    get_local_release_metadata,
+    get_repo_head_commit,
     get_official_self_repo_metadata,
     resolve_canonical_repo_root,
 )
@@ -63,3 +68,36 @@ def test_get_official_self_repo_metadata_reads_explicit_governance_source(tmp_pa
         'default_branch': 'main',
         'canonical_root': '.',
     }
+
+
+def test_get_local_release_metadata_reads_release_block(tmp_path: Path) -> None:
+    repo_root = tmp_path / 'repo'
+    (repo_root / 'config').mkdir(parents=True)
+    (repo_root / 'config' / 'version-governance.json').write_text(
+        '{"release": {"version": "3.0.1", "updated": "2026-04-09", "channel": "stable"}}',
+        encoding='utf-8',
+    )
+
+    payload = get_local_release_metadata(repo_root)
+
+    assert payload == {
+        'version': '3.0.1',
+        'updated': '2026-04-09',
+        'channel': 'stable',
+    }
+
+
+def test_get_repo_head_commit_reads_git_rev_parse(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / 'repo'
+    repo_root.mkdir(parents=True)
+
+    def fake_run(command: list[str], *, cwd: Path | None = None, capture_output: bool, text: bool, check: bool = False) -> subprocess.CompletedProcess[str]:
+        assert command == ['git', '-C', str(repo_root), 'rev-parse', 'HEAD']
+        assert cwd is None
+        assert capture_output is True
+        assert text is True
+        return subprocess.CompletedProcess(command, 0, stdout='deadbeef\n', stderr='')
+
+    monkeypatch.setattr('vgo_cli.repo.subprocess.run', fake_run)
+
+    assert get_repo_head_commit(repo_root) == 'deadbeef'

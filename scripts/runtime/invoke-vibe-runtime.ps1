@@ -49,6 +49,10 @@ function Wait-VibeArtifactSet {
 }
 
 $runtime = Get-VibeRuntimeContext -ScriptPath $PSCommandPath
+$upgradeReminder = Get-VibeUpgradeReminder -RepoRoot ([string]$runtime.repo_root) -HostAdapter $runtime.host_adapter
+if (-not [string]::IsNullOrWhiteSpace($upgradeReminder)) {
+    Write-Host $upgradeReminder
+}
 $Mode = Resolve-VibeRuntimeMode -Mode $Mode -DefaultMode ([string]$runtime.runtime_modes.default_mode)
 if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = New-VibeRunId

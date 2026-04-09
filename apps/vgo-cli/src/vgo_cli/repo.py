@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 
 
@@ -24,6 +25,15 @@ def get_installed_runtime_config(repo_root: Path) -> dict[str, object]:
     return merge_installed_runtime_config(load_governance(repo_root), default_installed_runtime_config())
 
 
+def get_local_release_metadata(repo_root: Path) -> dict[str, str]:
+    release = load_governance(repo_root).get('release') or {}
+    return {
+        'version': str(release.get('version') or '').strip(),
+        'updated': str(release.get('updated') or '').strip(),
+        'channel': str(release.get('channel') or '').strip(),
+    }
+
+
 def get_official_self_repo_metadata(repo_root: Path) -> dict[str, str]:
     governance = load_governance(repo_root)
     source = governance.get('source_of_truth') or {}
@@ -34,6 +44,17 @@ def get_official_self_repo_metadata(repo_root: Path) -> dict[str, str]:
         'default_branch': str(official_repo.get('default_branch') or '').strip(),
         'canonical_root': canonical_root,
     }
+
+
+def get_repo_head_commit(repo_root: Path) -> str:
+    result = subprocess.run(
+        ['git', '-C', str(repo_root), 'rev-parse', 'HEAD'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f'Unable to resolve HEAD commit for {repo_root}')
+    return result.stdout.strip()
 
 
 def resolve_canonical_repo_root(start_path: Path) -> Path | None:

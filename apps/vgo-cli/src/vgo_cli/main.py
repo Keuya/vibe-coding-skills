@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .commands import install_command, passthrough_command, route_command, runtime_command, uninstall_command, verify_command
+from .commands import install_command, passthrough_command, route_command, runtime_command, uninstall_command, upgrade_command, verify_command
 from .errors import CliError
 
 
@@ -34,6 +34,19 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall_parser.add_argument('--purge-empty-dirs', action='store_true')
     uninstall_parser.add_argument('--strict-owned-only', action='store_true')
     uninstall_parser.set_defaults(handler=uninstall_command)
+
+    upgrade_parser = subparsers.add_parser('upgrade')
+    upgrade_parser.add_argument('--repo-root', required=True)
+    upgrade_parser.add_argument('--frontend', choices=('shell', 'powershell'), default='shell')
+    upgrade_parser.add_argument('--profile', choices=('minimal', 'full'), default='full')
+    upgrade_parser.add_argument('--host', default='codex')
+    upgrade_parser.add_argument('--target-root', default='')
+    upgrade_parser.add_argument('--install-external', action='store_true')
+    upgrade_parser.add_argument('--strict-offline', action='store_true')
+    upgrade_parser.add_argument('--require-closed-ready', action='store_true')
+    upgrade_parser.add_argument('--allow-external-skill-fallback', action='store_true')
+    upgrade_parser.add_argument('--skip-runtime-freshness-gate', action='store_true')
+    upgrade_parser.set_defaults(handler=upgrade_command)
 
     route_parser = subparsers.add_parser('route')
     route_parser.add_argument('--repo-root', required=True)

@@ -111,6 +111,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
         self.assertIn("apps/vgo-cli/src/vgo_cli/workspace.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/commands.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/repo.py", required_markers)
+        self.assertIn("apps/vgo-cli/src/vgo_cli/version_reminder.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/external.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/output.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/install_gates.py", required_markers)
@@ -165,6 +166,11 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             EXPECTED_STAGE_IDS,
             [stage["id"] for stage in contract["stages"]],
         )
+
+        runtime_entry = (REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1").read_text(encoding="utf-8")
+        runtime_common = (REPO_ROOT / "scripts" / "runtime" / "VibeRuntime.Common.ps1").read_text(encoding="utf-8")
+        self.assertIn("Get-VibeUpgradeReminder", runtime_common)
+        self.assertIn("Get-VibeUpgradeReminder", runtime_entry)
 
     def test_invoke_vibe_runtime_produces_six_stage_closure_under_temp_artifact_root(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
