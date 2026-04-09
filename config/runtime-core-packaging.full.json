@@ -125,7 +125,8 @@
       "vibe",
       "vibe-want",
       "vibe-how",
-      "vibe-do"
+      "vibe-do",
+      "vibe-upgrade"
     ]
   },
   "internal_skill_corpus": {
