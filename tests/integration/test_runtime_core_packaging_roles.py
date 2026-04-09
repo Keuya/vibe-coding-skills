@@ -138,13 +138,13 @@ def test_profile_runtime_core_packaging_roles_describe_delivery_model() -> None:
         assert minimal['internal_skill_corpus']['target_relpath'] == 'skills/vibe/bundled/skills'
         assert minimal['public_skill_surface']['mode'] == 'discoverable_wrapper_projection'
         assert minimal['public_skill_surface']['discoverable_entry_surface'] == 'config/vibe-entry-surfaces.json'
-        assert minimal['public_skill_surface']['projected_skill_names'] == ['vibe', 'vibe-want', 'vibe-how', 'vibe-do']
+        assert minimal['public_skill_surface']['projected_skill_names'] == ['vibe', 'vibe-want', 'vibe-how', 'vibe-do', 'vibe-upgrade']
     if _supports_surface_split(full):
         assert sorted(full['compatibility_skill_projections']['projected_skill_names']) == CODEX_VIBE_WRAPPER_SKILLS
         assert full['internal_skill_corpus']['entrypoint_filename'] == 'SKILL.runtime-mirror.md'
         assert full['public_skill_surface']['mode'] == 'discoverable_wrapper_projection'
         assert full['public_skill_surface']['discoverable_entry_surface'] == 'config/vibe-entry-surfaces.json'
-        assert full['public_skill_surface']['projected_skill_names'] == ['vibe', 'vibe-want', 'vibe-how', 'vibe-do']
+        assert full['public_skill_surface']['projected_skill_names'] == ['vibe', 'vibe-want', 'vibe-how', 'vibe-do', 'vibe-upgrade']
 
 
 def test_profile_runtime_core_packaging_role_sources_match_copy_projection() -> None:
