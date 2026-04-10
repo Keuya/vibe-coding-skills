@@ -237,13 +237,33 @@ if ($runtimeInputPacket) {
     }
 }
 
-if ($memoryContextPack -and @($memoryContextPack.items).Count -gt 0) {
+$hasMemoryItems = $memoryContextPack -and @($memoryContextPack.items).Count -gt 0
+$hasSelectedCapsules = (
+    $memoryContextPack -and
+    $memoryContextPack.PSObject.Properties.Name -contains 'selected_capsules' -and
+    $null -ne $memoryContextPack.selected_capsules -and
+    @($memoryContextPack.selected_capsules).Count -gt 0
+)
+if ($hasMemoryItems -or $hasSelectedCapsules) {
     $lines += @(
         '',
         '## Memory Context',
-        'Bounded stage-aware memory context injected into requirement freezing:'
+        'Bounded stage-aware memory context injected into requirement freezing:',
+        ('- Disclosure level: {0}' -f [string]$memoryContextPack.disclosure_level)
     )
-    $lines += @($memoryContextPack.items | ForEach-Object { "- $_" })
+    if ($hasSelectedCapsules) {
+        foreach ($capsule in @($memoryContextPack.selected_capsules)) {
+            $lines += @(
+                ('- Capsule [{0}] {1}' -f [string]$capsule.capsule_id, [string]$capsule.title),
+                ('  Owner: {0}' -f [string]$capsule.owner),
+                ('  Why now: {0}' -f [string]$capsule.why_now),
+                ('  Expansion Ref: {0}' -f [string]$capsule.expansion_ref)
+            )
+            $lines += @($capsule.summary_lines | ForEach-Object { '  Summary: ' + [string]$_ })
+        }
+    } else {
+        $lines += @($memoryContextPack.items | ForEach-Object { "- $_" })
+    }
 }
 
 $childHandoffPath = $null
@@ -283,6 +303,12 @@ $receipt = [pscustomobject]@{
     memory_context_path = if ($memoryContextPack) { $MemoryContextPath } else { $null }
     memory_context_item_count = if ($memoryContextPack) { @($memoryContextPack.items).Count } else { 0 }
     memory_context_estimated_tokens = if ($memoryContextPack) { [int]$memoryContextPack.estimated_tokens } else { 0 }
+    memory_disclosure_level = if ($memoryContextPack -and $memoryContextPack.PSObject.Properties.Name -contains 'disclosure_level') { [string]$memoryContextPack.disclosure_level } else { $null }
+    memory_capsule_count = if (
+        $memoryContextPack -and
+        $memoryContextPack.PSObject.Properties.Name -contains 'selected_capsules' -and
+        $null -ne $memoryContextPack.selected_capsules
+    ) { @($memoryContextPack.selected_capsules).Count } else { 0 }
     generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 }
 $receiptPath = Join-Path $sessionRoot 'requirement-doc-receipt.json'

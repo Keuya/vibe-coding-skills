@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "updated": "2026-04-10",
+  "policy_id": "memory-disclosure-capsules-v1",
+  "enabled": true,
+  "mode": "capsule_progressive_disclosure",
+  "control_plane_owner": "vco",
+  "defaults": {
+    "pack_type": "capsule_digest",
+    "max_capsules": 4,
+    "max_chars_per_capsule": 360
+  },
+  "stages": {
+    "skeleton_check": {
+      "level": "L1_capsule_titles",
+      "max_capsules": 2
+    },
+    "deep_interview": {
+      "level": "L1_capsule_titles",
+      "max_capsules": 3
+    },
+    "requirement_doc": {
+      "level": "L2_capsule_summary",
+      "max_capsules": 3
+    },
+    "xl_plan": {
+      "level": "L2_capsule_summary",
+      "max_capsules": 4
+    },
+    "plan_execute": {
+      "level": "L3_evidence_pack",
+      "max_capsules": 4
+    },
+    "phase_cleanup": {
+      "level": "L0_presence",
+      "max_capsules": 2
+    }
+  },
+  "invariants": {
+    "forbid_raw_history_dump": true,
+    "forbid_unbounded_disclosure": true,
+    "preserve_owner_attribution": true
+  }
+}

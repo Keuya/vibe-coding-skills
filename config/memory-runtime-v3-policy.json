@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-03-07",
+  "updated": "2026-04-10",
   "plane_id": "memory-runtime-v3",
   "wave_range": {
     "from": 64,
@@ -15,6 +15,9 @@
   "inherits": {
     "memory_governance": "config/memory-governance.json",
     "tier_router": "config/memory-tier-router.json",
+    "workspace_memory_plane": "config/workspace-memory-plane.json",
+    "disclosure_policy": "config/memory-disclosure-policy.json",
+    "ingest_policy": "config/memory-ingest-policy.json",
     "mem0_policy": "config/mem0-backend-policy.json",
     "letta_contract": "config/letta-governance-contract.json"
   },
@@ -23,6 +26,11 @@
     "project_decision": "serena",
     "short_term_semantic": "ruflo",
     "long_term_graph": "cognee"
+  },
+  "shared_plane_contract": {
+    "workspace_identity_source": ".vibeskills/project.json",
+    "progressive_disclosure_mode": "capsule_progressive_disclosure",
+    "write_admission_mode": "signal_gated"
   },
   "extension_planes": {
     "mem0": {

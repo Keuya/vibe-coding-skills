@@ -59,7 +59,6 @@ def test_runtime_config_manifest_groups_separate_runtime_domains() -> None:
         "config/runtime-script-manifest.json",
         "config/runtime-contract.json",
         "config/runtime-core-packaging.json",
-        "config/vibe-entry-surfaces.json",
         "config/version-governance.json",
     }
     assert router_and_discovery >= {
@@ -70,12 +69,15 @@ def test_runtime_config_manifest_groups_separate_runtime_domains() -> None:
         "config/retrieval-policy.json",
     }
     assert memory == {
+        "config/memory-disclosure-policy.json",
+        "config/memory-ingest-policy.json",
         "config/memory-backend-adapters.json",
         "config/memory-governance.json",
         "config/memory-retrieval-budget-policy.json",
         "config/memory-runtime-v3-policy.json",
         "config/memory-stage-activation-policy.json",
         "config/memory-tier-router.json",
+        "config/workspace-memory-plane.json",
     }
     assert distribution_and_lock == {
         "config/plugins-manifest.codex.json",
@@ -102,3 +104,24 @@ def test_runtime_config_manifest_avoids_broad_directory_projection() -> None:
     assert manifest["notes"]["explicit_projection_rule"]
     assert manifest["notes"]["semantic_group_rule"]
     assert manifest["notes"]["opencode_projection_rule"]
+
+
+def test_runtime_config_manifest_keeps_canonical_memory_runtime_files_packaged() -> None:
+    manifest = _load_manifest()
+    memory_files = set(manifest["role_groups"]["files"]["memory_policy_files"])
+    flat_files = set(manifest["files"])
+
+    required = {
+        "config/memory-disclosure-policy.json",
+        "config/memory-ingest-policy.json",
+        "config/memory-backend-adapters.json",
+        "config/memory-governance.json",
+        "config/memory-retrieval-budget-policy.json",
+        "config/memory-runtime-v3-policy.json",
+        "config/memory-stage-activation-policy.json",
+        "config/memory-tier-router.json",
+        "config/workspace-memory-plane.json",
+    }
+
+    assert required <= memory_files
+    assert required <= flat_files

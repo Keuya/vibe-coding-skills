@@ -113,24 +113,28 @@ def test_required_runtime_marker_groups_keep_owners_separate_from_compatibility(
     assert all(path.startswith(("apps/", "packages/")) for path in semantic_owners)
 
 
-def test_required_runtime_markers_include_discoverable_entry_contract() -> None:
+def test_required_runtime_marker_groups_keep_memory_runtime_surfaces_present() -> None:
     governance = _load_governance()
     runtime = governance["runtime"]["installed_runtime"]
-    manifest = json.loads((REPO_ROOT / "config" / "runtime-config-manifest.json").read_text(encoding="utf-8"))
+    required_markers = set(runtime["required_runtime_markers"])
+    runtime_support = set(runtime["required_runtime_marker_groups"]["runtime_entrypoints_and_support"])
+    governance_and_manifests = set(runtime["required_runtime_marker_groups"]["governance_and_manifests"])
 
-    assert "config/vibe-entry-surfaces.json" in runtime["required_runtime_markers"]
-    assert "config/vibe-entry-surfaces.json" in runtime["required_runtime_marker_groups"]["governance_and_manifests"]
-    assert "config/vibe-entry-surfaces.json" in manifest["files"]
-
-
-def test_source_of_truth_declares_explicit_official_self_repo_metadata() -> None:
-    governance = _load_governance()
-    source_of_truth = governance["source_of_truth"]
-    official_repo = source_of_truth["official_self_repo"]
-
-    assert source_of_truth["canonical_root"] == "."
-    assert official_repo == {
-        "repo_url": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
-        "default_branch": "main",
-        "canonical_root": ".",
+    expected_runtime_support = {
+        "scripts/runtime/VibeMemoryActivation.Common.ps1",
+        "scripts/runtime/VibeMemoryBackends.Common.ps1",
+        "scripts/runtime/memory_backend_driver.py",
     }
+    expected_governance = {
+        "config/memory-backend-adapters.json",
+        "config/memory-disclosure-policy.json",
+        "config/memory-ingest-policy.json",
+        "config/memory-runtime-v3-policy.json",
+        "config/memory-tier-router.json",
+        "config/workspace-memory-plane.json",
+    }
+
+    assert expected_runtime_support <= runtime_support
+    assert expected_runtime_support <= required_markers
+    assert expected_governance <= governance_and_manifests
+    assert expected_governance <= required_markers

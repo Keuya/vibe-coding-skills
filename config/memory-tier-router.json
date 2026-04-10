@@ -3,6 +3,11 @@
   "updated": "2026-03-07",
   "enabled": true,
   "mode": "shadow",
+  "workspace_shared_plane": {
+    "source_config": "config/workspace-memory-plane.json",
+    "disclosure_policy": "config/memory-disclosure-policy.json",
+    "ingest_policy": "config/memory-ingest-policy.json"
+  },
   "preserve_existing_truth_sources": true,
   "tiers": {
     "session": "state_store",
@@ -15,6 +20,7 @@
   "constraints": {
     "forbid_mem0_as_primary": true,
     "forbid_letta_as_runtime_owner": true,
-    "forbid_episodic_memory": true
+    "forbid_episodic_memory": true,
+    "single_workspace_plane_per_workspace": true
   }
 }

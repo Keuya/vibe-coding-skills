@@ -358,6 +358,9 @@ function Get-VibeRuntimeContext {
         cleanup_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\phase-cleanup-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         proof_class_registry = Get-Content -LiteralPath (Join-Path $repoRoot 'config\proof-class-registry.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         memory_governance = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-governance.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        workspace_memory_plane = Get-Content -LiteralPath (Join-Path $repoRoot 'config\workspace-memory-plane.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        memory_disclosure_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-disclosure-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        memory_ingest_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-ingest-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         memory_tier_router = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-tier-router.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         memory_runtime_v3_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-runtime-v3-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         memory_stage_activation_policy = Get-Content -LiteralPath (Join-Path $repoRoot 'config\memory-stage-activation-policy.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -388,6 +391,48 @@ function Get-VibeWorkspaceProjectDescriptorPath {
     )
 
     return [System.IO.Path]::GetFullPath((Join-Path (Get-VibeWorkspaceSidecarRoot -RepoRoot $RepoRoot) 'project.json'))
+}
+
+function Get-VibeWorkspaceMemoryPlaneContract {
+    param(
+        [AllowNull()] [object]$Runtime = $null
+    )
+
+    $identityScope = 'workspace'
+    $logicalOwners = @('state_store', 'serena', 'ruflo', 'cognee')
+    if (
+        $null -ne $Runtime -and
+        (Test-VibeObjectHasProperty -InputObject $Runtime -PropertyName 'workspace_memory_plane') -and
+        $null -ne $Runtime.workspace_memory_plane
+    ) {
+        $workspacePlane = $Runtime.workspace_memory_plane
+        if (
+            (Test-VibeObjectHasProperty -InputObject $workspacePlane -PropertyName 'workspace_identity') -and
+            $null -ne $workspacePlane.workspace_identity -and
+            (Test-VibeObjectHasProperty -InputObject $workspacePlane.workspace_identity -PropertyName 'scope') -and
+            -not [string]::IsNullOrWhiteSpace([string]$workspacePlane.workspace_identity.scope)
+        ) {
+            $identityScope = [string]$workspacePlane.workspace_identity.scope
+        }
+        if (
+            (Test-VibeObjectHasProperty -InputObject $workspacePlane -PropertyName 'canonical_owners') -and
+            $null -ne $workspacePlane.canonical_owners
+        ) {
+            $owners = $workspacePlane.canonical_owners
+            $logicalOwners = @(
+                if ((Test-VibeObjectHasProperty -InputObject $owners -PropertyName 'session') -and -not [string]::IsNullOrWhiteSpace([string]$owners.session)) { [string]$owners.session } else { 'state_store' }
+                if ((Test-VibeObjectHasProperty -InputObject $owners -PropertyName 'project_decision') -and -not [string]::IsNullOrWhiteSpace([string]$owners.project_decision)) { [string]$owners.project_decision } else { 'serena' }
+                if ((Test-VibeObjectHasProperty -InputObject $owners -PropertyName 'short_term_semantic') -and -not [string]::IsNullOrWhiteSpace([string]$owners.short_term_semantic)) { [string]$owners.short_term_semantic } else { 'ruflo' }
+                if ((Test-VibeObjectHasProperty -InputObject $owners -PropertyName 'long_term_graph') -and -not [string]::IsNullOrWhiteSpace([string]$owners.long_term_graph)) { [string]$owners.long_term_graph } else { 'cognee' }
+            )
+        }
+    }
+
+    return [pscustomobject]@{
+        identity_scope = $identityScope
+        driver_contract = 'workspace_shared_memory_v1'
+        logical_owners = @($logicalOwners)
+    }
 }
 
 function Get-VibeHostSidecarRoot {
@@ -442,6 +487,7 @@ function New-VibeWorkspaceArtifactProjection {
     $workspaceRoot = Get-VibeWorkspaceRoot -RepoRoot $RepoRoot
     $workspaceSidecarRoot = Get-VibeWorkspaceSidecarRoot -RepoRoot $RepoRoot
     $projectDescriptorPath = Get-VibeWorkspaceProjectDescriptorPath -RepoRoot $RepoRoot
+    $memoryPlane = Get-VibeWorkspaceMemoryPlaneContract -Runtime $Runtime
     $useDefaultWorkspaceSidecar = [string]::IsNullOrWhiteSpace($ArtifactRoot)
 
     if ($useDefaultWorkspaceSidecar) {
@@ -463,6 +509,10 @@ function New-VibeWorkspaceArtifactProjection {
         artifact_root_source = $artifactRootSource
         default_workspace_sidecar_artifact_root = [bool]$useDefaultWorkspaceSidecar
         host_sidecar_root = Get-VibeHostSidecarRoot -Runtime $Runtime -RouterTargetRoot $RouterTargetRoot
+        workspace_memory_identity_root = $projectDescriptorPath
+        workspace_memory_identity_scope = [string]$memoryPlane.identity_scope
+        workspace_memory_driver_contract = [string]$memoryPlane.driver_contract
+        workspace_memory_logical_owners = [string[]]@($memoryPlane.logical_owners)
     }
 }
 
@@ -473,6 +523,7 @@ function Initialize-VibeWorkspaceProjectDescriptor {
     )
 
     $storage = New-VibeWorkspaceArtifactProjection -RepoRoot $RepoRoot -Runtime $Runtime
+    $memoryPlane = Get-VibeWorkspaceMemoryPlaneContract -Runtime $Runtime
     $descriptorPath = [string]$storage.project_descriptor_path
     $descriptor = [pscustomobject]@{
         schema_version = 1
@@ -486,6 +537,12 @@ function Initialize-VibeWorkspaceProjectDescriptor {
             requirement_root = 'docs/requirements'
             execution_plan_root = 'docs/plans'
             session_root = 'outputs/runtime/vibe-sessions'
+        }
+        memory_plane = [pscustomobject]@{
+            identity_root = [string]$storage.project_descriptor_path
+            identity_scope = [string]$memoryPlane.identity_scope
+            driver_contract = [string]$memoryPlane.driver_contract
+            logical_owners = [string[]]@($memoryPlane.logical_owners)
         }
         host_sidecar_root = if ([string]::IsNullOrWhiteSpace([string]$storage.host_sidecar_root)) { $null } else { [string]$storage.host_sidecar_root }
     }

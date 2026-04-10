@@ -353,6 +353,25 @@ VibeSkills builds a **four-tier memory system** — one authoritative component 
 
 </details>
 
+### What the workspace-shared memory upgrade changes in practice
+
+This release adds a workspace-scoped memory broker so memory continuity works the way users expect:
+
+- **Same workspace, different session/agent**: `codex`, `claude-code`, and other supported hosts can recall the same project memory inside one workspace.
+- **Different workspace, zero bleed**: even if two workspaces point at the same backend root, memory stays isolated by workspace identity instead of leaking across repos.
+- **Related memory only**: retrieval is gated by task-relevant terms after stripping generic runtime noise, so `$vibe`, `plan`, `continuity`, and similar scaffold words do not trigger false recalls by themselves.
+- **Progressive disclosure instead of memory dumps**: requirement and planning stages receive a small set of capsule summaries, while execution gets a richer evidence pack only when needed.
+- **Hard fail over silent downgrade**: if the workspace broker is unavailable, the runtime fails explicitly instead of silently falling back to legacy lane-local storage.
+
+Plain-English flow:
+
+1. The runtime stores small structured records such as decisions, handoff cards, and relations.
+2. A follow-up task searches only the current workspace and scores records by relevant business terms.
+3. The runtime injects only a few bounded memory capsules into the next stage.
+4. Later stages can reveal more detail, but the full memory store is never dumped into the prompt.
+
+See [workspace memory plane design](./docs/design/workspace-memory-plane.md) for the technical contract and [quantitative Codex memory simulation](./tests/runtime_neutral/test_codex_memory_user_simulation.py) for the benchmark coverage.
+
 
 ---
 

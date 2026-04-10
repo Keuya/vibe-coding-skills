@@ -2,12 +2,87 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
+import os
 import re
-from collections import defaultdict
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+STOP_TOKENS = {
+    "approved",
+    "about",
+    "after",
+    "along",
+    "and",
+    "around",
+    "asks",
+    "because",
+    "before",
+    "between",
+    "codex",
+    "context",
+    "continuity",
+    "debug",
+    "decision",
+    "dependencies",
+    "dependency",
+    "evidence",
+    "execution",
+    "follow-up",
+    "for",
+    "from",
+    "graph",
+    "implementation",
+    "into",
+    "keep",
+    "next",
+    "onto",
+    "over",
+    "plan",
+    "planner",
+    "planning",
+    "preserving",
+    "prior",
+    "prepare",
+    "recall",
+    "relationship",
+    "retain",
+    "review",
+    "runtime",
+    "step",
+    "than",
+    "that",
+    "their",
+    "them",
+    "then",
+    "there",
+    "these",
+    "the",
+    "they",
+    "this",
+    "those",
+    "through",
+    "under",
+    "until",
+    "user",
+    "vibe",
+    "vibeskills",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "whose",
+    "with",
+    "within",
+    "without",
+    "would",
+    "were",
+    "your",
+}
 
 
 def utc_now() -> str:
@@ -48,7 +123,11 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def tokenize(text: str) -> set[str]:
-    return {token for token in re.findall(r"[a-z0-9_/-]{3,}", text.lower()) if token}
+    return {
+        token
+        for token in re.findall(r"[a-z0-9_/-]{3,}", text.lower())
+        if token and token not in STOP_TOKENS
+    }
 
 
 def score_record(query: str, record: dict[str, Any]) -> int:
@@ -269,18 +348,31 @@ def cognee_write(payload: dict[str, Any], store_path: Path, project_key: str | N
     return "backend_write", items
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--lane", required=True, choices=["serena", "ruflo", "cognee"])
-    parser.add_argument("--action", required=True, choices=["read", "write"])
-    parser.add_argument("--repo-root", required=True)
-    parser.add_argument("--session-root", required=True)
-    parser.add_argument("--store-path", required=True)
-    parser.add_argument("--payload-path", required=True)
-    parser.add_argument("--response-path", required=True)
-    parser.add_argument("--project-key")
-    args = parser.parse_args()
+def invoke_workspace_shell(args: argparse.Namespace) -> int:
+    module_path = Path(__file__).with_name("workspace_memory_driver.py")
+    if not module_path.exists():
+        return 1
 
+    spec = importlib.util.spec_from_file_location("workspace_memory_driver", module_path)
+    if spec is None or spec.loader is None:
+        return 1
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return int(
+        module.execute(
+            lane=args.lane,
+            action=args.action,
+            repo_root=Path(args.repo_root),
+            payload_path=Path(args.payload_path),
+            response_path=Path(args.response_path),
+            project_key=args.project_key,
+            driver_mode="compatibility_shell",
+        )
+    )
+
+
+def invoke_legacy_shell(args: argparse.Namespace) -> int:
     payload = load_json(Path(args.payload_path))
     response_path = Path(args.response_path)
     store_path = Path(args.store_path)
@@ -307,8 +399,43 @@ def main() -> int:
         project_key=project_key,
         project_key_source=str(project_key_source) if project_key_source else None,
         items=items,
+        extra={"driver_mode": "legacy_lane_store"},
     )
     return 0
+
+
+def fail_hard(message: str) -> int:
+    print(message, file=sys.stderr)
+    return 1
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lane", required=True, choices=["serena", "ruflo", "cognee"])
+    parser.add_argument("--action", required=True, choices=["read", "write"])
+    parser.add_argument("--repo-root", required=True)
+    parser.add_argument("--session-root", required=True)
+    parser.add_argument("--store-path", required=True)
+    parser.add_argument("--payload-path", required=True)
+    parser.add_argument("--response-path", required=True)
+    parser.add_argument("--project-key")
+    parser.add_argument("--driver-mode")
+    args = parser.parse_args()
+
+    requested_driver_mode = (args.driver_mode or "").strip().lower()
+    configured_driver_mode = (os.getenv("VIBE_MEMORY_BACKEND_DRIVER_MODE") or "workspace").strip().lower()
+
+    if requested_driver_mode in {"legacy", "legacy_lane_store"}:
+        return fail_hard("legacy memory backend mode is forbidden; workspace broker is required")
+
+    if configured_driver_mode in {"legacy", "legacy_lane_store"}:
+        return fail_hard("legacy memory backend mode is forbidden; workspace broker is required")
+
+    workspace_status = invoke_workspace_shell(args)
+    if workspace_status == 0:
+        return 0
+
+    return fail_hard(f"workspace memory broker invocation failed with exit code {workspace_status}")
 
 
 if __name__ == "__main__":

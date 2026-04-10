@@ -325,10 +325,15 @@ if (Test-VibeGovernedStageReached -TerminalStage $terminalStage -TargetStage 'ph
         -DeepInterviewReadActions @($memoryDeepInterviewRead) `
         -RequirementContextPack $requirementMemoryContext `
         -XlPlanReadActions $xlPlanReadActions `
+        -PlanContextPack $planMemoryContext `
         -PlanExecuteReadActions @($memoryPlanExecuteRead) `
+        -PlanExecuteContextPack $executionMemoryContext `
         -PlanExecuteWriteActions @($memoryExecuteWrite, $memoryExecuteRufloWrite) `
         -CleanupWriteActions @($memoryCleanupDecision, $memoryCleanupCognee) `
         -CleanupFoldAction $memoryCleanupFold
+    Assert-VibeMemoryActivationHealthy `
+        -MemoryActivationReport $memoryActivation.report `
+        -ReportPath ([string]$memoryActivation.report_path)
     $deliveryAcceptanceReportPath = Join-Path $skeleton.session_root 'delivery-acceptance-report.json'
     $deliveryAcceptanceMarkdownPath = Join-Path $skeleton.session_root 'delivery-acceptance-report.md'
 }

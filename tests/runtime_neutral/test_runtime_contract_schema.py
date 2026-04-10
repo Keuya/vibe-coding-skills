@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 import uuid
@@ -11,6 +12,10 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+RUNTIME_CORE_SRC = REPO_ROOT / "packages" / "runtime-core" / "src"
+if str(RUNTIME_CORE_SRC) not in sys.path:
+    sys.path.insert(0, str(RUNTIME_CORE_SRC))
+
 RUNTIME_COMMON = REPO_ROOT / "scripts" / "runtime" / "VibeRuntime.Common.ps1"
 EXECUTION_COMMON = REPO_ROOT / "scripts" / "runtime" / "VibeExecution.Common.ps1"
 RUNTIME_ENTRY = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
@@ -58,6 +63,11 @@ def run_runtime(artifact_root: Path, *, extra_env: dict[str, str] | None = None)
         raise unittest.SkipTest("PowerShell executable not available in PATH")
 
     run_id = "pytest-contract-" + uuid.uuid4().hex[:10]
+    effective_env = os.environ.copy()
+    if extra_env:
+        effective_env.update(extra_env)
+    effective_env["VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION"] = "1"
+
     completed = subprocess.run(
         [
             shell,
@@ -79,7 +89,7 @@ def run_runtime(artifact_root: Path, *, extra_env: dict[str, str] | None = None)
         text=True,
         encoding="utf-8",
         check=True,
-        env={**os.environ, **(extra_env or {})},
+        env=effective_env,
     )
     return json.loads(completed.stdout)
 
@@ -89,14 +99,58 @@ def load_json(path: str | Path) -> dict[str, object]:
 
 
 def get_expected_workspace_root() -> Path:
-    resolved = REPO_ROOT.resolve()
-    parts = list(resolved.parts)
-    if ".worktrees" in parts:
-        return Path(*parts[: parts.index(".worktrees")])
-    return resolved
+    return REPO_ROOT.resolve()
 
 
 class RuntimeContractSchemaTests(unittest.TestCase):
+    def test_workspace_project_descriptor_keeps_storage_contract_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            workspace_root_text = str(workspace_root.resolve())
+
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$path = Initialize-VibeWorkspaceProjectDescriptor "
+                f"-RepoRoot {_ps_single_quote(workspace_root_text)}; "
+                "$descriptor = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json; "
+                "$descriptor | ConvertTo-Json -Depth 10 }"
+            )
+
+        self.assertEqual(1, payload["schema_version"])
+        self.assertEqual("vibeskills", payload["brand"])
+        self.assertEqual(workspace_root_text, payload["workspace_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["workspace_sidecar_root"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills/project.json", payload["project_descriptor_path"])
+        self.assertEqual(f"{workspace_root_text}/.vibeskills", payload["default_artifact_root"])
+        self.assertEqual("docs/requirements", payload["relative_runtime_contract"]["requirement_root"])
+        self.assertEqual("docs/plans", payload["relative_runtime_contract"]["execution_plan_root"])
+        self.assertEqual("outputs/runtime/vibe-sessions", payload["relative_runtime_contract"]["session_root"])
+
+    def test_workspace_project_descriptor_includes_workspace_memory_plane_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            workspace_root_text = str(workspace_root.resolve())
+
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$path = Initialize-VibeWorkspaceProjectDescriptor "
+                f"-RepoRoot {_ps_single_quote(workspace_root_text)}; "
+                "$descriptor = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json; "
+                "$descriptor | ConvertTo-Json -Depth 10 }"
+            )
+
+        self.assertEqual(f"{workspace_root_text}/.vibeskills/project.json", payload["memory_plane"]["identity_root"])
+        self.assertEqual("workspace", payload["memory_plane"]["identity_scope"])
+        self.assertEqual("workspace_shared_memory_v1", payload["memory_plane"]["driver_contract"])
+        self.assertEqual(
+            ["state_store", "serena", "ruflo", "cognee"],
+            payload["memory_plane"]["logical_owners"],
+        )
+
     def test_workspace_artifact_projection_defaults_to_repo_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             workspace_root = Path(tempdir) / "workspace"
@@ -118,6 +172,32 @@ class RuntimeContractSchemaTests(unittest.TestCase):
         self.assertEqual("workspace_sidecar_default", payload["artifact_root_source"])
         self.assertTrue(payload["default_workspace_sidecar_artifact_root"])
         self.assertEqual(f"{workspace_root_text}/.vibeskills/project.json", payload["project_descriptor_path"])
+
+    def test_workspace_artifact_projection_exposes_workspace_memory_identity_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            workspace_root = Path(tempdir) / "workspace"
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            workspace_root_text = str(workspace_root.resolve())
+
+            payload = run_ps_json(
+                "& { "
+                f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+                "$result = New-VibeWorkspaceArtifactProjection "
+                f"-RepoRoot {_ps_single_quote(workspace_root_text)} "
+                "-ArtifactRoot ''; "
+                "$result | ConvertTo-Json -Depth 10 }"
+            )
+
+        self.assertEqual(
+            f"{workspace_root_text}/.vibeskills/project.json",
+            payload["workspace_memory_identity_root"],
+        )
+        self.assertEqual("workspace", payload["workspace_memory_identity_scope"])
+        self.assertEqual("workspace_shared_memory_v1", payload["workspace_memory_driver_contract"])
+        self.assertEqual(
+            ["state_store", "serena", "ruflo", "cognee"],
+            payload["workspace_memory_logical_owners"],
+        )
 
     def test_session_root_initialization_persists_host_sidecar_root_from_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -218,6 +298,47 @@ class RuntimeContractSchemaTests(unittest.TestCase):
 
         self.assertEqual("openclaw", payload["requested_host_id"])
         self.assertEqual("windsurf", payload["effective_host_id"])
+
+    def test_runtime_memory_policy_includes_workspace_memory_defaults(self) -> None:
+        from vgo_runtime.memory import build_memory_policy
+
+        payload = build_memory_policy(stage_count=6).model_dump()
+
+        self.assertEqual("runtime-neutral", payload["backend"])
+        self.assertFalse(payload["enabled"])
+        self.assertEqual(6, payload["stage_count"])
+        self.assertEqual(".vibeskills/project.json", payload["workspace_identity_root"])
+        self.assertEqual("workspace_shared_memory_v1", payload["shared_memory_driver_contract"])
+        self.assertEqual(["state_store", "serena", "ruflo", "cognee"], payload["logical_memory_owners"])
+
+    def test_runtime_context_loads_workspace_memory_policy_surfaces(self) -> None:
+        payload = run_ps_json(
+            "& { "
+            f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+            f"$runtime = Get-VibeRuntimeContext -ScriptPath {_ps_single_quote(str(RUNTIME_ENTRY))}; "
+            "[pscustomobject]@{ "
+            "workspace_plane_id = $runtime.workspace_memory_plane.plane_id; "
+            "workspace_plane_mode = $runtime.workspace_memory_plane.mode; "
+            "disclosure_policy_id = $runtime.memory_disclosure_policy.policy_id; "
+            "ingest_policy_id = $runtime.memory_ingest_policy.policy_id "
+            "} | ConvertTo-Json -Depth 10 }"
+        )
+
+        self.assertEqual("workspace-shared-memory-v1", payload["workspace_plane_id"])
+        self.assertEqual("shadow", payload["workspace_plane_mode"])
+        self.assertEqual("memory-disclosure-capsules-v1", payload["disclosure_policy_id"])
+        self.assertEqual("memory-ingest-admission-v1", payload["ingest_policy_id"])
+
+    def test_workspace_memory_schema_defaults_preserve_workspace_identity_contract(self) -> None:
+        from vgo_runtime.workspace_memory_schema import build_workspace_memory_schema
+
+        payload = build_workspace_memory_schema().model_dump()
+
+        self.assertEqual(1, payload["schema_version"])
+        self.assertEqual(".vibeskills/project.json", payload["identity_root"])
+        self.assertEqual("workspace", payload["identity_scope"])
+        self.assertEqual("workspace_shared_memory_v1", payload["driver_contract"])
+        self.assertEqual(["state_store", "serena", "ruflo", "cognee"], payload["logical_owners"])
 
     def test_bridge_resolution_can_use_host_settings_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

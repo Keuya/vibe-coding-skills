@@ -1,6 +1,18 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+function Get-VibeMemoryBackendAdaptersConfig {
+    param(
+        [Parameter(Mandatory)] [object]$Runtime
+    )
+
+    if ($null -eq $Runtime -or -not ($Runtime.PSObject.Properties.Name -contains 'memory_backend_adapters')) {
+        return $null
+    }
+
+    return $Runtime.memory_backend_adapters
+}
+
 function Test-VibeMemoryTruthyEnvironmentValue {
     param(
         [AllowEmptyString()] [string]$Value = ''
@@ -18,8 +30,13 @@ function Resolve-VibeMemoryBackendRoot {
         [Parameter(Mandatory)] [object]$Runtime
     )
 
-    $rootEnvName = if ($Runtime.memory_backend_adapters -and $Runtime.memory_backend_adapters.backend_root_env) {
-        [string]$Runtime.memory_backend_adapters.backend_root_env
+    $adapters = Get-VibeMemoryBackendAdaptersConfig -Runtime $Runtime
+    $rootEnvName = if (
+        $adapters -and
+        $adapters.PSObject.Properties.Name -contains 'backend_root_env' -and
+        -not [string]::IsNullOrWhiteSpace([string]$adapters.backend_root_env)
+    ) {
+        [string]$adapters.backend_root_env
     } else {
         'VIBE_MEMORY_BACKEND_ROOT'
     }
@@ -37,7 +54,12 @@ function Get-VibeMemoryLaneConfig {
         [Parameter(Mandatory)] [string]$LaneId
     )
 
-    $lanes = $Runtime.memory_backend_adapters.lanes
+    $adapters = Get-VibeMemoryBackendAdaptersConfig -Runtime $Runtime
+    $lanes = if ($adapters -and $adapters.PSObject.Properties.Name -contains 'lanes') {
+        $adapters.lanes
+    } else {
+        $null
+    }
     if ($null -eq $lanes -or -not ($lanes.PSObject.Properties.Name -contains $LaneId)) {
         throw "Missing memory backend lane config for: $LaneId"
     }
@@ -81,7 +103,12 @@ function Resolve-VibeMemoryBackendCommand {
         [Parameter(Mandatory)] [object]$Runtime
     )
 
-    $driver = $Runtime.memory_backend_adapters.driver
+    $adapters = Get-VibeMemoryBackendAdaptersConfig -Runtime $Runtime
+    $driver = if ($adapters -and $adapters.PSObject.Properties.Name -contains 'driver') {
+        $adapters.driver
+    } else {
+        $null
+    }
     $command = if ($driver -and $driver.command) { [string]$driver.command } else { '${VGO_PYTHON}' }
     return Resolve-VgoPythonCommandSpec -Command $command
 }
@@ -138,6 +165,10 @@ function Invoke-VibeMemoryBackendAction {
             status = [string]$laneResolution.reason
             items = @()
             item_count = 0
+            capsule_count = 0
+            capsules = @()
+            suppressed_count = 0
+            workspace_memory_plane = $null
             artifact_path = $null
             store_path = $null
             project_key = $null
@@ -154,6 +185,10 @@ function Invoke-VibeMemoryBackendAction {
             status = 'memory_backend_driver_missing'
             items = @()
             item_count = 0
+            capsule_count = 0
+            capsules = @()
+            suppressed_count = 0
+            workspace_memory_plane = $null
             artifact_path = $null
             store_path = [string]$laneResolution.store_path
             project_key = $laneResolution.project_key
@@ -194,6 +229,10 @@ function Invoke-VibeMemoryBackendAction {
                 status = 'memory_backend_invocation_failed'
                 items = @()
                 item_count = 0
+                capsule_count = 0
+                capsules = @()
+                suppressed_count = 0
+                workspace_memory_plane = $null
                 artifact_path = $null
                 store_path = [string]$laneResolution.store_path
                 project_key = $laneResolution.project_key
@@ -209,6 +248,10 @@ function Invoke-VibeMemoryBackendAction {
                 status = 'memory_backend_missing_response'
                 items = @()
                 item_count = 0
+                capsule_count = 0
+                capsules = @()
+                suppressed_count = 0
+                workspace_memory_plane = $null
                 artifact_path = $null
                 store_path = [string]$laneResolution.store_path
                 project_key = $laneResolution.project_key
@@ -223,6 +266,13 @@ function Invoke-VibeMemoryBackendAction {
             status = [string]$response.status
             items = @($response.items)
             item_count = [int]$response.item_count
+            capsule_count = if ($response.PSObject.Properties.Name -contains 'capsule_count') { [int]$response.capsule_count } else { 0 }
+            capsules = if (
+                ($response.PSObject.Properties.Name -contains 'capsules') -and
+                $null -ne $response.capsules
+            ) { @($response.capsules) } else { @() }
+            suppressed_count = if ($response.PSObject.Properties.Name -contains 'suppressed_count') { [int]$response.suppressed_count } else { 0 }
+            workspace_memory_plane = if ($response.PSObject.Properties.Name -contains 'workspace_memory_plane') { $response.workspace_memory_plane } else { $null }
             artifact_path = $responsePath
             store_path = [string]$response.store_path
             project_key = if ($response.project_key) { [string]$response.project_key } else { $laneResolution.project_key }
@@ -235,6 +285,10 @@ function Invoke-VibeMemoryBackendAction {
             status = 'memory_backend_exception'
             items = @()
             item_count = 0
+            capsule_count = 0
+            capsules = @()
+            suppressed_count = 0
+            workspace_memory_plane = $null
             artifact_path = $null
             store_path = [string]$laneResolution.store_path
             project_key = $laneResolution.project_key

@@ -29,11 +29,14 @@
     "config/implementation-guardrails.json",
     "config/llm-acceleration-policy.json",
     "config/memory-backend-adapters.json",
+    "config/memory-disclosure-policy.json",
     "config/memory-governance.json",
+    "config/memory-ingest-policy.json",
     "config/memory-retrieval-budget-policy.json",
     "config/memory-runtime-v3-policy.json",
     "config/memory-stage-activation-policy.json",
     "config/memory-tier-router.json",
+    "config/workspace-memory-plane.json",
     "config/ml-lifecycle-overlay.json",
     "config/native-specialist-execution-policy.json",
     "config/observability-policy.json",
@@ -103,7 +106,6 @@
         "config/runtime-input-packet-policy.json",
         "config/runtime-modes.json",
         "config/runtime-script-manifest.json",
-        "config/vibe-entry-surfaces.json",
         "config/version-governance.json"
       ],
       "router_and_discovery_policy_files": [
@@ -133,15 +135,19 @@
         "config/router-thresholds.json",
         "config/skill-alias-map.json",
         "config/skill-keyword-index.json",
-        "config/skill-routing-rules.json"
+        "config/skill-routing-rules.json",
+        "config/vibe-entry-surfaces.json"
       ],
       "memory_policy_files": [
         "config/memory-backend-adapters.json",
+        "config/memory-disclosure-policy.json",
         "config/memory-governance.json",
+        "config/memory-ingest-policy.json",
         "config/memory-retrieval-budget-policy.json",
         "config/memory-runtime-v3-policy.json",
         "config/memory-stage-activation-policy.json",
-        "config/memory-tier-router.json"
+        "config/memory-tier-router.json",
+        "config/workspace-memory-plane.json"
       ],
       "overlay_and_specialist_policy_files": [
         "config/agency-overlays.json",
