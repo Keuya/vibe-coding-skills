@@ -5,6 +5,8 @@ param(
     [string]$RequirementDocPath = '',
     [string]$RuntimeInputPacketPath = '',
     [string]$PlanMemoryContextPath = '',
+    [string]$DiscussionConsultationPath = '',
+    [string]$PlanningConsultationPath = '',
     [string]$ArtifactRoot = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
     [AllowEmptyString()] [string]$RootRunId = '',
@@ -20,6 +22,7 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'VibeRuntime.Common.ps1')
 . (Join-Path $PSScriptRoot 'VibeExecution.Common.ps1')
+. (Join-Path $PSScriptRoot 'VibeConsultation.Common.ps1')
 . (Join-Path $PSScriptRoot '..\common\AntiProxyGoalDrift.ps1')
 
 $runtime = Get-VibeRuntimeContext -ScriptPath $PSCommandPath
@@ -38,6 +41,7 @@ $hierarchyState = Get-VibeHierarchyState `
     -InheritedExecutionPlanPath $InheritedExecutionPlanPath `
     -DelegationEnvelopePath $DelegationEnvelopePath `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
+$grade = Get-VibeInternalGrade -Task $Task
 $isChildScope = ([string]$hierarchyState.governance_scope -eq 'child')
 $planPath = if ($isChildScope) {
     if ([string]::IsNullOrWhiteSpace([string]$hierarchyState.inherited_execution_plan_path)) {
@@ -54,16 +58,47 @@ $runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketP
 } else {
     $null
 }
-$gradeResolution = Resolve-VibeGovernedGrade `
-    -BaseGrade (Get-VibeInternalGrade -Task $Task) `
-    -RequestedGradeFloor $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.requested_grade_floor } else { '' }) `
-    -Policy $runtime.runtime_input_packet_policy
-$grade = [string]$gradeResolution.internal_grade
 $planMemoryContext = if (-not [string]::IsNullOrWhiteSpace($PlanMemoryContextPath) -and (Test-Path -LiteralPath $PlanMemoryContextPath)) {
     Get-Content -LiteralPath $PlanMemoryContextPath -Raw -Encoding UTF8 | ConvertFrom-Json
 } else {
     $null
 }
+$planningConsultation = if (-not [string]::IsNullOrWhiteSpace($PlanningConsultationPath) -and (Test-Path -LiteralPath $PlanningConsultationPath)) {
+    Get-Content -LiteralPath $PlanningConsultationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+} else {
+    $null
+}
+$discussionConsultation = if (-not [string]::IsNullOrWhiteSpace($DiscussionConsultationPath) -and (Test-Path -LiteralPath $DiscussionConsultationPath)) {
+    Get-Content -LiteralPath $DiscussionConsultationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+} else {
+    $null
+}
+if ($discussionConsultation) {
+    $discussionFreezeGate = Assert-VibeSpecialistConsultationFreezeGate `
+        -Receipt $discussionConsultation `
+        -Policy $runtime.specialist_consultation_policy `
+        -FreezeTarget 'execution_plan'
+    if ($discussionConsultation.PSObject.Properties.Name -contains 'freeze_gate') {
+        $discussionConsultation.freeze_gate = $discussionFreezeGate
+    } else {
+        $discussionConsultation | Add-Member -NotePropertyName freeze_gate -NotePropertyValue $discussionFreezeGate
+    }
+}
+if ($planningConsultation) {
+    $planningFreezeGate = Assert-VibeSpecialistConsultationFreezeGate `
+        -Receipt $planningConsultation `
+        -Policy $runtime.specialist_consultation_policy `
+        -FreezeTarget 'execution_plan'
+    if ($planningConsultation.PSObject.Properties.Name -contains 'freeze_gate') {
+        $planningConsultation.freeze_gate = $planningFreezeGate
+    } else {
+        $planningConsultation | Add-Member -NotePropertyName freeze_gate -NotePropertyValue $planningFreezeGate
+    }
+}
+$stageLifecycleDisclosure = New-VibeSpecialistLifecycleDisclosureProjection `
+    -RuntimeInputPacket $runtimeInputPacket `
+    -DiscussionConsultationReceipt $discussionConsultation `
+    -PlanningConsultationReceipt $planningConsultation
 $approvedDispatch = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { @($runtimeInputPacket.specialist_dispatch.approved_dispatch) } else { @() }
 $localSuggestions = if ($runtimeInputPacket -and $runtimeInputPacket.specialist_dispatch) { @($runtimeInputPacket.specialist_dispatch.local_specialist_suggestions) } else { @() }
 $executionTopology = New-VibeExecutionTopology `
@@ -103,7 +138,7 @@ $lines = @(
     "# $(Get-VibeTitleFromTask -Task $Task)",
     '',
     '## Execution Summary',
-    "Governed runtime execution plan for `vibe` in mode `$Mode`.",
+    "Governed runtime execution plan for ``vibe`` in mode $Mode.",
     '',
     '## Frozen Inputs',
     "- Requirement doc: $([System.IO.Path]::GetFullPath($requirementPath))",
@@ -113,9 +148,6 @@ $lines = @(
 $lines += @('')
 if ($runtimeInputPacket) {
     $lines += @(
-        "- Entry intent: $([string]$runtimeInputPacket.entry_intent_id)",
-        "- Requested stop stage: $([string]$runtimeInputPacket.requested_stage_stop)",
-        "- Requested grade floor: $([string]$runtimeInputPacket.requested_grade_floor)",
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
         "- Frozen route pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",
@@ -198,7 +230,8 @@ if (@($approvedDispatch).Count -gt 0 -or @($localSuggestions).Count -gt 0) {
         '',
         '## Specialist Skill Dispatch Plan',
         '- Specialist routing is mandatory and bounded inside governed `vibe`; it does not transfer runtime authority away from vibe.',
-        '- Eligible specialist recommendations must auto-promote into `approved_dispatch` by default.',
+        '- Eligible specialist recommendations should auto-promote into `approved_dispatch` by default.',
+        '- Before specialist execution starts, governed `vibe` emits one unified disclosure for the effective `approved_dispatch` set using each skill''s real `native_skill_entrypoint`.',
         '- Each specialist must be invoked through its native workflow, input contract, and validation style.',
         '- Specialist outputs remain subordinate to the frozen requirement and the governed plan.'
     )
@@ -207,10 +240,7 @@ if (@($approvedDispatch).Count -gt 0 -or @($localSuggestions).Count -gt 0) {
                 ('- Dispatch {0} as {1}.' -f [string]$recommendation.skill_id, [string]$recommendation.bounded_role),
                 ('  Binding profile: {0}; dispatch phase: {1}; lane policy: {2}; parallel in XL: {3}' -f [string]$recommendation.binding_profile, [string]$recommendation.dispatch_phase, [string]$recommendation.lane_policy, [bool]$recommendation.parallelizable_in_root_xl),
                 ('  Write scope: {0}; review mode: {1}; execution priority: {2}' -f [string]$recommendation.write_scope, [string]$recommendation.review_mode, [int]$recommendation.execution_priority),
-                ('  Specialist source of truth: entrypoint={0}; root={1}; visibility={2}' -f [string]$recommendation.native_skill_entrypoint, [string]$recommendation.skill_root, [string]$recommendation.visibility_class),
-                ('  Usage required: {0}; preserve workflow: {1}' -f [bool]$recommendation.usage_required, [bool]$recommendation.must_preserve_workflow),
                 ('  Reason: {0}' -f [string]$recommendation.reason),
-                ('  Expected contribution: {0}' -f [string]$recommendation.expected_contribution),
                 ('  Required inputs: {0}' -f [string]::Join(', ', @($recommendation.required_inputs))),
                 ('  Expected outputs: {0}' -f [string]::Join(', ', @($recommendation.expected_outputs))),
                 ('  Verification: {0}' -f [string]$recommendation.verification_expectation)
@@ -232,21 +262,64 @@ if (@($approvedDispatch).Count -gt 0 -or @($localSuggestions).Count -gt 0) {
         }
     }
 }
-$hasPlanMemoryItems = $planMemoryContext -and @($planMemoryContext.items).Count -gt 0
-$hasPlanCapsules = (
-    $planMemoryContext -and
-    $planMemoryContext.PSObject.Properties.Name -contains 'selected_capsules' -and
-    $null -ne $planMemoryContext.selected_capsules -and
-    @($planMemoryContext.selected_capsules).Count -gt 0
-)
-if ($hasPlanMemoryItems -or $hasPlanCapsules) {
+if ($planningConsultation -and [bool]$planningConsultation.enabled) {
+    $lines += @(
+        '',
+        '## Specialist Consultation',
+        'These are specialists actually consulted during plan-time under governed `vibe` before this execution plan was frozen.'
+    )
+    foreach ($disclosure in @($planningConsultation.user_disclosures)) {
+        $lines += @(
+            ('- Consulted Skill: {0}' -f [string]$disclosure.skill_id),
+            ('  Why now: {0}' -f [string]$disclosure.why_now),
+            ('  Loaded from: {0}' -f [string]$disclosure.native_skill_entrypoint)
+        )
+        $consultedUnit = $null
+        foreach ($candidate in @($planningConsultation.consulted_units)) {
+            if ([string]$candidate.skill_id -eq [string]$disclosure.skill_id) {
+                $consultedUnit = $candidate
+                break
+            }
+        }
+        if ($consultedUnit) {
+            $lines += @(
+                ('  Consultation status: {0}' -f [string]$consultedUnit.status),
+                ('  Summary: {0}' -f [string]$consultedUnit.summary)
+            )
+            foreach ($note in @($consultedUnit.adoption_notes)) {
+                $lines += ('  Adopted into plan: {0}' -f [string]$note)
+            }
+        }
+    }
+    if (@($planningConsultation.deferred_to_execution).Count -gt 0) {
+        $lines += @(
+            '',
+            'Deferred specialist follow-up stayed separate from execution dispatch and remains advisory until execution-time approval.'
+        )
+        foreach ($item in @($planningConsultation.deferred_to_execution)) {
+            $lines += ('- Deferred to execution: {0} ({1})' -f [string]$item.skill_id, [string]$item.reason)
+        }
+    }
+    if (@($planningConsultation.degraded).Count -gt 0) {
+        foreach ($item in @($planningConsultation.degraded)) {
+            $lines += ('- Consultation degraded: {0} ({1})' -f [string]$item.skill_id, [string]$item.result_reason)
+        }
+    }
+}
+$lifecycleLines = Get-VibeSpecialistLifecycleDisclosureMarkdownLines `
+    -LifecycleDisclosure $stageLifecycleDisclosure `
+    -IncludeLayerIds @('discussion_routing', 'discussion_consultation', 'planning_consultation')
+if (@($lifecycleLines).Count -gt 0) {
+    $lines += @('', @($lifecycleLines))
+}
+if ($planMemoryContext -and @($planMemoryContext.items).Count -gt 0) {
     $lines += @(
         '',
         '## Memory Context',
         'Bounded stage-aware memory context injected into execution planning:',
         ('- Disclosure level: {0}' -f [string]$planMemoryContext.disclosure_level)
     )
-    if ($hasPlanCapsules) {
+    if ($planMemoryContext.PSObject.Properties.Name -contains 'selected_capsules' -and @($planMemoryContext.selected_capsules).Count -gt 0) {
         foreach ($capsule in @($planMemoryContext.selected_capsules)) {
             $lines += @(
                 ('- Capsule [{0}] {1}' -f [string]$capsule.capsule_id, [string]$capsule.title),
@@ -327,13 +400,12 @@ $receipt = [pscustomobject]@{
     canonical_write_allowed = -not $isChildScope
     inherited_execution_plan_path = if ($isChildScope) { $planPath } else { $null }
     runtime_input_packet_path = $RuntimeInputPacketPath
+    planning_consultation_path = if ($planningConsultation) { $PlanningConsultationPath } else { $null }
+    planning_consultation_count = if ($planningConsultation) { @($planningConsultation.consulted_units).Count } else { 0 }
+    planning_consultation_user_disclosure_count = if ($planningConsultation) { @($planningConsultation.user_disclosures).Count } else { 0 }
     plan_memory_context_path = $PlanMemoryContextPath
     plan_memory_disclosure_level = if ($planMemoryContext -and $planMemoryContext.PSObject.Properties.Name -contains 'disclosure_level') { [string]$planMemoryContext.disclosure_level } else { $null }
-    plan_memory_capsule_count = if (
-        $planMemoryContext -and
-        $planMemoryContext.PSObject.Properties.Name -contains 'selected_capsules' -and
-        $null -ne $planMemoryContext.selected_capsules
-    ) { @($planMemoryContext.selected_capsules).Count } else { 0 }
+    plan_memory_capsule_count = if ($planMemoryContext -and $planMemoryContext.PSObject.Properties.Name -contains 'selected_capsules') { @($planMemoryContext.selected_capsules).Count } else { 0 }
     execution_topology_path = $executionTopologyPath
     generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 }

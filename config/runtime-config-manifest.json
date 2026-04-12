@@ -70,7 +70,7 @@
     "config/runtime-input-packet-policy.json",
     "config/runtime-modes.json",
     "config/runtime-script-manifest.json",
-    "config/vibe-entry-surfaces.json",
+    "config/specialist-consultation-policy.json",
     "config/settings.template.codex.json",
     "config/skills-lock.json",
     "config/system-design-overlay.json",
@@ -106,6 +106,7 @@
         "config/runtime-input-packet-policy.json",
         "config/runtime-modes.json",
         "config/runtime-script-manifest.json",
+        "config/specialist-consultation-policy.json",
         "config/version-governance.json"
       ],
       "router_and_discovery_policy_files": [
@@ -135,8 +136,7 @@
         "config/router-thresholds.json",
         "config/skill-alias-map.json",
         "config/skill-keyword-index.json",
-        "config/skill-routing-rules.json",
-        "config/vibe-entry-surfaces.json"
+        "config/skill-routing-rules.json"
       ],
       "memory_policy_files": [
         "config/memory-backend-adapters.json",

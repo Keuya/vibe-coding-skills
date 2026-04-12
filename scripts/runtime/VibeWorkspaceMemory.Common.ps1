@@ -1,35 +1,13 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Get-VibeWorkspaceMemoryDriverConfig {
-    param(
-        [Parameter(Mandatory)] [object]$Runtime
-    )
-
-    if ($null -eq $Runtime -or -not ($Runtime.PSObject.Properties.Name -contains 'memory_backend_adapters')) {
-        return $null
-    }
-
-    $adapters = $Runtime.memory_backend_adapters
-    if ($null -eq $adapters -or -not ($adapters.PSObject.Properties.Name -contains 'driver')) {
-        return $null
-    }
-
-    return $adapters.driver
-}
-
 function Get-VibeWorkspaceMemoryDriverScriptPath {
     param(
         [Parameter(Mandatory)] [object]$Runtime
     )
 
-    $driver = Get-VibeWorkspaceMemoryDriverConfig -Runtime $Runtime
-    $driverPath = if (
-        $driver -and
-        $driver.PSObject.Properties.Name -contains 'script_path' -and
-        -not [string]::IsNullOrWhiteSpace([string]$driver.script_path)
-    ) {
-        [string]$driver.script_path
+    $driverPath = if ($Runtime.memory_backend_adapters -and $Runtime.memory_backend_adapters.driver -and $Runtime.memory_backend_adapters.driver.script_path) {
+        [string]$Runtime.memory_backend_adapters.driver.script_path
     } else {
         'scripts/runtime/workspace_memory_driver.py'
     }
@@ -43,7 +21,7 @@ function Resolve-VibeWorkspaceMemoryCommandSpec {
         [Parameter(Mandatory)] [object]$Runtime
     )
 
-    $driver = Get-VibeWorkspaceMemoryDriverConfig -Runtime $Runtime
+    $driver = $Runtime.memory_backend_adapters.driver
     $command = if ($driver -and $driver.command) { [string]$driver.command } else { '${VGO_PYTHON}' }
     return Resolve-VgoPythonCommandSpec -Command $command
 }
@@ -147,10 +125,7 @@ function Invoke-VibeWorkspaceMemoryAction {
             items = @($response.items)
             item_count = [int]$response.item_count
             capsule_count = [int]$response.capsule_count
-            capsules = if (
-                ($response.PSObject.Properties.Name -contains 'capsules') -and
-                $null -ne $response.capsules
-            ) { @($response.capsules) } else { @() }
+            capsules = @($response.capsules)
             suppressed_count = [int]$response.suppressed_count
             workspace_memory_plane = $response.workspace_memory_plane
             artifact_path = $responsePath

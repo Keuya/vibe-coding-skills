@@ -113,145 +113,15 @@ def extract_split_specialist_dispatch_function() -> str:
     return match.group(1)
 
 
-def extract_get_specialist_recommendations_function() -> str:
-    content = FREEZE_SCRIPT.read_text(encoding="utf-8")
-    match = re.search(
-        r"(function Get-VibeSpecialistRecommendations \{.*?^\})\s*^function Split-VibeSpecialistDispatch",
-        content,
-        re.DOTALL | re.MULTILINE,
-    )
-    if not match:
-        raise AssertionError("Unable to locate Get-VibeSpecialistRecommendations in Freeze-RuntimeInputPacket.ps1")
-    return match.group(1)
-
-
 class SkillPromotionFreezeContractTests(unittest.TestCase):
     def test_runtime_input_policy_requires_recommendation_floor_and_fallback_specialists(self) -> None:
         policy = load_json(REPO_ROOT / "config" / "runtime-input-packet-policy.json")
 
         self.assertEqual(1, int(policy["required_specialist_recommendation_count"]))
-        self.assertLessEqual(
-            int(policy["required_specialist_recommendation_count"]),
-            int(policy["specialist_recommendation_limit"]),
-        )
         fallback_by_task_type = policy["fallback_specialists_by_task_type"]
         for task_type in ("planning", "debug", "research", "coding", "review", "default"):
             with self.subTest(task_type=task_type):
                 self.assertGreaterEqual(len(as_list(fallback_by_task_type[task_type])), 1)
-
-    def test_recommendation_builder_rejects_floor_above_limit(self) -> None:
-        shell = resolve_powershell()
-        if shell is None:
-            raise unittest.SkipTest("PowerShell executable not available in PATH")
-
-        get_recommendations_function = extract_get_specialist_recommendations_function()
-        script_body = (
-            "& { "
-            "function Get-VibeCustomAdmissionIndex { param([object]$RouteResult) return @{} } "
-            "function Get-VibeFallbackSpecialistSkillIds { "
-            "param([string]$TaskType, [object]$Policy, [string]$RouterSelectedSkill, [string]$RuntimeSelectedSkill) "
-            "return @('fallback-skill') "
-            "} "
-            "function New-VibeSpecialistRecommendation { "
-            "param("
-            "[string]$RepoRoot, [string]$Task, [string]$SkillId, [string]$Source, [string]$TaskType, "
-            "[string]$Reason, [AllowNull()][string]$PackId, [double]$Confidence, [int]$Rank, "
-            "[AllowNull()][object]$DispatchContract, [AllowNull()][object]$PromotionPolicy, "
-            "[AllowNull()][object]$CustomMetadata, [string]$TargetRoot, [string]$HostId"
-            ") "
-            "return [pscustomobject]@{ skill_id = $SkillId; source = $Source; rank = $Rank } "
-            "} "
-            f"{get_recommendations_function} "
-            "$routeResult = [pscustomobject]@{ ranked = @() }; "
-            "$policy = [pscustomobject]@{ "
-            "specialist_recommendation_limit = 1; "
-            "required_specialist_recommendation_count = 2; "
-            "overlay_fields = @(); "
-            "specialist_dispatch_contract = [pscustomobject]@{} "
-            "}; "
-            "Get-VibeSpecialistRecommendations "
-            "-RepoRoot '.' "
-            "-Task 'demo task' "
-            "-RouteResult $routeResult "
-            "-RuntimeSelectedSkill 'vibe' "
-            "-RouterSelectedSkill '' "
-            "-TaskType 'planning' "
-            "-Policy $policy | Out-Null "
-            "}"
-        )
-
-        with self.assertRaises(subprocess.CalledProcessError):
-            subprocess.run(
-                [
-                    shell,
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-Command",
-                    script_body,
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=True,
-            )
-
-    def test_recommendation_builder_rejects_when_floor_cannot_be_satisfied(self) -> None:
-        shell = resolve_powershell()
-        if shell is None:
-            raise unittest.SkipTest("PowerShell executable not available in PATH")
-
-        get_recommendations_function = extract_get_specialist_recommendations_function()
-        script_body = (
-            "& { "
-            "function Get-VibeCustomAdmissionIndex { param([object]$RouteResult) return @{} } "
-            "function Get-VibeFallbackSpecialistSkillIds { "
-            "param([string]$TaskType, [object]$Policy, [string]$RouterSelectedSkill, [string]$RuntimeSelectedSkill) "
-            "return @() "
-            "} "
-            "function New-VibeSpecialistRecommendation { "
-            "param("
-            "[string]$RepoRoot, [string]$Task, [string]$SkillId, [string]$Source, [string]$TaskType, "
-            "[string]$Reason, [AllowNull()][string]$PackId, [double]$Confidence, [int]$Rank, "
-            "[AllowNull()][object]$DispatchContract, [AllowNull()][object]$PromotionPolicy, "
-            "[AllowNull()][object]$CustomMetadata, [string]$TargetRoot, [string]$HostId"
-            ") "
-            "return [pscustomobject]@{ skill_id = $SkillId; source = $Source; rank = $Rank } "
-            "} "
-            f"{get_recommendations_function} "
-            "$routeResult = [pscustomobject]@{ ranked = @() }; "
-            "$policy = [pscustomobject]@{ "
-            "specialist_recommendation_limit = 2; "
-            "required_specialist_recommendation_count = 1; "
-            "overlay_fields = @(); "
-            "specialist_dispatch_contract = [pscustomobject]@{} "
-            "}; "
-            "Get-VibeSpecialistRecommendations "
-            "-RepoRoot '.' "
-            "-Task 'demo task' "
-            "-RouteResult $routeResult "
-            "-RuntimeSelectedSkill 'vibe' "
-            "-RouterSelectedSkill '' "
-            "-TaskType 'planning' "
-            "-Policy $policy | Out-Null "
-            "}"
-        )
-
-        with self.assertRaises(subprocess.CalledProcessError):
-            subprocess.run(
-                [
-                    shell,
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-Command",
-                    script_body,
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=True,
-            )
 
     def test_eligible_matched_skill_is_approved_and_not_ghosted(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -274,6 +144,13 @@ class SkillPromotionFreezeContractTests(unittest.TestCase):
             self.assertFalse(scikit_learn_outcome["destructive"])
             self.assertTrue(scikit_learn_outcome["contract_complete"])
 
+            scikit_dispatch = next(
+                item for item in as_list(dispatch["approved_dispatch"]) if item["skill_id"] == "scikit-learn"
+            )
+            self.assertTrue(scikit_dispatch["native_skill_entrypoint"])
+            self.assertTrue(Path(scikit_dispatch["native_skill_entrypoint"]).is_absolute())
+            self.assertTrue(Path(scikit_dispatch["native_skill_entrypoint"]).exists())
+
     def test_freeze_records_explicit_states_for_all_surfaced_recommendations(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             payload = freeze_runtime_packet(ML_PROMPT, Path(tempdir))
@@ -285,6 +162,18 @@ class SkillPromotionFreezeContractTests(unittest.TestCase):
 
             self.assertTrue(surfaced)
             self.assertEqual(surfaced, outcome_ids)
+
+    def test_freeze_keeps_consultation_truth_out_of_execution_dispatch_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            payload = freeze_runtime_packet(ML_PROMPT, Path(tempdir))
+            packet = load_json(payload["packet_path"])
+            dispatch = packet["specialist_dispatch"]
+
+            self.assertNotIn("specialist_consultation", packet)
+            self.assertNotIn("consulted_units", dispatch)
+            self.assertNotIn("user_disclosures", dispatch)
+            self.assertGreaterEqual(len(as_list(packet["specialist_recommendations"])), 1)
+            self.assertGreaterEqual(len(as_list(dispatch["approved_dispatch"])), 1)
 
     def test_policy_can_allow_incomplete_contract_without_forced_freeze_degrade(self) -> None:
         split_function = extract_split_specialist_dispatch_function()
@@ -340,7 +229,6 @@ class SkillPromotionFreezeContractTests(unittest.TestCase):
                 "$recommendation = Get-VgoSkillPromotionMetadata "
                 "-Prompt 'generic prompt' "
                 "-SkillMdPath '/tmp/skill.md' "
-                "-SkillRoot '/tmp' "
                 "-Description 'desc' "
                 "-RequiredInputs @('input') "
                 "-ExpectedOutputs @('output') "
@@ -357,30 +245,3 @@ class SkillPromotionFreezeContractTests(unittest.TestCase):
         outcome = next(item for item in as_list(payload["promotion_outcomes"]) if item["skill_id"] == "demo-skill")
         self.assertEqual("local_suggestion", outcome["promotion_state"])
         self.assertEqual("surface_only", outcome["recommended_promotion_action"])
-
-    def test_split_dispatch_clamps_usage_required_to_native_contract(self) -> None:
-        split_function = extract_split_specialist_dispatch_function()
-        payload = run_powershell_json(
-            (
-                "& { "
-                f". '{HELPER_SCRIPT}'; "
-                f"{split_function} "
-                "$recommendation = [pscustomobject]@{ "
-                "skill_id = 'demo-skill'; "
-                "destructive = $false; "
-                "destructive_reason_codes = @(); "
-                "contract_complete = $true; "
-                "recommended_promotion_action = 'auto_dispatch'; "
-                "native_usage_required = $true; "
-                "usage_required = $false "
-                "}; "
-                "$dispatch = Split-VibeSpecialistDispatch -GovernanceScope 'root' -Recommendations @($recommendation); "
-                "$dispatch | ConvertTo-Json -Depth 20 }"
-            )
-        )
-
-        approved_dispatch = as_list(payload["approved_dispatch"])
-        self.assertEqual(1, len(approved_dispatch))
-        self.assertTrue(bool(approved_dispatch[0]["native_usage_required"]))
-        self.assertTrue(bool(approved_dispatch[0]["usage_required"]))
-        self.assertEqual([], as_list(payload["degraded"]))

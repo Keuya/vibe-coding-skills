@@ -137,6 +137,11 @@ These fields remain public and compatibility-preserved, but later waves may cont
 - runtime summary:
   - `memory_activation`
   - `delivery_acceptance`
+  - `specialist_user_disclosure`
+  - `specialist_consultation`
+  - `specialist_lifecycle_disclosure`
+  - `host_stage_disclosure`
+  - `host_user_briefing`
 
 Compatibility rule:
 

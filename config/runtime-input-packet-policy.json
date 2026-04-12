@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-17",
+  "updated_at": "2026-04-12",
   "enabled": true,
   "router_script_path": "scripts/router/resolve-pack-route.ps1",
   "explicit_runtime_skill": "vibe",
@@ -24,17 +24,6 @@
     "divergence_shadow",
     "provenance"
   ],
-  "optional_public_entry_fields": [
-    "entry_intent_id",
-    "requested_stage_stop",
-    "requested_grade_floor"
-  ],
-  "public_grade_floor_allowlist": [
-    "L",
-    "XL"
-  ],
-  "shortcut_rejects_multiple_grade_flags": true,
-  "shortcut_rejects_multiple_entry_ids": true,
   "hierarchy_contract": {
     "default_governance_scope": "root",
     "governance_artifacts": {
@@ -99,6 +88,17 @@
       "disable_env": "VGO_DISABLE_CHILD_SPECIALIST_AUTO_ABSORB",
       "force_escalation_env": "VGO_FORCE_CHILD_SPECIALIST_ESCALATION"
     }
+  },
+  "interactive_specialist_disclosure": {
+    "enabled": true,
+    "stage": "plan_execute",
+    "scope": "approved_dispatch_only",
+    "timing": "before_execution",
+    "aggregation": "unified_once",
+    "path_source": "native_skill_entrypoint",
+    "require_entrypoint_path": true,
+    "include_description": true,
+    "header": "Pre-dispatch specialist disclosure:"
   },
   "specialist_binding_profiles": {
     "planning": {

@@ -62,45 +62,6 @@ function Get-VibeMemoryCanonicalOwners {
     }
 }
 
-function Get-VibeMemoryDisclosureStagePolicy {
-    param(
-        [Parameter(Mandatory)] [object]$Runtime,
-        [Parameter(Mandatory)] [string]$Stage
-    )
-
-    $defaults = $Runtime.memory_disclosure_policy.defaults
-    $stagePolicy = $null
-    if ($Runtime.memory_disclosure_policy.stages.PSObject.Properties.Name -contains $Stage) {
-        $stagePolicy = $Runtime.memory_disclosure_policy.stages.$Stage
-    }
-
-    $level = if ($null -ne $stagePolicy -and $stagePolicy.PSObject.Properties.Name -contains 'level' -and -not [string]::IsNullOrWhiteSpace([string]$stagePolicy.level)) {
-        [string]$stagePolicy.level
-    } else {
-        'L1_capsule_titles'
-    }
-    $maxCapsules = if ($null -ne $stagePolicy -and $stagePolicy.PSObject.Properties.Name -contains 'max_capsules' -and $null -ne $stagePolicy.max_capsules) {
-        [int]$stagePolicy.max_capsules
-    } elseif ($defaults.PSObject.Properties.Name -contains 'max_capsules' -and $null -ne $defaults.max_capsules) {
-        [int]$defaults.max_capsules
-    } else {
-        4
-    }
-    $maxCharsPerCapsule = if ($null -ne $stagePolicy -and $stagePolicy.PSObject.Properties.Name -contains 'max_chars_per_capsule' -and $null -ne $stagePolicy.max_chars_per_capsule) {
-        [int]$stagePolicy.max_chars_per_capsule
-    } elseif ($defaults.PSObject.Properties.Name -contains 'max_chars_per_capsule' -and $null -ne $defaults.max_chars_per_capsule) {
-        [int]$defaults.max_chars_per_capsule
-    } else {
-        360
-    }
-
-    return [pscustomobject]@{
-        level = $level
-        max_capsules = $maxCapsules
-        max_chars_per_capsule = $maxCharsPerCapsule
-    }
-}
-
 function Get-VibeMemoryStagePolicy {
     param(
         [Parameter(Mandatory)] [object]$Runtime,
@@ -190,7 +151,6 @@ function Get-VibeMemoryReadActionObject {
         artifact_path = if ($BackendResult.artifact_path) { [string]$BackendResult.artifact_path } else { $null }
         project_key = if ($BackendResult.project_key) { [string]$BackendResult.project_key } else { $null }
         project_key_source = if ($BackendResult.project_key_source) { [string]$BackendResult.project_key_source } else { $null }
-        workspace_memory_plane = if ($BackendResult.PSObject.Properties.Name -contains 'workspace_memory_plane') { $BackendResult.workspace_memory_plane } else { $null }
     }
 }
 
@@ -209,7 +169,6 @@ function Get-VibeMemoryWriteActionObject {
         project_key = if ($BackendResult.project_key) { [string]$BackendResult.project_key } else { $null }
         project_key_source = if ($BackendResult.project_key_source) { [string]$BackendResult.project_key_source } else { $null }
         store_path = if ($BackendResult.store_path) { [string]$BackendResult.store_path } else { $null }
-        workspace_memory_plane = if ($BackendResult.PSObject.Properties.Name -contains 'workspace_memory_plane') { $BackendResult.workspace_memory_plane } else { $null }
     }
 }
 
@@ -310,11 +269,18 @@ function Get-VibeRufloReadAction {
 
 function Get-VibeMemoryDisclosureLevel {
     param(
-        [Parameter(Mandatory)] [object]$Runtime,
         [Parameter(Mandatory)] [string]$Stage
     )
 
-    return [string](Get-VibeMemoryDisclosureStagePolicy -Runtime $Runtime -Stage $Stage).level
+    switch ($Stage) {
+        'skeleton_check' { return 'L1_capsule_titles' }
+        'deep_interview' { return 'L1_capsule_titles' }
+        'requirement_doc' { return 'L2_capsule_summary' }
+        'xl_plan' { return 'L2_capsule_summary' }
+        'plan_execute' { return 'L3_evidence_pack' }
+        'phase_cleanup' { return 'L0_presence' }
+        default { return 'L1_capsule_titles' }
+    }
 }
 
 function Get-VibeStableShortHash {
@@ -459,8 +425,8 @@ function Get-VibeActionCapsuleCandidates {
 function New-VibeSelectedMemoryCapsules {
     param(
         [Parameter(Mandatory)] [AllowEmptyCollection()] [object[]]$ReadActions,
-        [Parameter(Mandatory)] [object]$Budget,
-        [Parameter(Mandatory)] [string]$Stage
+        [Parameter(Mandatory)] [string]$Stage,
+        [Parameter(Mandatory)] [object]$Budget
     )
 
     $capsules = [System.Collections.Generic.List[object]]::new()
@@ -495,60 +461,6 @@ function New-VibeSelectedMemoryCapsules {
     return @($capsules)
 }
 
-function Get-VibeDisclosedMemoryCapsules {
-    param(
-        [AllowEmptyCollection()] [object[]]$Capsules = @(),
-        [AllowEmptyCollection()] [string[]]$BoundedItems = @()
-    )
-
-    $disclosedCapsules = [System.Collections.Generic.List[object]]::new()
-    $cursor = 0
-    foreach ($capsule in @($Capsules)) {
-        if ($cursor -ge @($BoundedItems).Count) {
-            break
-        }
-
-        $sourceLines = @($capsule.summary_lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
-        if (@($sourceLines).Count -eq 0) {
-            continue
-        }
-
-        $disclosedLines = [System.Collections.Generic.List[string]]::new()
-        foreach ($null in @($sourceLines)) {
-            if ($cursor -ge @($BoundedItems).Count) {
-                break
-            }
-
-            $disclosedLines.Add([string]$BoundedItems[$cursor]) | Out-Null
-            $cursor++
-        }
-
-        if ($disclosedLines.Count -le 0) {
-            continue
-        }
-
-        $title = if (-not [string]::IsNullOrWhiteSpace([string]$capsule.title)) {
-            [string]$capsule.title
-        } else {
-            [string]$disclosedLines[0]
-        }
-
-        $disclosedCapsules.Add([pscustomobject]@{
-            capsule_id = if ($capsule.PSObject.Properties.Name -contains 'capsule_id') { [string]$capsule.capsule_id } else { $null }
-            owner = if ($capsule.PSObject.Properties.Name -contains 'owner') { [string]$capsule.owner } else { $null }
-            lane = if ($capsule.PSObject.Properties.Name -contains 'lane') { [string]$capsule.lane } else { $null }
-            kind = if ($capsule.PSObject.Properties.Name -contains 'kind') { [string]$capsule.kind } else { $null }
-            updated_at = if ($capsule.PSObject.Properties.Name -contains 'updated_at') { $capsule.updated_at } else { $null }
-            title = $title
-            why_now = if ($capsule.PSObject.Properties.Name -contains 'why_now') { [string]$capsule.why_now } else { $null }
-            expansion_ref = if ($capsule.PSObject.Properties.Name -contains 'expansion_ref') { [string]$capsule.expansion_ref } else { $null }
-            summary_lines = @($disclosedLines)
-        }) | Out-Null
-    }
-
-    return @($disclosedCapsules)
-}
-
 function New-VibeProgressiveDisclosureContextPack {
     param(
         [Parameter(Mandatory)] [object]$Runtime,
@@ -560,13 +472,7 @@ function New-VibeProgressiveDisclosureContextPack {
     )
 
     $budget = Get-VibeMemoryBudgetSpec -Runtime $Runtime -Stage $Stage
-    $disclosurePolicy = Get-VibeMemoryDisclosureStagePolicy -Runtime $Runtime -Stage $Stage
-    $capsuleBudget = [pscustomobject]@{
-        top_k = [int][Math]::Min([int]$budget.top_k, [int]$disclosurePolicy.max_capsules)
-        max_tokens = [int]$budget.max_tokens
-        max_chars_per_item = [int][Math]::Min([int]$budget.max_chars_per_item, [int]$disclosurePolicy.max_chars_per_capsule)
-    }
-    $selectedCapsules = @(New-VibeSelectedMemoryCapsules -ReadActions $ReadActions -Budget $capsuleBudget -Stage $Stage)
+    $selectedCapsules = @(New-VibeSelectedMemoryCapsules -ReadActions $ReadActions -Stage $Stage -Budget $budget)
 
     $items = @()
     foreach ($capsule in @($selectedCapsules)) {
@@ -577,86 +483,33 @@ function New-VibeProgressiveDisclosureContextPack {
         }
     }
 
-    $boundedItems = Get-VibeBoundedMemoryItems -Items $items -Budget $capsuleBudget
-    $disclosedCapsules = @(Get-VibeDisclosedMemoryCapsules -Capsules $selectedCapsules -BoundedItems $boundedItems)
+    $boundedItems = Get-VibeBoundedMemoryItems -Items $items -Budget $budget
     $estimatedTokens = Get-VibeEstimatedTokenCount -Items @($boundedItems)
     $artifactPath = Join-Path (Get-VibeMemoryArtifactsRoot -SessionRoot $SessionRoot) $ArtifactName
     $artifact = [pscustomobject]@{
         stage = $Stage
         source_stage = if ([string]::IsNullOrWhiteSpace($SourceStage)) { $null } else { $SourceStage }
         owner = 'state_store'
-        disclosure_level = [string]$disclosurePolicy.level
+        disclosure_level = Get-VibeMemoryDisclosureLevel -Stage $Stage
         generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        capsule_count = @($disclosedCapsules).Count
-        selected_capsules = @($disclosedCapsules)
+        capsule_count = @($selectedCapsules).Count
+        selected_capsules = @($selectedCapsules)
         items = @($boundedItems)
         estimated_tokens = $estimatedTokens
-        budget = $capsuleBudget
+        budget = $budget
     }
     Write-VibeJsonArtifact -Path $artifactPath -Value $artifact
 
     return [pscustomobject]@{
         context_path = $artifactPath
         disclosure_level = [string]$artifact.disclosure_level
-        capsule_count = @($disclosedCapsules).Count
-        selected_capsules = @($disclosedCapsules)
+        capsule_count = @($selectedCapsules).Count
+        selected_capsules = @($selectedCapsules)
         injected_item_count = @($boundedItems).Count
         estimated_tokens = $estimatedTokens
-        budget = $capsuleBudget
+        budget = $budget
         items = @($boundedItems)
     }
-}
-
-function Get-VibeMemoryActivationFailures {
-    param(
-        [Parameter(Mandatory)] [object]$MemoryActivationReport
-    )
-
-    $fatalStatuses = @(
-        'memory_backend_driver_missing',
-        'memory_backend_invocation_failed',
-        'memory_backend_missing_response',
-        'memory_backend_exception',
-        'workspace_memory_driver_missing',
-        'workspace_memory_invocation_failed',
-        'workspace_memory_exception'
-    )
-    $failures = [System.Collections.Generic.List[object]]::new()
-    foreach ($stage in @($MemoryActivationReport.stages)) {
-        foreach ($action in @($stage.read_actions) + @($stage.write_actions)) {
-            $status = [string]$action.status
-            if ($fatalStatuses -contains $status) {
-                $failures.Add([pscustomobject]@{
-                    stage = [string]$stage.stage
-                    owner = if ($action.PSObject.Properties.Name -contains 'owner') { [string]$action.owner } else { $null }
-                    status = $status
-                }) | Out-Null
-            }
-        }
-    }
-    return @($failures)
-}
-
-function Assert-VibeMemoryActivationHealthy {
-    param(
-        [Parameter(Mandatory)] [object]$MemoryActivationReport,
-        [AllowEmptyString()] [string]$ReportPath = ''
-    )
-
-    $failures = @(Get-VibeMemoryActivationFailures -MemoryActivationReport $MemoryActivationReport)
-    if (@($failures).Count -le 0) {
-        return
-    }
-
-    $formatted = @($failures | ForEach-Object {
-        if ([string]::IsNullOrWhiteSpace([string]$_.owner)) {
-            ('{0}:{1}' -f [string]$_.stage, [string]$_.status)
-        } else {
-            ('{0}:{1}:{2}' -f [string]$_.stage, [string]$_.owner, [string]$_.status)
-        }
-    }) -join ', '
-    $reportSuffix = if ([string]::IsNullOrWhiteSpace($ReportPath)) { '' } else { " report=$ReportPath" }
-    throw ("workspace memory activation failed hard under governed runtime: {0}{1}" -f $formatted, $reportSuffix)
 }
 
 function New-VibePlanMemoryContextPack {

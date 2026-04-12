@@ -121,6 +121,7 @@ Rules:
 
 - `vibe` keeps final control of stage order, plan authority, and completion claims
 - specialist recommendations should always be surfaced in governed runtime output, and safe bounded recommendations should aggressively promote into effective dispatch
+- when effective dispatch exists, root-governed execution must emit one unified pre-execution disclosure that names only the actually executing specialist Skills and their real `native_skill_entrypoint`
 - each specialist receives a bounded subtask contract plus the frozen requirement context
 - specialist outputs must stay in the native format or workflow expected by that specialist skill
 - each approved specialist also carries phase binding, lane policy, write scope, and review mode

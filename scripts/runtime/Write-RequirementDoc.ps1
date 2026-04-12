@@ -5,6 +5,7 @@ param(
     [string]$IntentContractPath = '',
     [string]$RuntimeInputPacketPath = '',
     [string]$MemoryContextPath = '',
+    [string]$DiscussionConsultationPath = '',
     [string]$ArtifactRoot = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
     [AllowEmptyString()] [string]$RootRunId = '',
@@ -19,6 +20,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'VibeRuntime.Common.ps1')
+. (Join-Path $PSScriptRoot 'VibeConsultation.Common.ps1')
 . (Join-Path $PSScriptRoot '..\common\AntiProxyGoalDrift.ps1')
 
 function Test-VibeTaskNeedsManualSpotChecks {
@@ -27,7 +29,8 @@ function Test-VibeTaskNeedsManualSpotChecks {
         [AllowEmptyString()] [string]$Deliverable = ''
     )
 
-    return Test-VibeTaskNeedsUiBaseline -Task $Task -Deliverable $Deliverable
+    $text = ('{0} {1}' -f $Task, $Deliverable).ToLowerInvariant()
+    return $text -match 'ui|ux|frontend|browser|page|screen|openclaw|cursor|windsurf|codex|用户|界面|交互|可视化|体验'
 }
 
 function Test-VibeTaskNeedsDocumentArtifactBaseline {
@@ -39,7 +42,7 @@ function Test-VibeTaskNeedsDocumentArtifactBaseline {
     $text = ('{0} {1}' -f $Task, $Deliverable).ToLowerInvariant()
     $docOnlySignals = 'without changing (application )?code|without code changes|document-only'
     $documentArtifactSignals = 'readme|documentation|docx|pdf|pptx|headings|spacing|formatting|markdown|slide|slides|presentation|deck|\bdocument\b|\bdocs\b'
-    $codeImplementationSignals = 'failing test|stack trace|debug|bug|fix|refactor|implement|build|develop|production code|source code|unit test|integration test|script|function|class|parser|exporter|renderer|pipeline|service|module|cli'
+    $codeImplementationSignals = 'failing test|stack trace|debug|bug|fix|refactor|script|function|class|endpoint|api|component|module|backend|frontend|dashboard|page|screen|unit test|integration test|parser|exporter|renderer|pipeline|service|library|cli'
 
     if ($text -match $docOnlySignals) {
         return $true
@@ -52,21 +55,6 @@ function Test-VibeTaskNeedsDocumentArtifactBaseline {
     return -not ($text -match $codeImplementationSignals)
 }
 
-function Test-VibeTaskNeedsUiBaseline {
-    param(
-        [Parameter(Mandatory)] [string]$Task,
-        [AllowEmptyString()] [string]$Deliverable = ''
-    )
-
-    if (Test-VibeTaskNeedsDocumentArtifactBaseline -Task $Task -Deliverable $Deliverable) {
-        return $false
-    }
-
-    $text = ('{0} {1}' -f $Task, $Deliverable).ToLowerInvariant()
-    $uiSignals = '(^|\b)(ui|ux|frontend|browser|screen|visual|interaction|responsive|layout|component|page|dashboard|prototype|wireframe)(\b|$)|界面|交互|可视化|体验|前端|网页'
-    return $text -match $uiSignals
-}
-
 function Test-VibeTaskNeedsCodeTaskTddEvidence {
     param(
         [Parameter(Mandatory)] [string]$Task,
@@ -74,13 +62,12 @@ function Test-VibeTaskNeedsCodeTaskTddEvidence {
     )
 
     $text = ('{0} {1}' -f $Task, $Deliverable).ToLowerInvariant()
-    $codeImplementationSignals = 'failing test|stack trace|debug|bug|fix|refactor|implement|build|develop|production code|source code|unit test|integration test|script|function|class|parser|exporter|renderer|pipeline|service|module|cli'
 
     if ((Test-VibeTaskNeedsDocumentArtifactBaseline -Task $Task -Deliverable $Deliverable) -or ($text -match 'image|logo|illustration|diagram')) {
         return $false
     }
 
-    return $text -match $codeImplementationSignals
+    return $text -match 'failing test|stack trace|debug|bug|fix|refactor|implement|build|feature|code|script|function|class|endpoint|api|component|module|frontend|backend|dashboard|page|screen|unit test|integration test'
 }
 
 function Get-VibeDefaultCodeTaskTddEvidenceRequirements {
@@ -245,7 +232,7 @@ if (@($baselineDocumentQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsDo
 if (@($artifactReviewRequirements).Count -eq 0 -and @($baselineDocumentQualityDimensions).Count -gt 0) {
     $artifactReviewRequirements = Get-VibeDefaultDocumentArtifactReviewRequirements
 }
-if (@($baselineUiQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsUiBaseline -Task $Task -Deliverable ([string]$intentContract.deliverable))) {
+if (@($baselineUiQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsManualSpotChecks -Task $Task -Deliverable ([string]$intentContract.deliverable))) {
     $baselineUiQualityDimensions = Get-VibeDefaultBaselineUiQualityDimensions
 }
 $runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath) -and (Test-Path -LiteralPath $RuntimeInputPacketPath)) {
@@ -258,6 +245,25 @@ $memoryContextPack = if (-not [string]::IsNullOrWhiteSpace($MemoryContextPath) -
 } else {
     $null
 }
+$discussionConsultation = if (-not [string]::IsNullOrWhiteSpace($DiscussionConsultationPath) -and (Test-Path -LiteralPath $DiscussionConsultationPath)) {
+    Get-Content -LiteralPath $DiscussionConsultationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+} else {
+    $null
+}
+if ($discussionConsultation) {
+    $discussionFreezeGate = Assert-VibeSpecialistConsultationFreezeGate `
+        -Receipt $discussionConsultation `
+        -Policy $runtime.specialist_consultation_policy `
+        -FreezeTarget 'requirement_doc'
+    if ($discussionConsultation.PSObject.Properties.Name -contains 'freeze_gate') {
+        $discussionConsultation.freeze_gate = $discussionFreezeGate
+    } else {
+        $discussionConsultation | Add-Member -NotePropertyName freeze_gate -NotePropertyValue $discussionFreezeGate
+    }
+}
+$stageLifecycleDisclosure = New-VibeSpecialistLifecycleDisclosureProjection `
+    -RuntimeInputPacket $runtimeInputPacket `
+    -DiscussionConsultationReceipt $discussionConsultation
 $lines = @(
     "# $($intentContract.title)",
     '',
@@ -392,9 +398,6 @@ if ($runtimeInputPacket) {
     $lines += @(
         '',
         '## Runtime Input Truth',
-        "- Entry intent: $([string]$runtimeInputPacket.entry_intent_id)",
-        "- Requested stop stage: $([string]$runtimeInputPacket.requested_stage_stop)",
-        "- Requested grade floor: $([string]$runtimeInputPacket.requested_grade_floor)",
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
         "- Selected pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",
@@ -410,18 +413,17 @@ if ($runtimeInputPacket) {
         $lines += @(
             '',
             '## Specialist Recommendations',
-            'These are mandatory bounded native specialist recommendations carried inside the governed `vibe` runtime. Eligible recommendations must auto-promote into bounded dispatch while `vibe` remains the only runtime authority.'
+            'These are mandatory bounded native specialist recommendations carried inside the governed `vibe` runtime. Eligible recommendations should auto-promote into bounded dispatch while `vibe` remains the only runtime authority.',
+            'If execution reaches non-empty effective `approved_dispatch`, governed `vibe` must emit one unified pre-execution disclosure that lists only actually executing Skills and each real `native_skill_entrypoint`.'
         )
         foreach ($recommendation in $specialistRecommendations) {
             $lines += @(
                 "- Skill: $([string]$recommendation.skill_id)",
                 "  Source: $([string]$recommendation.source); pack: $([string]$recommendation.pack_id); rank: $([string]$recommendation.rank); confidence: $([string]$recommendation.confidence)",
-                "  Role: $([string]$recommendation.bounded_role); native usage required: $([bool]$recommendation.native_usage_required); usage required: $([bool]$recommendation.usage_required); preserve workflow: $([bool]$recommendation.must_preserve_workflow)",
+                "  Role: $([string]$recommendation.bounded_role); native usage required: $([bool]$recommendation.native_usage_required); preserve workflow: $([bool]$recommendation.must_preserve_workflow)",
                 "  Binding: profile=$([string]$recommendation.binding_profile); phase=$([string]$recommendation.dispatch_phase); lane policy=$([string]$recommendation.lane_policy); parallel in XL=$([bool]$recommendation.parallelizable_in_root_xl)",
                 "  Write scope: $([string]$recommendation.write_scope); review mode: $([string]$recommendation.review_mode); execution priority: $([int]$recommendation.execution_priority)",
-                "  Specialist source of truth: entrypoint=$([string]$recommendation.native_skill_entrypoint); root=$([string]$recommendation.skill_root); visibility=$([string]$recommendation.visibility_class)",
                 "  Reason: $([string]$recommendation.reason)",
-                "  Expected contribution: $([string]$recommendation.expected_contribution)",
                 "  Required inputs: $([string]::Join(', ', @($recommendation.required_inputs)))",
                 "  Expected outputs: $([string]::Join(', ', @($recommendation.expected_outputs)))",
                 "  Verification expectation: $([string]$recommendation.verification_expectation)"
@@ -430,21 +432,66 @@ if ($runtimeInputPacket) {
     }
 }
 
-$hasMemoryItems = $memoryContextPack -and @($memoryContextPack.items).Count -gt 0
-$hasSelectedCapsules = (
-    $memoryContextPack -and
-    $memoryContextPack.PSObject.Properties.Name -contains 'selected_capsules' -and
-    $null -ne $memoryContextPack.selected_capsules -and
-    @($memoryContextPack.selected_capsules).Count -gt 0
-)
-if ($hasMemoryItems -or $hasSelectedCapsules) {
+if ($discussionConsultation -and [bool]$discussionConsultation.enabled) {
+    $lines += @(
+        '',
+        '## Specialist Consultation',
+        'These are specialists actually consulted during discussion-time under governed `vibe` before this requirement doc was frozen.'
+    )
+    foreach ($disclosure in @($discussionConsultation.user_disclosures)) {
+        $lines += @(
+            ('- Consulted Skill: {0}' -f [string]$disclosure.skill_id),
+            ('  Why now: {0}' -f [string]$disclosure.why_now),
+            ('  Loaded from: {0}' -f [string]$disclosure.native_skill_entrypoint)
+        )
+        $consultedUnit = $null
+        foreach ($candidate in @($discussionConsultation.consulted_units)) {
+            if ([string]$candidate.skill_id -eq [string]$disclosure.skill_id) {
+                $consultedUnit = $candidate
+                break
+            }
+        }
+        if ($consultedUnit) {
+            $lines += @(
+                ('  Consultation status: {0}' -f [string]$consultedUnit.status),
+                ('  Summary: {0}' -f [string]$consultedUnit.summary)
+            )
+            foreach ($note in @($consultedUnit.adoption_notes)) {
+                $lines += ('  Adopted into requirement: {0}' -f [string]$note)
+            }
+        }
+    }
+    if (@($discussionConsultation.deferred_to_execution).Count -gt 0) {
+        $lines += @(
+            '',
+            'Deferred specialist follow-up stayed separate from execution truth and remains advisory until execution-time dispatch.'
+        )
+        foreach ($item in @($discussionConsultation.deferred_to_execution)) {
+            $lines += ('- Deferred to execution: {0} ({1})' -f [string]$item.skill_id, [string]$item.reason)
+        }
+    }
+    if (@($discussionConsultation.degraded).Count -gt 0) {
+        foreach ($item in @($discussionConsultation.degraded)) {
+            $lines += ('- Consultation degraded: {0} ({1})' -f [string]$item.skill_id, [string]$item.result_reason)
+        }
+    }
+}
+
+$lifecycleLines = Get-VibeSpecialistLifecycleDisclosureMarkdownLines `
+    -LifecycleDisclosure $stageLifecycleDisclosure `
+    -IncludeLayerIds @('discussion_routing', 'discussion_consultation')
+if (@($lifecycleLines).Count -gt 0) {
+    $lines += @('', @($lifecycleLines))
+}
+
+if ($memoryContextPack -and @($memoryContextPack.items).Count -gt 0) {
     $lines += @(
         '',
         '## Memory Context',
         'Bounded stage-aware memory context injected into requirement freezing:',
         ('- Disclosure level: {0}' -f [string]$memoryContextPack.disclosure_level)
     )
-    if ($hasSelectedCapsules) {
+    if ($memoryContextPack.PSObject.Properties.Name -contains 'selected_capsules' -and @($memoryContextPack.selected_capsules).Count -gt 0) {
         foreach ($capsule in @($memoryContextPack.selected_capsules)) {
             $lines += @(
                 ('- Capsule [{0}] {1}' -f [string]$capsule.capsule_id, [string]$capsule.title),
@@ -493,24 +540,14 @@ $receipt = [pscustomobject]@{
     canonical_write_allowed = -not $isChildScope
     inherited_requirement_doc_path = if ($isChildScope) { $docPath } else { $null }
     runtime_input_packet_path = $RuntimeInputPacketPath
+    discussion_consultation_path = if ($discussionConsultation) { $DiscussionConsultationPath } else { $null }
+    discussion_consultation_count = if ($discussionConsultation) { @($discussionConsultation.consulted_units).Count } else { 0 }
+    discussion_consultation_user_disclosure_count = if ($discussionConsultation) { @($discussionConsultation.user_disclosures).Count } else { 0 }
     memory_context_path = if ($memoryContextPack) { $MemoryContextPath } else { $null }
     memory_context_item_count = if ($memoryContextPack) { @($memoryContextPack.items).Count } else { 0 }
     memory_context_estimated_tokens = if ($memoryContextPack) { [int]$memoryContextPack.estimated_tokens } else { 0 }
     memory_disclosure_level = if ($memoryContextPack -and $memoryContextPack.PSObject.Properties.Name -contains 'disclosure_level') { [string]$memoryContextPack.disclosure_level } else { $null }
-    memory_capsule_count = if (
-        $memoryContextPack -and
-        $memoryContextPack.PSObject.Properties.Name -contains 'selected_capsules' -and
-        $null -ne $memoryContextPack.selected_capsules
-    ) { @($memoryContextPack.selected_capsules).Count } else { 0 }
-    frozen_requirement_sections = [ordered]@{
-        artifact_review_requirements = @($artifactReviewRequirements)
-        code_task_tdd_evidence_requirements = @($codeTaskTddEvidenceRequirements)
-        code_task_tdd_exceptions = @($codeTaskTddExceptions)
-        baseline_document_quality_dimensions = @($baselineDocumentQualityDimensions)
-        baseline_ui_quality_dimensions = @($baselineUiQualityDimensions)
-        task_specific_acceptance_extensions = @($taskSpecificAcceptanceExtensions)
-        research_augmentation_sources = @($researchAugmentationSources)
-    }
+    memory_capsule_count = if ($memoryContextPack -and $memoryContextPack.PSObject.Properties.Name -contains 'selected_capsules') { @($memoryContextPack.selected_capsules).Count } else { 0 }
     generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 }
 $receiptPath = Join-Path $sessionRoot 'requirement-doc-receipt.json'

@@ -1,20 +1,12 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
 import hashlib
 import json
-import os
 import re
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
-if os.name == "nt":  # pragma: no cover - exercised on Windows
-    import msvcrt
-else:  # pragma: no cover - exercised on POSIX
-    import fcntl
 
 
 LANE_KIND = {
@@ -32,8 +24,6 @@ LANE_OWNER = {
 WORKSPACE_MEMORY_IDENTITY_SCOPE = "workspace"
 WORKSPACE_MEMORY_DRIVER_CONTRACT = "workspace_shared_memory_v1"
 WORKSPACE_MEMORY_LOGICAL_OWNERS = ["state_store", "serena", "ruflo", "cognee"]
-WORKSPACE_MEMORY_ID_PREFIX = "ws:"
-WORKSPACE_MEMORY_ID_HEX_LEN = 24
 
 NOISE_TOKENS = {
     "tmp",
@@ -173,115 +163,11 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
-    ensure_parent(path)
-    content = "\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True) for row in rows)
-    if content:
-        content += "\n"
-
-    temp_path: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=str(path.parent),
-            prefix=f"{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            handle.write(content)
-            handle.flush()
-            os.fsync(handle.fileno())
-            temp_path = Path(handle.name)
-        os.replace(temp_path, path)
-    finally:
-        if temp_path is not None and temp_path.exists():
-            temp_path.unlink(missing_ok=True)
-
-
-@contextlib.contextmanager
-def exclusive_file_lock(lock_path: Path):
-    ensure_parent(lock_path)
-    with lock_path.open("a+b") as handle:
-        if os.name == "nt":  # pragma: no cover - exercised on Windows
-            handle.seek(0, os.SEEK_END)
-            if handle.tell() == 0:
-                handle.write(b"0")
-                handle.flush()
-            handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
-        else:  # pragma: no cover - exercised on POSIX
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            if os.name == "nt":  # pragma: no cover - exercised on Windows
-                handle.seek(0)
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
-            else:  # pragma: no cover - exercised on POSIX
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-
-
-def _normalize_identity_input(value: str) -> str:
-    return value.replace("\\", "/").rstrip("/").lower()
-
-
-def _load_json_if_exists(path: Path, default: dict[str, Any]) -> dict[str, Any]:
-    if not path.exists():
-        return default
-    return load_json(path)
-
-
-def load_workspace_memory_policy_bundle(repo_root: Path) -> dict[str, Any]:
-    config_root = repo_root / "config"
-    workspace_plane = _load_json_if_exists(
-        config_root / "workspace-memory-plane.json",
-        {
-            "plane_id": "workspace-shared-memory-v1",
-            "workspace_identity": {"descriptor_path": ".vibeskills/project.json", "scope": WORKSPACE_MEMORY_IDENTITY_SCOPE},
-            "canonical_owners": {
-                "session": WORKSPACE_MEMORY_LOGICAL_OWNERS[0],
-                "project_decision": WORKSPACE_MEMORY_LOGICAL_OWNERS[1],
-                "short_term_semantic": WORKSPACE_MEMORY_LOGICAL_OWNERS[2],
-                "long_term_graph": WORKSPACE_MEMORY_LOGICAL_OWNERS[3],
-            },
-        },
-    )
-    disclosure_policy = _load_json_if_exists(
-        config_root / "memory-disclosure-policy.json",
-        {
-            "defaults": {"pack_type": "capsule_digest", "max_capsules": 4, "max_chars_per_capsule": 360},
-            "stages": {},
-        },
-    )
-    ingest_policy = _load_json_if_exists(
-        config_root / "memory-ingest-policy.json",
-        {
-            "write_admission": {"minimum_signal_score": 0.35},
-            "noise_suppression": {
-                "drop_path_patterns": [".tmp/", "outputs/runtime/vibe-sessions/"],
-                "downgrade_artifact_kinds": [],
-                "drop_empty_payloads": True,
-            },
-            "owner_write_rules": {
-                "serena": {"allow": ["decision"]},
-                "ruflo": {"allow": ["handoff_card"]},
-                "cognee": {"allow": ["relation"]},
-            },
-        },
-    )
-    return {
-        "workspace_plane": workspace_plane,
-        "disclosure_policy": disclosure_policy,
-        "ingest_policy": ingest_policy,
-    }
-
-
-def tokenize(text: str, *, filter_stop_tokens: bool = True) -> set[str]:
+def tokenize(text: str) -> set[str]:
     return {
         token
         for token in re.findall(r"[a-z0-9_/-]{3,}", text.lower())
-        if token and (not filter_stop_tokens or token not in STOP_TOKENS)
+        if token and token not in STOP_TOKENS
     }
 
 
@@ -312,20 +198,10 @@ def dedupe_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(by_id.values())
 
 
-def ensure_workspace_descriptor(repo_root: Path, policy_bundle: dict[str, Any] | None = None) -> dict[str, Any]:
-    policy_bundle = policy_bundle or load_workspace_memory_policy_bundle(repo_root)
+def ensure_workspace_descriptor(repo_root: Path) -> dict[str, Any]:
     workspace_root = repo_root.resolve()
     sidecar_root = workspace_root / ".vibeskills"
     descriptor_path = sidecar_root / "project.json"
-    workspace_plane_policy = policy_bundle["workspace_plane"]
-    workspace_identity_policy = dict(workspace_plane_policy.get("workspace_identity") or {})
-    canonical_owners = dict(workspace_plane_policy.get("canonical_owners") or {})
-    logical_owners = [
-        str(canonical_owners.get("session") or WORKSPACE_MEMORY_LOGICAL_OWNERS[0]),
-        str(canonical_owners.get("project_decision") or WORKSPACE_MEMORY_LOGICAL_OWNERS[1]),
-        str(canonical_owners.get("short_term_semantic") or WORKSPACE_MEMORY_LOGICAL_OWNERS[2]),
-        str(canonical_owners.get("long_term_graph") or WORKSPACE_MEMORY_LOGICAL_OWNERS[3]),
-    ]
     if descriptor_path.exists():
         descriptor = load_json(descriptor_path)
     else:
@@ -357,9 +233,9 @@ def ensure_workspace_descriptor(repo_root: Path, policy_bundle: dict[str, Any] |
     }
     descriptor["memory_plane"] = {
         "identity_root": descriptor["project_descriptor_path"],
-        "identity_scope": str(workspace_identity_policy.get("scope") or WORKSPACE_MEMORY_IDENTITY_SCOPE),
+        "identity_scope": WORKSPACE_MEMORY_IDENTITY_SCOPE,
         "driver_contract": WORKSPACE_MEMORY_DRIVER_CONTRACT,
-        "logical_owners": logical_owners,
+        "logical_owners": list(WORKSPACE_MEMORY_LOGICAL_OWNERS),
     }
     descriptor.setdefault("host_sidecar_root", None)
     write_json(descriptor_path, descriptor)
@@ -372,27 +248,18 @@ def resolve_plane_path(descriptor: dict[str, Any]) -> Path:
 
 def workspace_memory_projection(descriptor: dict[str, Any], plane_path: Path) -> dict[str, Any]:
     workspace_root = str(descriptor["workspace_root"])
-    identity_root = str(((descriptor.get("memory_plane") or {}).get("identity_root")) or descriptor["project_descriptor_path"])
-    workspace_id = WORKSPACE_MEMORY_ID_PREFIX + hashlib.sha256(
-        _normalize_identity_input(identity_root).encode("utf-8")
-    ).hexdigest()[:WORKSPACE_MEMORY_ID_HEX_LEN]
     return {
         "schema_version": 1,
         "workspace_root": workspace_root,
         "workspace_sidecar_root": str(descriptor["workspace_sidecar_root"]),
         "descriptor_path": str(descriptor["project_descriptor_path"]),
-        "identity_root": identity_root,
-        "workspace_id": workspace_id,
+        "workspace_id": hashlib.sha256(workspace_root.encode("utf-8")).hexdigest()[:16],
         "plane_path": str(plane_path),
     }
 
 
-def is_temp_like_path(value: str, drop_path_patterns: list[str] | None = None) -> bool:
+def is_temp_like_path(value: str) -> bool:
     normalized = value.replace("\\", "/").lower()
-    if drop_path_patterns:
-        for pattern in drop_path_patterns:
-            if pattern and pattern.lower() in normalized:
-                return True
     return (
         normalized.startswith("/tmp/")
         or normalized.startswith("/var/tmp/")
@@ -405,12 +272,8 @@ def is_temp_like_path(value: str, drop_path_patterns: list[str] | None = None) -
     )
 
 
-def classify_noise(record: dict[str, Any], ingest_policy: dict[str, Any]) -> str | None:
+def classify_noise(record: dict[str, Any]) -> str | None:
     lane = str(record.get("lane") or "")
-    owner_rules = dict(ingest_policy.get("owner_write_rules") or {})
-    allowed_kinds = [str(value) for value in (owner_rules.get(lane, {}) or {}).get("allow") or [] if str(value).strip()]
-    if allowed_kinds and str(record.get("kind") or "") not in allowed_kinds:
-        return "owner_write_rule_violation"
     if lane == "serena" and not str(record.get("summary") or "").strip():
         return "empty_summary"
     if lane == "ruflo" and not str(record.get("summary") or "").strip() and not record.get("items"):
@@ -429,32 +292,18 @@ def classify_noise(record: dict[str, Any], ingest_policy: dict[str, Any]) -> str
         " ".join(str(v) for v in record.get("keywords") or []),
         " ".join(str(v) for v in record.get("evidence_paths") or []),
     ]
-    raw_tokens = tokenize(" ".join(text_parts), filter_stop_tokens=False)
-    tokens = {token for token in raw_tokens if token not in STOP_TOKENS}
-    noise_suppression = dict(ingest_policy.get("noise_suppression") or {})
-    if not tokens and bool(noise_suppression.get("drop_empty_payloads", True)):
+    tokens = tokenize(" ".join(text_parts))
+    if not tokens:
         return "empty_payload"
-    if raw_tokens & SIGNAL_TOKENS:
+    if tokens & SIGNAL_TOKENS:
         return None
     noise_token_count = len(tokens & NOISE_TOKENS)
     signal_token_count = len(tokens - NOISE_TOKENS)
     noise_ratio = float(noise_token_count) / float(len(tokens)) if tokens else 0.0
-    signal_score = float(signal_token_count) / float(len(tokens)) if tokens else 0.0
-    minimum_signal_score = float((ingest_policy.get("write_admission") or {}).get("minimum_signal_score") or 0.0)
     evidence_paths = [str(v) for v in record.get("evidence_paths") or [] if str(v).strip()]
-    drop_path_patterns = [str(value) for value in noise_suppression.get("drop_path_patterns") or [] if str(value).strip()]
-    downgrade_artifact_kinds = {
-        str(value)
-        for value in noise_suppression.get("downgrade_artifact_kinds") or []
-        if str(value).strip()
-    }
-    all_temp_like = bool(evidence_paths) and all(is_temp_like_path(path, drop_path_patterns) for path in evidence_paths)
+    all_temp_like = bool(evidence_paths) and all(is_temp_like_path(path) for path in evidence_paths)
     if signal_token_count == 0:
         return "noise_only_tokens"
-    if downgrade_artifact_kinds and str(record.get("kind") or "") in downgrade_artifact_kinds:
-        return "downgraded_artifact_kind"
-    if signal_score < minimum_signal_score:
-        return "insufficient_signal_score"
     if all_temp_like and signal_token_count <= 2 and noise_token_count >= 2:
         return "temp_path_noise"
     if all_temp_like and noise_ratio >= 0.5 and signal_token_count <= 4:
@@ -673,8 +522,7 @@ def execute(
     driver_mode: str,
 ) -> int:
     payload = load_json(payload_path)
-    policy_bundle = load_workspace_memory_policy_bundle(repo_root)
-    descriptor = ensure_workspace_descriptor(repo_root, policy_bundle=policy_bundle)
+    descriptor = ensure_workspace_descriptor(repo_root)
     plane_path = resolve_plane_path(descriptor)
     ensure_parent(plane_path)
     workspace_plane = workspace_memory_projection(descriptor, plane_path)
@@ -707,7 +555,7 @@ def execute(
         else:
             admitted: list[dict[str, Any]] = []
             for record in candidate_records:
-                reason = classify_noise(record, policy_bundle["ingest_policy"])
+                reason = classify_noise(record)
                 if reason:
                     suppressed_count += 1
                     continue
@@ -716,11 +564,9 @@ def execute(
             if not admitted:
                 status = "guarded_noise_suppressed" if suppressed_count > 0 else "guarded_no_write"
             else:
-                lock_path = plane_path.with_name(f"{plane_path.name}.lock")
-                with exclusive_file_lock(lock_path):
-                    rows = load_jsonl(plane_path)
-                    rows.extend(admitted)
-                    write_jsonl_atomic(plane_path, dedupe_rows(rows))
+                rows = load_jsonl(plane_path)
+                rows.extend(admitted)
+                write_jsonl(plane_path, dedupe_rows(rows))
                 capsules = build_capsules(admitted)
                 if lane == "serena":
                     items = [f"Persisted Serena decision: {row.get('summary')}" for row in admitted]

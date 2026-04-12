@@ -1,18 +1,13 @@
 {
   "schema_version": 2,
   "release": {
-    "version": "3.0.0",
-    "updated": "2026-04-07",
+    "version": "2.3.56",
+    "updated": "2026-04-04",
     "channel": "stable",
-    "notes": "major public baseline / architecture closure / host-safe install-uninstall / governed execution proof / native MCP-first readiness"
+    "notes": "remaining architecture closure / owner-consumer proof / live status truth alignment / bounded fallback honesty / governed execution proof"
   },
   "source_of_truth": {
-    "canonical_root": ".",
-    "official_self_repo": {
-      "repo_url": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
-      "default_branch": "main",
-      "canonical_root": "."
-    }
+    "canonical_root": "."
   },
   "mirror_topology": {
     "canonical_target_id": "canonical",
@@ -138,9 +133,6 @@
         "apps/vgo-cli/src/vgo_cli/workspace.py",
         "apps/vgo-cli/src/vgo_cli/commands.py",
         "apps/vgo-cli/src/vgo_cli/repo.py",
-        "apps/vgo-cli/src/vgo_cli/upgrade_state.py",
-        "apps/vgo-cli/src/vgo_cli/upgrade_service.py",
-        "apps/vgo-cli/src/vgo_cli/version_reminder.py",
         "apps/vgo-cli/src/vgo_cli/external.py",
         "apps/vgo-cli/src/vgo_cli/output.py",
         "apps/vgo-cli/src/vgo_cli/install_gates.py",
@@ -168,6 +160,7 @@
         "scripts/runtime/Invoke-DelegatedLaneUnit.ps1",
         "scripts/runtime/Invoke-PhaseCleanup.ps1",
         "scripts/runtime/Invoke-SkeletonCheck.ps1",
+        "scripts/runtime/VibeConsultation.Common.ps1",
         "scripts/runtime/VibeExecution.Common.ps1",
         "scripts/runtime/VibeMemoryActivation.Common.ps1",
         "scripts/runtime/VibeWorkspaceMemory.Common.ps1",
@@ -190,8 +183,8 @@
         "config/runtime-contract.json",
         "config/runtime-modes.json",
         "config/runtime-input-packet-policy.json",
-        "config/vibe-entry-surfaces.json",
         "config/execution-runtime-policy.json",
+        "config/specialist-consultation-policy.json",
         "config/memory-backend-adapters.json",
         "config/memory-disclosure-policy.json",
         "config/memory-ingest-policy.json",
@@ -213,8 +206,8 @@
           "config/runtime-contract.json",
           "config/runtime-modes.json",
           "config/runtime-input-packet-policy.json",
-          "config/vibe-entry-surfaces.json",
           "config/execution-runtime-policy.json",
+          "config/specialist-consultation-policy.json",
           "config/memory-backend-adapters.json",
           "config/memory-disclosure-policy.json",
           "config/memory-ingest-policy.json",
@@ -236,9 +229,6 @@
           "apps/vgo-cli/src/vgo_cli/workspace.py",
           "apps/vgo-cli/src/vgo_cli/commands.py",
           "apps/vgo-cli/src/vgo_cli/repo.py",
-          "apps/vgo-cli/src/vgo_cli/upgrade_state.py",
-          "apps/vgo-cli/src/vgo_cli/upgrade_service.py",
-          "apps/vgo-cli/src/vgo_cli/version_reminder.py",
           "apps/vgo-cli/src/vgo_cli/external.py",
           "apps/vgo-cli/src/vgo_cli/output.py",
           "apps/vgo-cli/src/vgo_cli/install_gates.py",
@@ -271,6 +261,7 @@
           "scripts/runtime/Invoke-DelegatedLaneUnit.ps1",
           "scripts/runtime/Invoke-PhaseCleanup.ps1",
           "scripts/runtime/Invoke-SkeletonCheck.ps1",
+          "scripts/runtime/VibeConsultation.Common.ps1",
           "scripts/runtime/VibeExecution.Common.ps1",
           "scripts/runtime/VibeMemoryActivation.Common.ps1",
           "scripts/runtime/VibeWorkspaceMemory.Common.ps1",

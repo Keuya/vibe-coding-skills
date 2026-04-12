@@ -12,27 +12,27 @@
   },
   "stages": {
     "skeleton_check": {
-      "level": "L1_capsule_titles",
+      "level": "minimal",
       "max_capsules": 2
     },
     "deep_interview": {
-      "level": "L1_capsule_titles",
+      "level": "bounded_context",
       "max_capsules": 3
     },
     "requirement_doc": {
-      "level": "L2_capsule_summary",
+      "level": "decision_focused",
       "max_capsules": 3
     },
     "xl_plan": {
-      "level": "L2_capsule_summary",
+      "level": "decision_and_relation_focused",
       "max_capsules": 4
     },
     "plan_execute": {
-      "level": "L3_evidence_pack",
+      "level": "execution_relevant",
       "max_capsules": 4
     },
     "phase_cleanup": {
-      "level": "L0_presence",
+      "level": "closure",
       "max_capsules": 2
     }
   },

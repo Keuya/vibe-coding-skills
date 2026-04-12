@@ -337,9 +337,6 @@ function ConvertTo-VibeExecutedUnitReceipt {
         execution_driver = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'execution_driver') { [string]$Outcome.lane_result.execution_driver } else { $null }
         live_native_execution = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'live_native_execution') { [bool]$Outcome.lane_result.live_native_execution } else { $false }
         degraded = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'degraded') { [bool]$Outcome.lane_result.degraded } else { $false }
-        prompt_path = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'prompt_path' -and -not [string]::IsNullOrWhiteSpace([string]$Outcome.lane_result.prompt_path)) { [string]$Outcome.lane_result.prompt_path } else { $null }
-        prompt_injection_complete = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'prompt_injection_complete') { [bool]$Outcome.lane_result.prompt_injection_complete } else { $false }
-        missing_prompt_injection_fields = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'missing_prompt_injection_fields') { @($Outcome.lane_result.missing_prompt_injection_fields) } else { @() }
     }
 }
 
@@ -734,6 +731,7 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 }
 
 $sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
+$grade = Get-VibeInternalGrade -Task $Task
 $requirementPath = if (-not [string]::IsNullOrWhiteSpace($RequirementDocPath)) { $RequirementDocPath } else { Get-VibeRequirementDocPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $planPath = if (-not [string]::IsNullOrWhiteSpace($ExecutionPlanPath)) { $ExecutionPlanPath } else { Get-VibeExecutionPlanPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $runtimeInputPath = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath)) { $RuntimeInputPacketPath } else { Get-VibeRuntimeInputPacketPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot }
@@ -742,11 +740,6 @@ $runtimeInputPacket = if (Test-Path -LiteralPath $runtimeInputPath) {
 } else {
     $null
 }
-$gradeResolution = Resolve-VibeGovernedGrade `
-    -BaseGrade (Get-VibeInternalGrade -Task $Task) `
-    -RequestedGradeFloor $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.requested_grade_floor } else { '' }) `
-    -Policy $runtime.runtime_input_packet_policy
-$grade = [string]$gradeResolution.internal_grade
 $hierarchyState = Get-VibeHierarchyState `
     -GovernanceScope $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.governance_scope } else { $GovernanceScope }) `
     -RunId $RunId `
@@ -798,6 +791,18 @@ $specialistDispatchResolution = Resolve-VibeEffectiveSpecialistDispatch `
 $approvedDispatch = @($specialistDispatchResolution.effective_approved_dispatch)
 $localSuggestions = @($specialistDispatchResolution.residual_local_specialist_suggestions)
 $autoApprovedDispatch = @($specialistDispatchResolution.auto_approved_dispatch)
+$interactiveSpecialistDisclosurePolicy = Get-VibeInteractiveSpecialistDisclosurePolicy -RuntimeInputPacketPolicy $runtime.runtime_input_packet_policy
+$specialistUserDisclosure = New-VibeSpecialistUserDisclosureProjection `
+    -ApprovedDispatch @($approvedDispatch) `
+    -Policy $interactiveSpecialistDisclosurePolicy
+if ($specialistUserDisclosure) {
+    $executionDisclosureLayer = New-VibeSpecialistExecutionLifecycleLayerProjection `
+        -SpecialistUserDisclosure $specialistUserDisclosure `
+        -ExecutionManifest $null
+    $executionDisclosureSegment = New-VibeHostUserBriefingSegmentProjection -LifecycleLayer $executionDisclosureLayer
+    $executionDisclosureEvent = New-VibeHostStageDisclosureEventProjection -Segment $executionDisclosureSegment
+    Add-VibeHostStageDisclosureEvent -SessionRoot $sessionRoot -Event $executionDisclosureEvent | Out-Null
+}
 $executionTopologyPath = Get-VibeExecutionTopologyPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
 $executionTopology = New-VibeExecutionTopology `
     -RunId $RunId `
@@ -1070,7 +1075,20 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             }
 
             if ([string]$unitReceipt.lane_kind -eq 'specialist_dispatch') {
-                $executedSpecialistUnits += New-VibeExecutedSpecialistUnitSummary -UnitReceipt $unitReceipt -LaneEntry $outcome.lane_entry
+                $executedSpecialistUnits += [pscustomobject]@{
+                    unit_id = [string]$unitReceipt.unit_id
+                    skill_id = [string]$unitReceipt.skill_id
+                    dispatch_phase = if ($unitReceipt.PSObject.Properties.Name -contains 'dispatch_phase') { [string]$unitReceipt.dispatch_phase } else { $null }
+                    binding_profile = if ($unitReceipt.PSObject.Properties.Name -contains 'binding_profile') { [string]$unitReceipt.binding_profile } else { $null }
+                    lane_policy = if ($unitReceipt.PSObject.Properties.Name -contains 'lane_policy') { [string]$unitReceipt.lane_policy } else { $null }
+                    parallelizable = [bool]$outcome.lane_entry.parallelizable
+                    result_path = [string]$unitReceipt.result_path
+                    verification_passed = [bool]$unitReceipt.verification_passed
+                    execution_driver = [string]$unitReceipt.execution_driver
+                    live_native_execution = [bool]$unitReceipt.live_native_execution
+                    degraded = [bool]$unitReceipt.degraded
+                    lane_receipt_path = if ($unitReceipt.lane_receipt_path) { [string]$unitReceipt.lane_receipt_path } else { $null }
+                }
             }
         }
 
@@ -1118,32 +1136,9 @@ $executedWithoutApproval = @($executedSpecialistSkillIds | Where-Object { $_ -no
 $localSuggestionsExecutedWithoutApproval = @($localSuggestionSkillIds | Where-Object { $_ -in $executedSpecialistSkillIds })
 $dispatchContractIncompleteSkillIds = @(
     $approvedDispatch | Where-Object {
-        $entry = $_
-        $hasNativeUsageRequired = $entry.PSObject.Properties.Name -contains 'native_usage_required'
-        $hasMustPreserveWorkflow = $entry.PSObject.Properties.Name -contains 'must_preserve_workflow'
-        $hasNativeSkillEntrypoint = $entry.PSObject.Properties.Name -contains 'native_skill_entrypoint'
-        $hasSkillRoot = $entry.PSObject.Properties.Name -contains 'skill_root'
-        $hasUsageRequired = $entry.PSObject.Properties.Name -contains 'usage_required'
-        -not $hasNativeUsageRequired -or
-        -not [bool]$entry.native_usage_required -or
-        -not $hasMustPreserveWorkflow -or
-        -not [bool]$entry.must_preserve_workflow -or
-        -not $hasNativeSkillEntrypoint -or
-        [string]::IsNullOrWhiteSpace([string]$entry.native_skill_entrypoint) -or
-        -not $hasSkillRoot -or
-        [string]::IsNullOrWhiteSpace([string]$entry.skill_root) -or
-        -not $hasUsageRequired -or
-        -not [bool]$entry.usage_required
-    } | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
-)
-$promptInjectionIncompleteSkillIds = @(
-    $executedSpecialistUnits | Where-Object {
-        $hasPromptArtifact = ($_.PSObject.Properties.Name -contains 'prompt_path') -and -not [string]::IsNullOrWhiteSpace([string]$_.prompt_path)
-        $missingPromptFields = if ($_.PSObject.Properties.Name -contains 'missing_prompt_injection_fields') { @($_.missing_prompt_injection_fields) } else { @() }
-        $promptProofRequired = [bool]$_.live_native_execution -or $hasPromptArtifact -or (@($missingPromptFields).Count -gt 0)
-        $promptProofRequired -and
-        ($_.PSObject.Properties.Name -contains 'prompt_injection_complete') -and
-        -not [bool]$_.prompt_injection_complete
+        -not [bool]$_.native_usage_required -or
+        -not [bool]$_.must_preserve_workflow -or
+        [string]::IsNullOrWhiteSpace([string]$_.native_skill_entrypoint)
     } | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
 )
 
@@ -1167,14 +1162,12 @@ $dispatchIntegrity = [pscustomobject]@{
     executed_specialists_subset_of_approved_dispatch = [bool](@($executedWithoutApproval).Count -eq 0)
     local_suggestions_contained = [bool](@($localSuggestionsExecutedWithoutApproval).Count -eq 0)
     native_contract_complete_for_approved_dispatch = [bool](@($dispatchContractIncompleteSkillIds).Count -eq 0)
-    prompt_injection_complete_for_executed_specialists = [bool](@($promptInjectionIncompleteSkillIds).Count -eq 0)
     matched_skills_resolved = [bool](@($ghostMatchSkillIds).Count -eq 0)
     approved_dispatch_missing_from_recommendations = @($approvedDispatchMissingFromRecommendations)
     approved_dispatch_not_executed = @($approvedDispatchNotExecuted)
     executed_without_approval = @($executedWithoutApproval)
     local_suggestions_executed_without_approval = @($localSuggestionsExecutedWithoutApproval)
     dispatch_contract_incomplete_skill_ids = @($dispatchContractIncompleteSkillIds)
-    prompt_injection_incomplete_skill_ids = @($promptInjectionIncompleteSkillIds)
 }
 $dispatchIntegrity | Add-Member -NotePropertyName 'proof_passed' -NotePropertyValue ([bool](
     $dispatchIntegrity.approved_dispatch_supported_by_recommendation_or_inherited_approval -and
@@ -1182,7 +1175,6 @@ $dispatchIntegrity | Add-Member -NotePropertyName 'proof_passed' -NotePropertyVa
     $dispatchIntegrity.executed_specialists_subset_of_approved_dispatch -and
     $dispatchIntegrity.local_suggestions_contained -and
     $dispatchIntegrity.native_contract_complete_for_approved_dispatch -and
-    $dispatchIntegrity.prompt_injection_complete_for_executed_specialists -and
     $dispatchIntegrity.matched_skills_resolved
 ))
 
@@ -1331,6 +1323,7 @@ $executionManifest = [pscustomobject]@{
         escalation_required = [bool]$escalationRequired
         escalation_request_path = $escalationPath
     }
+    specialist_user_disclosure = $specialistUserDisclosure
     dispatch_integrity = $dispatchIntegrity
     status = if ([string]$hierarchyState.governance_scope -eq 'child' -and $baseStatus -eq 'completed') { 'completed_local_scope' } else { $baseStatus }
     waves = @($waveReceipts)
@@ -1406,6 +1399,13 @@ $proofLines = @(
     ('- plan_shadow: `{0}`' -f $planShadow.path),
     ''
 )
+if ($specialistUserDisclosure) {
+    $proofLines += @(
+        '## Specialist User Disclosure',
+        [string]$specialistUserDisclosure.rendered_text,
+        ''
+    )
+}
 foreach ($waveReceipt in @($waveReceipts)) {
     $proofLines += @(
         "## $([string]$waveReceipt.wave_id)",
@@ -1452,6 +1452,7 @@ $receipt = [pscustomobject]@{
     specialist_skills = @($specialistSkills)
     auto_approved_specialist_unit_count = @($autoApprovedDispatch).Count
     local_specialist_suggestion_count = @($localSuggestions).Count
+    specialist_user_disclosure = $specialistUserDisclosure
     dispatch_integrity_proof_passed = [bool]$dispatchIntegrity.proof_passed
     dispatch_integrity = $dispatchIntegrity
     escalation_required = [bool]$escalationRequired

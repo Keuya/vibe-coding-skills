@@ -58,7 +58,7 @@ def run_runtime(task: str, artifact_root: Path, *, extra_env: dict[str, str] | N
         text=True,
         encoding="utf-8",
         check=True,
-        env={**os.environ, **(extra_env or {}), "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1"},
+        env={**os.environ, "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1", **(extra_env or {})},
     )
     stdout = completed.stdout.strip()
     if stdout in ("", "null"):
@@ -157,15 +157,11 @@ class RuntimeContractGoldenTests(unittest.TestCase):
     def test_root_governed_runtime_matches_curated_packet_and_manifest_golden(self) -> None:
         fixture = load_json(GOLDEN_FIXTURE)
 
-        with tempfile.TemporaryDirectory() as tempdir, tempfile.TemporaryDirectory() as codex_home:
+        with tempfile.TemporaryDirectory() as tempdir:
             payload = run_runtime(
                 TASK,
                 artifact_root=Path(tempdir),
-                extra_env={
-                    "VCO_HOST_ID": "codex",
-                    # Keep the golden baseline independent from any machine-local Codex install state.
-                    "CODEX_HOME": codex_home,
-                },
+                extra_env={"VCO_HOST_ID": "codex"},
             )
             summary = payload["summary"]
             runtime_input_packet = load_json(summary["artifacts"]["runtime_input_packet"])

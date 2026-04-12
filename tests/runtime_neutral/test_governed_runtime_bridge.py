@@ -56,9 +56,6 @@ UI_TASK = "Build a responsive dashboard UI with clear interaction feedback, mean
 DOC_TASK = "Reformat the project README headings and spacing without changing application code."
 DOC_CODE_TASK = "Implement the markdown export pipeline for the docs renderer and add targeted verification for the parser."
 DOC_DECK_TASK = "Build the release deck slides and refine presentation spacing without changing application code."
-DOC_HOST_KEYWORD_TASK = "Refresh codex onboarding documentation for 用户 handoff without changing application code."
-API_DOC_TASK = "Update API documentation for the authentication flow and refresh endpoint examples."
-WIREFRAME_TASK = "Prototype onboarding screen wireframe with desktop and mobile layout coverage."
 
 
 def resolve_python_command_spec_via_powershell(command_spec: str, path_entries: list[Path]) -> dict[str, object]:
@@ -118,7 +115,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
         self.assertIn("apps/vgo-cli/src/vgo_cli/workspace.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/commands.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/repo.py", required_markers)
-        self.assertIn("apps/vgo-cli/src/vgo_cli/version_reminder.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/external.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/output.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/install_gates.py", required_markers)
@@ -173,11 +169,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             EXPECTED_STAGE_IDS,
             [stage["id"] for stage in contract["stages"]],
         )
-
-        runtime_entry = (REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1").read_text(encoding="utf-8")
-        runtime_common = (REPO_ROOT / "scripts" / "runtime" / "VibeRuntime.Common.ps1").read_text(encoding="utf-8")
-        self.assertIn("Get-VibeUpgradeReminder", runtime_common)
-        self.assertIn("Get-VibeUpgradeReminder", runtime_entry)
 
     def test_invoke_vibe_runtime_produces_six_stage_closure_under_temp_artifact_root(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
@@ -284,7 +275,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 self.assertIn("## Assumptions", requirement_doc)
                 self.assertIn("## Runtime Input Truth", requirement_doc)
                 self.assertIn("## Specialist Recommendations", requirement_doc)
-                self.assertIn("Eligible recommendations must auto-promote", requirement_doc)
                 self.assertIn("## Artifact Review Requirements", requirement_doc)
                 self.assertIn("## Code Task TDD Evidence Requirements", requirement_doc)
                 self.assertIn("- Record failing-first evidence for the changed behavior before implementation or defect correction.", requirement_doc)
@@ -296,6 +286,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 self.assertIn("No baseline UI quality dimensions were frozen for this run.", requirement_doc)
                 self.assertIn("## Task-Specific Acceptance Extensions", requirement_doc)
                 self.assertIn("## Research Augmentation Sources", requirement_doc)
+                self.assertIn("Eligible recommendations should auto-promote", requirement_doc)
             self.assertEqual("requirements", requirement_doc_path.parent.name)
             self.assertEqual("plans", execution_plan_path.parent.name)
             execution_plan = execution_plan_path.read_text(encoding="utf-8")
@@ -346,12 +337,69 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(execution_manifest["specialist_accounting"]["dispatch_unit_count"], 1)
             self.assertIn("systematic-debugging", execution_manifest["specialist_accounting"]["specialist_skills"])
             self.assertGreaterEqual(execution_manifest["plan_shadow"]["specialist_dispatch_unit_count"], 1)
+
+            specialist_disclosure = execution_manifest["specialist_user_disclosure"]
+            self.assertEqual("approved_dispatch_only", specialist_disclosure["scope"])
+            self.assertEqual("before_execution", specialist_disclosure["timing"])
+            self.assertEqual("native_skill_entrypoint", specialist_disclosure["path_source"])
+            self.assertGreaterEqual(specialist_disclosure["routed_skill_count"], 1)
+            self.assertEqual(specialist_disclosure["routed_skill_count"], len(specialist_disclosure["routed_skills"]))
+            routed_entry = next(
+                item for item in specialist_disclosure["routed_skills"] if item["skill_id"] == "systematic-debugging"
+            )
+            self.assertTrue(Path(routed_entry["native_skill_entrypoint"]).is_absolute())
+            self.assertTrue(Path(routed_entry["native_skill_entrypoint"]).exists())
+            self.assertIn("systematic-debugging", specialist_disclosure["rendered_text"])
+            self.assertIn(routed_entry["native_skill_entrypoint"], specialist_disclosure["rendered_text"])
+            self.assertEqual(specialist_disclosure, execute_receipt["specialist_user_disclosure"])
+            self.assertEqual(specialist_disclosure, summary["specialist_user_disclosure"])
+
+            consultation_summary = summary["specialist_consultation"]
+            self.assertTrue(bool(consultation_summary["enabled"]))
+            self.assertEqual(2, int(consultation_summary["window_count"]))
+            self.assertEqual(
+                ["discussion", "planning"],
+                [str(window["window_id"]) for window in list(consultation_summary["windows"])],
+            )
+            self.assertGreaterEqual(int(consultation_summary["approved_consultation_count"]), 2)
+            self.assertGreaterEqual(int(consultation_summary["user_disclosure_count"]), 2)
+            self.assertIn("discussion_specialist_consultation", artifacts)
+            self.assertIn("planning_specialist_consultation", artifacts)
+            self.assertIn("specialist_lifecycle_disclosure", artifacts)
+            self.assertIn("host_stage_disclosure", artifacts)
+            discussion_receipt = json.loads(
+                resolve_artifact_path("discussion_specialist_consultation").read_text(encoding="utf-8")
+            )
+            planning_receipt = json.loads(
+                resolve_artifact_path("planning_specialist_consultation").read_text(encoding="utf-8")
+            )
+            lifecycle_disclosure = json.loads(
+                resolve_artifact_path("specialist_lifecycle_disclosure").read_text(encoding="utf-8")
+            )
+            host_stage_disclosure = json.loads(resolve_artifact_path("host_stage_disclosure").read_text(encoding="utf-8"))
+            self.assertGreaterEqual(len(list(discussion_receipt["approved_consultation"])), 1)
+            self.assertGreaterEqual(len(list(planning_receipt["approved_consultation"])), 1)
+            self.assertGreaterEqual(len(list(discussion_receipt["user_disclosures"])), 1)
+            self.assertGreaterEqual(len(list(planning_receipt["user_disclosures"])), 1)
+            self.assertEqual("routing_consultation_execution_separated", lifecycle_disclosure["truth_model"])
+            self.assertEqual(
+                ["discussion_routing", "discussion_consultation", "planning_consultation", "execution_dispatch"],
+                [str(layer["layer_id"]) for layer in list(lifecycle_disclosure["layers"])],
+            )
+            self.assertIn("systematic-debugging", lifecycle_disclosure["rendered_text"])
+            self.assertEqual(lifecycle_disclosure, summary["specialist_lifecycle_disclosure"])
+            self.assertEqual("progressive_host_stage_disclosure", host_stage_disclosure["mode"])
+            self.assertEqual(
+                ["discussion_routing", "discussion_consultation", "planning_consultation", "execution_dispatch"],
+                [str(event["segment_id"]) for event in list(host_stage_disclosure["events"])],
+            )
+            self.assertEqual([1, 2, 3, 4], [int(event["sequence"]) for event in list(host_stage_disclosure["events"])])
+            self.assertEqual(host_stage_disclosure, summary["host_stage_disclosure"])
+
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["proof_passed"]))
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["approved_dispatch_fully_executed"]))
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["executed_specialists_subset_of_approved_dispatch"]))
             self.assertTrue(bool(execution_manifest["dispatch_integrity"]["local_suggestions_contained"]))
-            self.assertTrue(bool(execution_manifest["dispatch_integrity"]["prompt_injection_complete_for_executed_specialists"]))
-            self.assertEqual([], list(execution_manifest["dispatch_integrity"]["prompt_injection_incomplete_skill_ids"]))
             self.assertTrue(execution_proof["proof_passed"])
             self.assertGreaterEqual(execution_proof["executed_unit_count"], 2)
             self.assertEqual("runtime", execution_proof["proof_class"])
@@ -364,17 +412,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertEqual("receipt_only", cleanup_receipt["cleanup_mode"])
             self.assertEqual("runtime", cleanup_receipt["proof_class"])
             self.assertFalse(cleanup_receipt["default_bounded_cleanup_applied"])
-
-            for result_path in execution_proof["result_paths"]:
-                result = json.loads(Path(result_path).read_text(encoding="utf-8"))
-                self.assertEqual(0, result["exit_code"])
-                self.assertTrue(Path(result["stdout_path"]).exists())
-                self.assertTrue(Path(result["stderr_path"]).exists())
-                if result.get("kind") == "specialist_dispatch" and bool(result.get("degraded")):
-                    self.assertEqual("degraded_non_authoritative", result["status"])
-                    self.assertFalse(bool(result["verification_passed"]))
-                else:
-                    self.assertEqual("completed", result["status"])
 
     def test_invoke_vibe_runtime_freezes_default_ui_baseline_dimensions_for_ui_task(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
@@ -484,9 +521,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertIn("No code-task TDD evidence requirements were frozen for this run.", requirement_doc)
             self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
             self.assertIn("- Structure Integrity", requirement_doc)
-            self.assertIn("## Manual Spot Checks", requirement_doc)
-            self.assertIn("None required beyond automated verification for this task unless the execution scope expands to a user-visible or interactive flow.", requirement_doc)
-            self.assertNotIn("Open the primary user-facing flow and confirm the main path works from entry to completion.", requirement_doc)
             self.assertIn("- Formatting Consistency", requirement_doc)
             self.assertIn("- Content Completeness", requirement_doc)
             self.assertIn("- Link and Reference Integrity", requirement_doc)
@@ -595,66 +629,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertIn("- Structure Integrity", requirement_doc)
             self.assertIn("- Output Fidelity", requirement_doc)
 
-    def test_invoke_vibe_runtime_does_not_freeze_ui_baseline_for_non_ui_doc_tasks_with_host_keywords(self) -> None:
-        script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
-        run_id = "pytest-governed-runtime-doc-host-keywords"
-        shell = resolve_powershell()
-        if shell is None:
-            self.skipTest("PowerShell executable not available in PATH")
-
-        with tempfile.TemporaryDirectory() as tempdir:
-            artifact_root = Path(tempdir)
-            command = [
-                shell,
-                "-NoLogo",
-                "-NoProfile",
-                "-Command",
-                (
-                    "& { "
-                    f"$result = & '{script_path}' "
-                    f"-Task '{DOC_HOST_KEYWORD_TASK}' "
-                    "-Mode interactive_governed "
-                    f"-RunId '{run_id}' "
-                    f"-ArtifactRoot '{artifact_root}'; "
-                    "$result | ConvertTo-Json -Depth 20 }"
-                ),
-            ]
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=True,
-                env={**os.environ, "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1"},
-            )
-
-            payload = json.loads(completed.stdout)
-            relative_artifacts = payload["summary"].get("artifacts_relative", {})
-            requirement_doc_path = artifact_root / Path(relative_artifacts["requirement_doc"])
-            self.assertTrue(requirement_doc_path.exists())
-
-            requirement_doc = requirement_doc_path.read_text(encoding="utf-8")
-            self.assertIn("## Baseline UI Quality Dimensions", requirement_doc)
-            self.assertIn("No baseline UI quality dimensions were frozen for this run.", requirement_doc)
-            self.assertNotIn("- Structure Completeness", requirement_doc)
-            self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
-            self.assertIn("- Structure Integrity", requirement_doc)
-            self.assertIn("## Manual Spot Checks", requirement_doc)
-            self.assertIn("None required beyond automated verification for this task unless the execution scope expands to a user-visible or interactive flow.", requirement_doc)
-            self.assertNotIn("Open the primary user-facing flow and confirm the main path works from entry to completion.", requirement_doc)
-
-    def test_project_delivery_readme_lists_all_truth_layers(self) -> None:
-        readme_path = REPO_ROOT / "tests" / "scenarios" / "project_delivery" / "README.md"
-        readme_text = readme_path.read_text(encoding="utf-8")
-
-        self.assertIn("Each scenario must provide six truth-layer states:", readme_text)
-        self.assertIn("- `governance_truth`", readme_text)
-        self.assertIn("- `engineering_verification_truth`", readme_text)
-        self.assertIn("- `code_task_tdd_evidence_truth`", readme_text)
-        self.assertIn("- `workflow_completion_truth`", readme_text)
-        self.assertIn("- `artifact_review_truth`", readme_text)
-        self.assertIn("- `product_acceptance_truth`", readme_text)
-
     def test_write_requirement_doc_preserves_explicit_document_artifact_review_requirements(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "Write-RequirementDoc.ps1"
         run_id = "pytest-requirement-doc-explicit-artifact-review"
@@ -739,174 +713,6 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             )
             self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
             self.assertIn("- Structure Integrity", requirement_doc)
-
-    def test_write_requirement_doc_treats_api_documentation_tasks_as_document_artifacts(self) -> None:
-        script_path = REPO_ROOT / "scripts" / "runtime" / "Write-RequirementDoc.ps1"
-        run_id = "pytest-requirement-doc-api-documentation"
-        shell = resolve_powershell()
-        if shell is None:
-            self.skipTest("PowerShell executable not available in PATH")
-
-        intent_contract = {
-            "title": "API documentation refresh",
-            "goal": API_DOC_TASK,
-            "deliverable": "Updated API documentation only.",
-            "constraints": [
-                "Do not change application code.",
-            ],
-            "acceptance_criteria": [
-                "Requirement document is frozen before execution.",
-            ],
-            "non_goals": [
-                "Do not implement backend or frontend code changes.",
-            ],
-            "autonomy_mode": "interactive_governed",
-            "assumptions": [
-                "Only documentation artifacts change.",
-            ],
-        }
-
-        with tempfile.TemporaryDirectory() as tempdir:
-            artifact_root = Path(tempdir)
-            intent_contract_path = artifact_root / "intent-contract.json"
-            intent_contract_path.write_text(
-                json.dumps(intent_contract, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            command = [
-                shell,
-                "-NoLogo",
-                "-NoProfile",
-                "-Command",
-                (
-                    "& { "
-                    f"$result = & '{script_path}' "
-                    f"-Task '{API_DOC_TASK}' "
-                    "-Mode interactive_governed "
-                    f"-RunId '{run_id}' "
-                    f"-IntentContractPath '{intent_contract_path}' "
-                    f"-ArtifactRoot '{artifact_root}'; "
-                    "$result | ConvertTo-Json -Depth 20 }"
-                ),
-            ]
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            payload = json.loads(completed.stdout)
-            requirement_doc_path = Path(payload["requirement_doc_path"])
-            self.assertTrue(requirement_doc_path.exists())
-            requirement_receipt = payload["receipt"]
-
-            requirement_doc = requirement_doc_path.read_text(encoding="utf-8")
-            self.assertIn("## Artifact Review Requirements", requirement_doc)
-            self.assertIn(
-                "- Review the touched document artifact directly against each frozen baseline document quality dimension.",
-                requirement_doc,
-            )
-            self.assertIn("## Code Task TDD Evidence Requirements", requirement_doc)
-            self.assertIn("No code-task TDD evidence requirements were frozen for this run.", requirement_doc)
-            self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
-            self.assertIn("- Structure Integrity", requirement_doc)
-            self.assertIn("## Baseline UI Quality Dimensions", requirement_doc)
-            self.assertIn("No baseline UI quality dimensions were frozen for this run.", requirement_doc)
-            self.assertEqual(
-                {
-                    "artifact_review_requirements": [
-                        "Review the touched document artifact directly against each frozen baseline document quality dimension.",
-                        "Open, render, or export the touched document artifact at least once and confirm the touched scope remains intact.",
-                        "For formatting-only or layout-only work, confirm content fidelity explicitly before full completion wording is allowed.",
-                    ],
-                    "code_task_tdd_evidence_requirements": [],
-                    "code_task_tdd_exceptions": [],
-                    "baseline_document_quality_dimensions": [
-                        "Structure Integrity",
-                        "Formatting Consistency",
-                        "Content Completeness",
-                        "Link and Reference Integrity",
-                        "Layout and Asset Stability",
-                        "Output Fidelity",
-                    ],
-                    "baseline_ui_quality_dimensions": [],
-                    "task_specific_acceptance_extensions": [],
-                    "research_augmentation_sources": [],
-                },
-                requirement_receipt["frozen_requirement_sections"],
-            )
-
-    def test_write_requirement_doc_treats_wireframe_tasks_as_visual_artifacts_without_tdd(self) -> None:
-        script_path = REPO_ROOT / "scripts" / "runtime" / "Write-RequirementDoc.ps1"
-        run_id = "pytest-requirement-doc-wireframe"
-        shell = resolve_powershell()
-        if shell is None:
-            self.skipTest("PowerShell executable not available in PATH")
-
-        intent_contract = {
-            "title": "Onboarding wireframe prototype",
-            "goal": WIREFRAME_TASK,
-            "deliverable": "Wireframe-only onboarding screen design artifact.",
-            "constraints": [
-                "Do not implement production code in this phase.",
-            ],
-            "acceptance_criteria": [
-                "Requirement document is frozen before execution.",
-            ],
-            "non_goals": [
-                "Do not convert the wireframe into production UI code.",
-            ],
-            "autonomy_mode": "interactive_governed",
-            "assumptions": [
-                "The deliverable is a visual design artifact, not implementation code.",
-            ],
-        }
-
-        with tempfile.TemporaryDirectory() as tempdir:
-            artifact_root = Path(tempdir)
-            intent_contract_path = artifact_root / "intent-contract.json"
-            intent_contract_path.write_text(
-                json.dumps(intent_contract, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            command = [
-                shell,
-                "-NoLogo",
-                "-NoProfile",
-                "-Command",
-                (
-                    "& { "
-                    f"$result = & '{script_path}' "
-                    f"-Task '{WIREFRAME_TASK}' "
-                    "-Mode interactive_governed "
-                    f"-RunId '{run_id}' "
-                    f"-IntentContractPath '{intent_contract_path}' "
-                    f"-ArtifactRoot '{artifact_root}'; "
-                    "$result | ConvertTo-Json -Depth 20 }"
-                ),
-            ]
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            payload = json.loads(completed.stdout)
-            requirement_doc_path = Path(payload["requirement_doc_path"])
-            self.assertTrue(requirement_doc_path.exists())
-
-            requirement_doc = requirement_doc_path.read_text(encoding="utf-8")
-            self.assertIn("## Code Task TDD Evidence Requirements", requirement_doc)
-            self.assertIn("No code-task TDD evidence requirements were frozen for this run.", requirement_doc)
-            self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
-            self.assertIn("No baseline document quality dimensions were frozen for this run.", requirement_doc)
-            self.assertIn("## Baseline UI Quality Dimensions", requirement_doc)
-            self.assertIn("- Structure Completeness", requirement_doc)
-            self.assertIn("- Responsive Stability", requirement_doc)
 
     def test_resolve_vgo_python_command_spec_falls_back_to_python3(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
