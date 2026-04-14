@@ -3,12 +3,22 @@
 This is the single public install entrypoint.
 
 Normal users only need this page.
-It routes to the four retained base install prompt docs.
+It takes you to the four retained base install prompt docs.
 
-## Choose Two Things
+If this is your first install, the default path is simple:
+
+1. choose your host
+2. choose `install`
+3. if you are unsure, choose `Full Version + Customizable Governance`
+4. copy the matching prompt and paste it into your AI app
+
+## Choose Host, Action, and Version
 
 1. Confirm the host: `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, or `opencode`
-2. Confirm the action and public version:
+2. Confirm the action:
+   - for a first install, usually choose: `install`
+   - choose `update` only when you already installed VibeSkills and want to upgrade it
+3. Confirm the public version:
    - install: `Full Version + Customizable Governance`
    - install: `Framework Only + Customizable Governance`
    - update: `Full Version + Customizable Governance`
@@ -19,6 +29,11 @@ Public version maps to:
 - `Full Version + Customizable Governance` -> `full`
 - `Framework Only + Customizable Governance` -> `minimal`
 
+For a normal first install, these two defaults are usually enough:
+
+- if you are unsure, start with `install + Full Version + Customizable Governance`
+- choose `Framework Only + Customizable Governance` only if you deliberately want the lighter framework-only path
+
 Notes:
 
 - host mode is resolved from [`../../config/adapter-registry.json`](../../config/adapter-registry.json)
@@ -28,6 +43,7 @@ Notes:
 ## Copy One Prompt
 
 The four retained base prompt docs cover install / update and full / minimal.
+Most first-time users only need the first two; the last two are for updating an existing install.
 Outside these four docs, the other pages no longer act as public install prompt entrypoints.
 
 - [`prompts/full-version-install.en.md`](./prompts/full-version-install.en.md)
@@ -36,6 +52,8 @@ Outside these four docs, the other pages no longer act as public install prompt 
 - [`prompts/framework-only-update.en.md`](./prompts/framework-only-update.en.md)
 
 ## Read Next Only If Needed
+
+Only continue into these docs if you hit one of these cases:
 
 - Host-specific supplements:
   - [`openclaw-path.en.md`](./openclaw-path.en.md)

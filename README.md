@@ -523,61 +523,71 @@ The runtime core behind **VibeSkills** is **VCO**. This is not a single-point to
 
 ## ⚙️ Installation & Skills Management
 
-_Skills keep growing — but you don't need to manage them individually._
+You do not need to learn the whole architecture before you install VibeSkills.
 
-### Public topology: one visible runtime, rich internal capability
+### Default install path
 
-The default install is intentionally narrow on the outside:
+1. Decide which app you are installing into: `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, or `opencode`
+2. If this is your first install and you have no special constraint, choose `install + full`
+3. Open the main install guide:
+   [Prompt-based install (recommended)](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/one-click-install-release-copy.en.md)
+4. Copy the prompt that matches your app and version, then paste it into that AI app
+5. Finish the install, then continue with [Getting Started](#-getting-started)
 
-- public host-visible runtime entry: `<target-root>/skills/vibe`
-- internal bundled specialist corpus: `<target-root>/skills/vibe/bundled/skills/*`
-- compatibility projections: only host-scoped, explicit, and test-backed when a host still needs them
+### `full` or `minimal`?
 
-This is the key architectural split: **capability breadth is internal, public surface breadth is minimal**. A full install still carries broad routing and specialist coverage, but it no longer needs to flood `<target-root>/skills/` with 300+ peer directories just so hosts can discover `vibe`.
+- Choose `full` if you want the recommended setup and the simplest default path
+- Choose `minimal` only if you deliberately want the smaller framework-only install
 
-### Uninstall: Owned-only cleanup
+### When should you open the other install docs?
 
-Running `uninstall.ps1 -HostId <host>` or `uninstall.sh --host <host>` is the partner surface to install. By default it performs a ledger-first, owned-only cleanup that only touches paths recorded in `.vibeskills/install-ledger.json`, `*.host-closure.json`, or the documented legacy surfaces. The bundled runtime keeps only the executable contract; the full governance explainer lives in the canonical repo at [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md).
+- If you are not sure which host path matches your app, start with the [cold-start host matrix](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md)
+- If you want the longer step-by-step command path, use the [multi-host command reference](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.en.md)
+- If you need host-specific notes for OpenClaw or OpenCode, open the [OpenClaw host guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/openclaw-path.en.md) or the [OpenCode host guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/opencode-path.en.md)
+- If you need an offline or manual copy path, open the [manual install guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/manual-copy-install.en.md)
 
-The `.vibeskills` brand is now split into two layers on purpose:
+<details>
+<summary><b>🔧 Advanced install details</b></summary>
+
+Only read this part if you need manual configuration, troubleshooting, or advanced customization.
+
+**If a guide asks you to edit something manually, these are the real file paths**
+
+- Codex: `~/.codex/settings.json`
+- Claude Code: `~/.claude/settings.json`
+- Cursor: `~/.cursor/settings.json`
+- OpenCode: `~/.config/opencode/opencode.json`
+- Windsurf / OpenClaw sidecar state: `<target-root>/.vibeskills/host-settings.json`
+
+**What stays visible after install**
+
+- public runtime entry: `<target-root>/skills/vibe`
+- internal bundled corpus: `<target-root>/skills/vibe/bundled/skills/*`
+- compatibility helper files: only when a host explicitly needs them
+
+The `.vibeskills` folders are split on purpose:
 
 - host-sidecar: `<target-root>/.vibeskills/host-settings.json`, `host-closure.json`, `install-ledger.json`, `bin/*`
 - workspace-sidecar: `<workspace-root>/.vibeskills/project.json`, `.vibeskills/docs/requirements/*`, `.vibeskills/docs/plans/*`, `.vibeskills/outputs/runtime/vibe-sessions/*`
 
-This keeps host install state separate from governed workspace/runtime artifacts while preserving the existing relative runtime contract. Explicit `ArtifactRoot` overrides still work when operators need a different artifact location.
+**What has been verified after install**
 
-### Install: One entry, two public versions
+| Host | Verified areas after install |
+|:---|:---|
+| `codex` | planning, debug, governed execution, memory continuity |
+| `claude-code` | planning, debug, governed execution, memory continuity |
+| `openclaw` | planning, debug, governed execution, memory continuity |
+| `opencode` | planning, debug, governed execution, memory continuity |
 
-<div align="center">
+These checks confirm that the installed runtime still controls routing, still writes its governance and cleanup records, and still preserves memory continuity. They do not mean that every host-specific invocation surface was exercised in the exact same way.
 
-| | Single Public Entry |
-|:---:|:---|
-| **Install** | [⚡ Prompt-based install (recommended)](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/one-click-install-release-copy.en.md) |
-| **Public versions inside the same entry** | `Full Version + Customizable Governance` / `Framework Only + Customizable Governance` |
-| **Result** | choose host + action + version in one place, then copy the matching prompt |
+**Uninstall and custom skills**
 
-</div>
+- uninstall paths: `uninstall.ps1 -HostId <host>` and `uninstall.sh --host <host>`
+- uninstall governance notes: [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md)
+- custom skill onboarding: [custom workflow & skill onboarding guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/custom-workflow-onboarding.en.md)
 
-The install surface is now registry-driven. `HostId` / `--host` selects host semantics, and the same public entry can resolve into `governed`, `preview-guidance`, or `runtime-core` depending on the adapter. `full` and `minimal` remain different products, but the difference is now mostly **internal capability breadth and optional compatibility payloads**, not "a few visible skills" versus "hundreds of visible skills." If you are not sure which path matches your host, start with the [cold-start host matrix](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md) or the [multi-host command reference](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.en.md).
-
-When a follow-up step remains manual, the install docs now name the real path and file explicitly. For example: Codex uses `~/.codex/settings.json`, Claude Code uses `~/.claude/settings.json`, Cursor uses `~/.cursor/settings.json`, OpenCode keeps the real `~/.config/opencode/opencode.json` host-managed, and runtime-core hosts such as Windsurf / OpenClaw use `<target-root>/.vibeskills/host-settings.json` only as repo-owned sidecar state rather than an invented global settings contract.
-
-### Installed-host validation matrix
-
-The current install topology has been probe-validated against the installed runtime after each host-specific install / closure surface is materialized, not only against repo-local scripts:
-
-| Host | Installed entry kept public | Installed-runtime probes covered |
-|:---|:---|:---|
-| `codex` | `skills/vibe` public entry kept installed | planning, debug, governed execution, memory continuity |
-| `claude-code` | managed closure + installed `skills/vibe` payload | planning, debug, governed execution, memory continuity |
-| `openclaw` | runtime-core adapter + installed `skills/vibe` payload | planning, debug, governed execution, memory continuity |
-| `opencode` | preview-guidance adapter + installed `skills/vibe` payload | planning, debug, governed execution, memory continuity |
-
-Those probes validate that installed `vibe` still owns routing authority, preserves governance stage outputs, records cleanup receipts, and keeps memory read/write continuity after installation. They do not claim that every host-native public invocation syntax was exercised directly in the probe itself; the probe target is the installed runtime after the host-specific surface has been materialized. In a few planning-heavy scenarios, advisory gates can surface a bounded `completed_with_failures` status while runtime authority and governed delivery remain intact; that status is treated as expected only for explicitly allowlisted advisory checks.
-
-### Customize: Add your own skills
-
-→ [Custom workflow & skill onboarding guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/custom-workflow-onboarding.en.md)
+</details>
 
 ## 📦 Standing on the Shoulders of Giants
 
