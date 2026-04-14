@@ -331,44 +331,28 @@ README 不再把 340+ 个 skill 像电话簿一样全部铺开。
 
 ## ⚙️ 安装与 Skills 管理
 
-_技能库可以继续长大，但安装入口始终只有一个。_
+你不需要先把整套架构弄懂，才能把 VibeSkills 装起来。
 
-### 第一次安装：先做这 3 件事
+### 快速安装
 
-1. 先确认宿主：`codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`、`opencode`
-2. 再选版本：大多数用户直接选 `full`；只有明确只想要核心框架时再选 `minimal`
-3. 打开唯一公开入口，复制对应提示词：
+1. 先确认你准备在哪个客户端里用它：`codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`、`opencode`
+2. 拿不准就先选 `full`
+3. 打开主安装页：
    [提示词安装（推荐）](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/one-click-install-release-copy.md)
+4. 找到对应客户端和版本，复制提示词
+5. 安装完成后，直接看下面的 [开启你的 Vibe 体验](#-开启你的-vibe-体验)
 
-如果你的目标只是“先装上并开始用”，上面三步已经够了。
+### `full` 还是 `minimal`？
 
-### 一个入口，两种公开版本
+- 想按推荐方式直接用，就选 `full`
+- 只有你明确想要更小、更轻的框架安装时，再选 `minimal`
 
-<div align="center">
-
-| | 唯一公开入口 |
-|:---:|:---|
-| **安装入口** | [⚡ 提示词安装（推荐）](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/one-click-install-release-copy.md) |
-| **版本** | `full` / `minimal` |
-| **你要做的事** | 选宿主、选版本、复制提示词 |
-
-</div>
-
-大多数人只需要记住：
-
-- `full`：推荐默认值，保留完整能力宽度与常见兼容负载
-- `minimal`：只保留核心框架，适合你明确想做轻量安装的场景
-
-如果你还不知道该走哪条路径，先看 [冷启动宿主矩阵](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.md)。
+如果你还不知道该看哪份说明，先看 [冷启动宿主矩阵](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.md)。如果你想看更完整的分步命令说明，再看 [多宿主命令参考](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.md)。
 
 <details>
-<summary><b>🔧 还想看高级安装说明？点击展开</b></summary>
+<summary><b>🔧 高级安装细节</b></summary>
 
-<br/>
-
-**需要手动 follow-up 时，会给你真实路径**
-
-安装文档现在会明确写出真实文件位置，而不是笼统地说“请手动设置”。例如：
+**如果文档要求你手动补一步，这些是真实文件路径**
 
 - Codex：`~/.codex/settings.json`
 - Claude Code：`~/.claude/settings.json`
@@ -376,43 +360,39 @@ _技能库可以继续长大，但安装入口始终只有一个。_
 - OpenCode：`~/.config/opencode/opencode.json`
 - Windsurf / OpenClaw sidecar：`<target-root>/.vibeskills/host-settings.json`
 
-**README 在安装后的口径是什么**
-
-当前拓扑已经对“安装后的运行时”做过探针，而不是只验证仓库内脚本。
-
-| 宿主 | 保留的公开入口 | 已覆盖的 installed-runtime 探针 |
-|:---|:---|:---|
-| `codex` | 保留已安装的 `skills/vibe` 入口 | planning、debug、governed execution、memory continuity |
-| `claude-code` | managed closure + 已安装 `skills/vibe` 负载 | planning、debug、governed execution、memory continuity |
-| `openclaw` | runtime-core adapter + 已安装 `skills/vibe` 负载 | planning、debug、governed execution、memory continuity |
-| `opencode` | preview-guidance adapter + 已安装 `skills/vibe` 负载 | planning、debug、governed execution、memory continuity |
-
-这些探针要表达的是：安装后的 `vibe` 仍然掌握路由权、还能写治理产物、会生成 cleanup receipt，并保持记忆连续性；它不等于“每一种宿主调用语法都被同一次探针直接执行过”。
-
-**公开拓扑一眼看懂**
+**安装后对外保留什么**
 
 - 对外运行时入口：`<target-root>/skills/vibe`
 - 内部 bundled 语料：`<target-root>/skills/vibe/bundled/skills/*`
-- 兼容性投影：只有宿主明确需要时才投影
+- 兼容性辅助文件：只有宿主明确需要时才生成
 
-`.vibeskills` 也被刻意拆成两层：
+`.vibeskills` 被拆成两层：
 
 - host-sidecar：`<target-root>/.vibeskills/host-settings.json`、`host-closure.json`、`install-ledger.json`、`bin/*`
 - workspace-sidecar：`<workspace-root>/.vibeskills/project.json`、`.vibeskills/docs/requirements/*`、`.vibeskills/docs/plans/*`、`.vibeskills/outputs/runtime/vibe-sessions/*`
 
-**卸载 / 清理**
+**哪些宿主已经做过安装后验证**
 
-`uninstall.ps1 -HostId <host>` 和 `uninstall.sh --host <host>` 是对称卸载路径，默认只清理 ledger 记录的 owned-only 内容。完整说明见 [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md)。
+| 宿主 | 已验证的范围 |
+|:---|:---|
+| `codex` | planning、debug、governed execution、memory continuity |
+| `claude-code` | planning、debug、governed execution、memory continuity |
+| `openclaw` | planning、debug、governed execution、memory continuity |
+| `opencode` | planning、debug、governed execution、memory continuity |
 
-**自定义 Skill**
+这些检查说明：安装后的 `vibe` 仍然能负责路由、写出治理和清理记录，并保持记忆连续性；但这不等于“每一种宿主调用语法都被同一次验证直接跑过”。
 
-看 [自定义工作流与 Skill 接入指南](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/custom-workflow-onboarding.md)。
+**卸载和自定义**
+
+- 卸载入口：`uninstall.ps1 -HostId <host>`、`uninstall.sh --host <host>`
+- 卸载治理说明：[`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md)
+- 自定义 Skill 接入： [自定义工作流与 Skill 接入指南](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/custom-workflow-onboarding.md)
 
 </details>
 
 ## 📦 集众家之所长：资源整合
 
-这些能力不是闭门造车做出来的。VibeSkills 很多底气，来自持续吸收开源社区里已经被验证过的好方法，再把它们收进同一套治理体系里。
+这些能力不是闭门造车做出来的。VibeSkills 持续吸收开源社区里已经被验证过的好方法，再把它们收进同一套治理体系里。
 
 > 🙏 **特别鸣谢与致敬**
 >
@@ -431,32 +411,28 @@ _技能库可以继续长大，但安装入口始终只有一个。_
 
 如果你还没安装，请先回到上面的 [30 秒安装](#quick-install)。
 
-请通过宿主环境里的 Skills 调用方式来使用它，不要把它当成一个独立 CLI 程序直接运行。
-
-<br/>
-
-<div align="center">
-
-| 宿主环境 | 调用方式 | 示例 |
-|:---:|:---:|:---|
-| **Claude Code** | `/vibe` | `我希望你能设计一个 XXX /vibe` |
-| **Codex** | `$vibe` | `我希望你设计一个 XXXX $vibe` |
-| **OpenCode** | `/vibe` | `请用 vibe skill 规划这次改动。` |
-| **OpenClaw** | Skills 入口 | 参考宿主说明 |
-| **Cursor / Windsurf** | Skills 入口 | 参考各平台 Skills 调用文档 |
-
-</div>
-
-<br/>
+安装完成后，请从你的 AI 工具里的 Skills / 命令入口调用它，不要把这个仓库当成独立 CLI 直接运行。
 
 > 💡 **小贴士**：如果你希望每一轮都走完整的受管工作流，就在消息末尾带上 `$vibe` 或 `/vibe`。不带的话，系统会把它当作普通请求。
 
+最常见的用法：
+
+- `Codex`：在消息末尾加 `$vibe`
+- `Claude Code`：在消息末尾加 `/vibe`
+- `OpenCode`：使用 `/vibe`
+- `Cursor / Windsurf / OpenClaw`：在宿主自己的 Skills 入口里选择 `vibe`
+
+示例：
+
+```text
+Codex：请帮我规划这次改动 $vibe
+Claude Code / OpenCode：请帮我规划这次改动 /vibe
+```
+
 <details>
-<summary><b>📚 文档导航与安装指引（点击展开）</b></summary>
+<summary><b>📚 接下来你最可能会用到的文档</b></summary>
 
-<br/>
-
-**快速了解系统**
+**先看这些**
 
 - 📖 [了解系统架构与理念](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/quick-start.md)
 - 📜 [VibeSkills 宣言](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/manifesto.md)
@@ -468,19 +444,15 @@ _技能库可以继续长大，但安装入口始终只有一个。_
 - 📄 [OpenClaw 宿主说明](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/openclaw-path.md)
 - 📄 [OpenCode 宿主说明](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/opencode-path.md)
 - 📁 [手动复制安装（离线）](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/manual-copy-install.md)
-- 🛠 [高级 host / lane 参考](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.md)
+- 🛠 [高级安装命令参考](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.md)
 - 🧊 [冷启动与其他环境说明](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.md)
 
 **补充说明**
 
-- `$vibe` 或 `/vibe` 只是 governed runtime 入口，不等于 MCP 已经安装完成。
+- `$vibe` 或 `/vibe` 是进入受管工作流的入口，但它本身不等于 MCP 已经安装完成。
 - 当前公开支持面覆盖 `codex`、`claude-code`、`cursor`、`windsurf`、`openclaw`、`opencode`，更细的宿主差异请看对应文档。
 
 </details>
-
-<br/>
-
-<div align="center">
 
 ### 🤝 加入社区 · 共建生态
 
@@ -492,19 +464,13 @@ _技能库可以继续长大，但安装入口始终只有一个。_
 Fork → 修改 → Pull Request → 合并 ✅
 ```
 
-<br/>
-
 > ⭐ 如果这个项目对你有帮助，点个 Star 就是很直接的支持。
-
-<br/>
 
 感谢 **LinuxDo** 社区的支持和讨论。
 
 [![LinuxDo](https://img.shields.io/badge/社区-LinuxDo-blue?style=for-the-badge)](https://linux.do/)
 
 技术交流、AI 资讯和经验分享都可以在 LinuxDo 里看到。
-
-</div>
 
 <br/>
 

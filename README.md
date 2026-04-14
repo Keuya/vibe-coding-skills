@@ -334,44 +334,28 @@ This is the short factual version:
 
 ## ⚙️ Installation & Skills Management
 
-_The skill library can keep growing. You still only need one install entry._
+You do not need to learn the whole architecture before you install VibeSkills.
 
-### First install: just do these 3 things
+### Fast path
 
-1. Confirm your host: `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, or `opencode`
-2. Pick a version: most users should start with `full`; choose `minimal` only if you already know you want the lighter framework-only path
-3. Open the single public install page and copy the matching prompt:
+1. Decide which app you are installing into: `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, or `opencode`
+2. If you are unsure, choose `full`
+3. Open the main install guide:
    [Prompt-based install (recommended)](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/one-click-install-release-copy.en.md)
+4. Copy the prompt that matches your app and version
+5. Finish the install, then continue with [Getting Started](#-getting-started)
 
-If your only goal is "get installed and start using it", the three steps above are enough.
+### `full` or `minimal`?
 
-### One entry, two public versions
+- Choose `full` if you want the recommended setup
+- Choose `minimal` only if you deliberately want the smaller install
 
-<div align="center">
-
-| | Single public entry |
-|:---:|:---|
-| **Install page** | [⚡ Prompt-based install (recommended)](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/one-click-install-release-copy.en.md) |
-| **Versions** | `full` / `minimal` |
-| **What you do** | pick host, pick version, copy the prompt |
-
-</div>
-
-The only rule most people need is:
-
-- `full`: recommended default, keeps the broad capability set
-- `minimal`: lighter framework-only path
-
-If you are unsure which host path fits you, start with the [cold-start host matrix](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md).
+If you are not sure which guide matches your app, start with the [cold-start host matrix](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md). If you want the longer step-by-step command guide, use the [multi-host command reference](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.en.md).
 
 <details>
-<summary><b>🔧 Need the advanced install notes? Click to expand</b></summary>
+<summary><b>🔧 Advanced install details</b></summary>
 
-<br/>
-
-**Manual follow-up uses real host paths**
-
-When a follow-up step stays manual, the install docs now point to the real host-managed path instead of hand-waving. Examples:
+**If a guide asks you to edit something manually, these are the real file paths**
 
 - Codex: `~/.codex/settings.json`
 - Claude Code: `~/.claude/settings.json`
@@ -379,43 +363,39 @@ When a follow-up step stays manual, the install docs now point to the real host-
 - OpenCode: `~/.config/opencode/opencode.json`
 - Windsurf / OpenClaw sidecar state: `<target-root>/.vibeskills/host-settings.json`
 
-**What the README is claiming after install**
-
-The current topology has probe coverage against the installed runtime, not only repo-local scripts.
-
-| Host | Installed public entry | Installed-runtime probes covered |
-|:---|:---|:---|
-| `codex` | installed `skills/vibe` entry | planning, debug, governed execution, memory continuity |
-| `claude-code` | managed closure + installed `skills/vibe` payload | planning, debug, governed execution, memory continuity |
-| `openclaw` | runtime-core adapter + installed `skills/vibe` payload | planning, debug, governed execution, memory continuity |
-| `opencode` | preview-guidance adapter + installed `skills/vibe` payload | planning, debug, governed execution, memory continuity |
-
-Those probes are intended to show that the installed runtime still owns routing, emits governance artifacts, writes cleanup receipts, and preserves memory continuity. They are not claiming that every host-native invocation surface was directly exercised in the same probe.
-
-**Public topology in one glance**
+**What stays visible after install**
 
 - public runtime entry: `<target-root>/skills/vibe`
 - internal bundled corpus: `<target-root>/skills/vibe/bundled/skills/*`
-- compatibility projections: only when a host explicitly needs them
+- compatibility helper files: only when a host explicitly needs them
 
-The `.vibeskills` layout is intentionally split:
+The `.vibeskills` folders are split on purpose:
 
 - host-sidecar: `<target-root>/.vibeskills/host-settings.json`, `host-closure.json`, `install-ledger.json`, `bin/*`
 - workspace-sidecar: `<workspace-root>/.vibeskills/project.json`, `.vibeskills/docs/requirements/*`, `.vibeskills/docs/plans/*`, `.vibeskills/outputs/runtime/vibe-sessions/*`
 
-**Uninstall / cleanup**
+**What has been verified after install**
 
-`uninstall.ps1 -HostId <host>` and `uninstall.sh --host <host>` are the matching uninstall paths. By default they perform ledger-first, owned-only cleanup. The deeper governance notes are in [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md).
+| Host | Verified areas after install |
+|:---|:---|
+| `codex` | planning, debug, governed execution, memory continuity |
+| `claude-code` | planning, debug, governed execution, memory continuity |
+| `openclaw` | planning, debug, governed execution, memory continuity |
+| `opencode` | planning, debug, governed execution, memory continuity |
 
-**Custom skills**
+These checks confirm that the installed runtime still controls routing, still writes its governance and cleanup records, and still preserves memory continuity. They do not mean that every host-specific invocation surface was exercised in the exact same way.
 
-See the [custom workflow & skill onboarding guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/custom-workflow-onboarding.en.md).
+**Uninstall and custom skills**
+
+- uninstall paths: `uninstall.ps1 -HostId <host>` and `uninstall.sh --host <host>`
+- uninstall governance notes: [`docs/uninstall-governance.md`](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/uninstall-governance.md)
+- custom skill onboarding: [custom workflow & skill onboarding guide](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/custom-workflow-onboarding.en.md)
 
 </details>
 
 ## 📦 Standing on the Shoulders of Giants
 
-These capabilities were not built in isolation. A big part of VibeSkills is continuously absorbing strong open-source ideas, then making them work together inside one governed system.
+These capabilities were not built in isolation. VibeSkills pulls together proven ideas from open-source projects and makes them work inside one governed system.
 
 > 🙏 **Special Thanks & Acknowledgements**
 >
@@ -434,32 +414,28 @@ These capabilities were not built in isolation. A big part of VibeSkills is cont
 
 If you have not installed yet, go back to [30-Second Install](#quick-install) first.
 
-Use it through your host's Skills invocation flow. Do not treat this repo like a standalone CLI program.
-
-<br/>
-
-<div align="center">
-
-| Host Environment | Invocation | Example |
-|:---:|:---:|:---|
-| **Claude Code** | `/vibe` | `I want you to design a XXX /vibe` |
-| **Codex** | `$vibe` | `I want you to design a XXXX $vibe` |
-| **OpenCode** | `/vibe` | `Use the vibe skill to plan this change.` |
-| **OpenClaw** | Skills entry | Refer to the host docs |
-| **Cursor / Windsurf** | Skills entry | Refer to each platform's Skills docs |
-
-</div>
-
-<br/>
+After install, use VibeSkills from inside your host's Skills or command flow. This repo is not a standalone CLI.
 
 > 💡 **Tip**: If you want every turn to stay inside the full governed workflow, append `$vibe` or `/vibe` to each message. Without that invocation, the message is treated as a normal request.
 
+Most common ways to start:
+
+- `Codex`: append `$vibe` to the message
+- `Claude Code`: append `/vibe`
+- `OpenCode`: use `/vibe`
+- `Cursor / Windsurf / OpenClaw`: open the host's Skills entry and choose `vibe`
+
+Examples:
+
+```text
+Codex: Please plan this change $vibe
+Claude Code / OpenCode: Please plan this change /vibe
+```
+
 <details>
-<summary><b>📚 Documentation & Installation Guides (click to expand)</b></summary>
+<summary><b>📚 Docs you may want next</b></summary>
 
-<br/>
-
-**Understand the system**
+**Start here**
 
 - 📖 [System architecture & philosophy](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/quick-start.en.md)
 - 📜 [VibeSkills Manifesto](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/manifesto.en.md)
@@ -474,16 +450,12 @@ Use it through your host's Skills invocation flow. Do not treat this repo like a
 - 🛠 [Advanced install command reference](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/install/recommended-full-path.en.md)
 - 🧊 [Cold start & other environments](https://github.com/foryourhealth111-pixel/Vibe-Skills/blob/main/docs/cold-start-install-paths.en.md)
 
-**Extra runtime notes**
+**Important note**
 
-- `$vibe` or `/vibe` is the governed runtime entry, not proof that MCP itself is installed.
+- `$vibe` or `/vibe` starts the governed workflow. By itself, it does not prove that MCP is installed.
 - Public host-facing paths currently cover `codex`, `claude-code`, `cursor`, `windsurf`, `openclaw`, and `opencode`, with different levels of install/runtime surface detail documented in the linked host guides.
 
 </details>
-
-<br/>
-
-<div align="center">
 
 ### 🤝 Join the Community · Build Together
 
@@ -495,19 +467,13 @@ Questions, ideas, bug reports, and documentation fixes are all welcome.
 Fork → Modify → Pull Request → Merge ✅
 ```
 
-<br/>
-
 > ⭐ If this project helps you, a star is a meaningful way to support it.
-
-<br/>
 
 Thanks to the **LinuxDo** community for the support and discussion.
 
 [![LinuxDo](https://img.shields.io/badge/Community-LinuxDo-blue?style=for-the-badge)](https://linux.do/)
 
 Tech discussion, AI news, and experience sharing all happen there.
-
-</div>
 
 <br/>
 
