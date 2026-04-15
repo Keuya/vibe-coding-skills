@@ -24,7 +24,13 @@ def resolve_upgrade_repo_root(repo_root: Path) -> Path | None:
     return resolve_canonical_repo_root(repo_root)
 
 
-def refresh_installed_status(repo_root: Path, target_root: Path, host_id: str) -> dict[str, object]:
+def refresh_installed_status(
+    repo_root: Path,
+    target_root: Path,
+    host_id: str,
+    *,
+    persist: bool = True,
+) -> dict[str, object]:
     official_repo = get_official_self_repo_metadata(repo_root)
     release = get_local_release_metadata(repo_root)
     merged = merge_upgrade_status(
@@ -39,7 +45,8 @@ def refresh_installed_status(repo_root: Path, target_root: Path, host_id: str) -
             'installed_recorded_at': None,
         },
     )
-    save_upgrade_status(target_root, merged)
+    if persist:
+        save_upgrade_status(target_root, merged)
     return merged
 
 
@@ -54,7 +61,15 @@ def refresh_upstream_status(
         return current_status
 
     repo_url = str(current_status.get('repo_remote') or '').strip()
-    branch = str(current_status.get('repo_default_branch') or 'main').strip() or 'main'
+    branch = str(current_status.get('repo_default_branch') or '').strip()
+    if not repo_url or not branch:
+        official_repo = get_official_self_repo_metadata(repo_root)
+        repo_url = repo_url or str(official_repo.get('repo_url') or '').strip()
+        branch = branch or str(official_repo.get('default_branch') or '').strip()
+    branch = branch or 'main'
+    if not repo_url:
+        raise CliError('Official self repository URL is not configured in version-governance.json.')
+
     fetch_result = run_subprocess(['git', 'fetch', '--quiet', repo_url, branch], cwd=repo_root)
     if fetch_result.returncode != 0:
         raise CliError(fetch_result.stderr.strip() or 'Failed to refresh upstream repository state.')
@@ -193,7 +208,7 @@ def upgrade_runtime(
             'Pass --repo-root pointing at a Vibe-Skills git checkout before invoking the upgrade runtime.'
         )
 
-    before = refresh_installed_status(resolved_repo_root, target_root, host_id)
+    before = refresh_installed_status(resolved_repo_root, target_root, host_id, persist=False)
     status = refresh_upstream_status(resolved_repo_root, target_root, before, force_refresh=True)
     if not bool(status.get('update_available')):
         print(

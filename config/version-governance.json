@@ -7,7 +7,11 @@
     "notes": "mainline upgrade flow / workspace memory plane / document artifact governance / specialist lifecycle disclosure / release truth refresh"
   },
   "source_of_truth": {
-    "canonical_root": "."
+    "canonical_root": ".",
+    "official_self_repo": {
+      "repo_url": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+      "default_branch": "main"
+    }
   },
   "mirror_topology": {
     "canonical_target_id": "canonical",

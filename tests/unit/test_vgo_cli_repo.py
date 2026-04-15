@@ -70,6 +70,16 @@ def test_get_official_self_repo_metadata_reads_explicit_governance_source(tmp_pa
     }
 
 
+def test_real_version_governance_declares_official_self_repo_metadata() -> None:
+    payload = get_official_self_repo_metadata(REPO_ROOT)
+
+    assert payload == {
+        'repo_url': 'https://github.com/foryourhealth111-pixel/Vibe-Skills.git',
+        'default_branch': 'main',
+        'canonical_root': '.',
+    }
+
+
 def test_get_local_release_metadata_reads_release_block(tmp_path: Path) -> None:
     repo_root = tmp_path / 'repo'
     (repo_root / 'config').mkdir(parents=True)

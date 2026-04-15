@@ -28,10 +28,17 @@ def test_upgrade_runtime_resolves_canonical_git_root_before_refresh(monkeypatch:
 
     monkeypatch.setattr(upgrade_service, "resolve_upgrade_repo_root", lambda path: canonical_root)
 
-    def fake_refresh_installed_status(repo_root_arg: Path, target_root_arg: Path, host_id: str) -> dict[str, object]:
+    def fake_refresh_installed_status(
+        repo_root_arg: Path,
+        target_root_arg: Path,
+        host_id: str,
+        *,
+        persist: bool = True,
+    ) -> dict[str, object]:
         recorded["repo_root"] = repo_root_arg
         recorded["target_root"] = target_root_arg
         recorded["host_id"] = host_id
+        recorded["persist"] = persist
         return {
             "installed_version": "3.0.1",
             "installed_commit": "same",
@@ -64,6 +71,7 @@ def test_upgrade_runtime_resolves_canonical_git_root_before_refresh(monkeypatch:
     assert recorded["repo_root"] == canonical_root
     assert recorded["target_root"] == target_root
     assert recorded["host_id"] == "codex"
+    assert recorded["persist"] is False
 
 
 def test_upgrade_runtime_noops_when_install_is_already_current(
@@ -80,7 +88,7 @@ def test_upgrade_runtime_noops_when_install_is_already_current(
     monkeypatch.setattr(
         upgrade_service,
         "refresh_installed_status",
-        lambda repo_root_arg, target_root_arg, host_id: {
+        lambda repo_root_arg, target_root_arg, host_id, **kwargs: {
             "installed_version": "3.0.1",
             "installed_commit": "same",
             "remote_latest_version": "3.0.1",
@@ -197,7 +205,11 @@ def test_upgrade_runtime_refreshes_repo_reinstalls_and_checks_when_update_is_ava
     )
 
     monkeypatch.setattr(upgrade_service, "resolve_upgrade_repo_root", lambda path: repo_root)
-    monkeypatch.setattr(upgrade_service, "refresh_installed_status", lambda repo_root_arg, target_root_arg, host_id: next(statuses))
+    monkeypatch.setattr(
+        upgrade_service,
+        "refresh_installed_status",
+        lambda repo_root_arg, target_root_arg, host_id, **kwargs: next(statuses),
+    )
 
     def fake_refresh_upstream(
         repo_root_arg: Path,
@@ -263,7 +275,7 @@ def test_upgrade_runtime_forces_fresh_upstream_refresh_before_deciding_update(
     monkeypatch.setattr(
         upgrade_service,
         "refresh_installed_status",
-        lambda repo_root_arg, target_root_arg, host_id: {
+        lambda repo_root_arg, target_root_arg, host_id, **kwargs: {
             "installed_version": "3.0.0",
             "installed_commit": "local",
             "remote_latest_version": "3.0.1",
@@ -374,6 +386,141 @@ def test_refresh_upstream_status_reads_release_metadata_from_resolved_commit(
     ]
 
 
+def test_refresh_upstream_status_falls_back_to_repo_governance_when_cached_remote_metadata_is_blank(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    upgrade_service = importlib.import_module("vgo_cli.upgrade_service")
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    target_root = tmp_path / "target"
+    target_root.mkdir()
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(
+        upgrade_service,
+        "get_official_self_repo_metadata",
+        lambda repo_root_arg: {
+            "repo_url": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+            "default_branch": "main",
+            "canonical_root": ".",
+        },
+    )
+
+    def fake_run_subprocess(command: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        assert cwd == repo_root
+        if command[:3] == ["git", "fetch", "--quiet"]:
+            assert command == [
+                "git",
+                "fetch",
+                "--quiet",
+                "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+                "main",
+            ]
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, stdout="abc123\n", stderr="")
+        if command == ["git", "show", "abc123:config/version-governance.json"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout='{"release":{"version":"3.0.1"}}\n',
+                stderr="",
+            )
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(upgrade_service, "run_subprocess", fake_run_subprocess)
+
+    status = upgrade_service.refresh_upstream_status(
+        repo_root,
+        target_root,
+        {
+            "repo_remote": "",
+            "repo_default_branch": "",
+            "installed_version": "3.0.0",
+            "installed_commit": "old",
+        },
+        force_refresh=True,
+    )
+
+    assert status["remote_latest_commit"] == "abc123"
+    assert status["remote_latest_version"] == "3.0.1"
+    assert commands[0] == [
+        "git",
+        "fetch",
+        "--quiet",
+        "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+        "main",
+    ]
+
+
+def test_upgrade_runtime_does_not_rewrite_existing_status_when_upstream_refresh_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    upgrade_service = importlib.import_module("vgo_cli.upgrade_service")
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    target_root = tmp_path / "target"
+    target_root.mkdir()
+    previous_status = {
+        "host_id": "codex",
+        "target_root": str(target_root.resolve()),
+        "repo_remote": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+        "repo_default_branch": "main",
+        "installed_version": "3.0.0",
+        "installed_commit": "old",
+        "installed_recorded_at": "2026-04-10T00:00:00Z",
+        "remote_latest_commit": "old",
+        "remote_latest_version": "3.0.0",
+        "remote_latest_checked_at": "2026-04-10T00:00:00Z",
+        "update_available": False,
+    }
+    upgrade_service.save_upgrade_status(target_root, previous_status)
+
+    monkeypatch.setattr(upgrade_service, "resolve_upgrade_repo_root", lambda path: repo_root)
+    monkeypatch.setattr(
+        upgrade_service,
+        "get_official_self_repo_metadata",
+        lambda repo_root_arg: {
+            "repo_url": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+            "default_branch": "main",
+            "canonical_root": ".",
+        },
+    )
+    monkeypatch.setattr(
+        upgrade_service,
+        "get_local_release_metadata",
+        lambda repo_root_arg: {"version": "3.0.1", "updated": "2026-04-15", "channel": "stable"},
+    )
+    monkeypatch.setattr(upgrade_service, "get_repo_head_commit", lambda repo_root_arg: "new")
+
+    def fake_run_subprocess(command: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        assert cwd == repo_root
+        if command[:3] == ["git", "fetch", "--quiet"]:
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="network down")
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(upgrade_service, "run_subprocess", fake_run_subprocess)
+
+    with pytest.raises(upgrade_service.CliError, match="network down"):
+        upgrade_service.upgrade_runtime(
+            repo_root=repo_root,
+            target_root=target_root,
+            host_id="codex",
+            profile="full",
+            frontend="shell",
+            install_external=False,
+            strict_offline=False,
+            require_closed_ready=False,
+            allow_external_skill_fallback=False,
+            skip_runtime_freshness_gate=False,
+        )
+
+    assert upgrade_service.load_upgrade_status(target_root) == previous_status
+
+
 def test_upgrade_runtime_propagates_refresh_failures(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     upgrade_service = importlib.import_module("vgo_cli.upgrade_service")
 
@@ -386,7 +533,7 @@ def test_upgrade_runtime_propagates_refresh_failures(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(
         upgrade_service,
         "refresh_installed_status",
-        lambda repo_root_arg, target_root_arg, host_id: {"installed_version": "3.0.0", "installed_commit": "old"},
+        lambda repo_root_arg, target_root_arg, host_id, **kwargs: {"installed_version": "3.0.0", "installed_commit": "old"},
     )
     monkeypatch.setattr(
         upgrade_service,
@@ -424,7 +571,11 @@ def test_upgrade_runtime_propagates_check_failures(monkeypatch: pytest.MonkeyPat
     )
 
     monkeypatch.setattr(upgrade_service, "resolve_upgrade_repo_root", lambda path: repo_root)
-    monkeypatch.setattr(upgrade_service, "refresh_installed_status", lambda repo_root_arg, target_root_arg, host_id: next(statuses))
+    monkeypatch.setattr(
+        upgrade_service,
+        "refresh_installed_status",
+        lambda repo_root_arg, target_root_arg, host_id, **kwargs: next(statuses),
+    )
     monkeypatch.setattr(
         upgrade_service,
         "refresh_upstream_status",
