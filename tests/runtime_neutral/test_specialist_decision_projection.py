@@ -94,3 +94,34 @@ class SpecialistDecisionProjectionTests(unittest.TestCase):
         self.assertEqual("no_specialist_needed", payload["resolution_mode"])
         self.assertIn("no specialist help was needed", str(payload["notes"]).lower())
         self.assertNotIn("repo-asset fallback", str(payload["notes"]).lower())
+
+    def test_specialist_decision_projection_defaults_missing_traceability_basis_to_empty_list(self) -> None:
+        payload = self._run_projection(
+            "$override = [pscustomobject]@{ "
+            "decision_state = 'no_specialist_recommendations'; "
+            "resolution_mode = 'repo_asset_fallback'; "
+            "repo_asset_fallback = [pscustomobject]@{ "
+            "used = $true; "
+            "asset_paths = @('outputs/foo.py'); "
+            "reason = 'Reuse the repo-local plotting asset.'; "
+            "legal_basis = 'Repo-local governed asset.' "
+            "} "
+            "}; "
+            "$result = New-VibeSpecialistDecisionProjection "
+            "-RecommendationCount 0 "
+            "-OverridePayload $override; "
+            "$result | ConvertTo-Json -Depth 10"
+        )
+
+        self.assertEqual("repo_asset_fallback", payload["resolution_mode"])
+        self.assertEqual([], payload["repo_asset_fallback"]["traceability_basis"])
+
+    def test_specialist_decision_projection_defaults_empty_match_and_surface_ids_to_empty_lists(self) -> None:
+        payload = self._run_projection(
+            "$result = New-VibeSpecialistDecisionProjection "
+            "-RecommendationCount 0; "
+            "$result | ConvertTo-Json -Depth 10"
+        )
+
+        self.assertEqual([], payload["matched_skill_ids"])
+        self.assertEqual([], payload["surfaced_skill_ids"])

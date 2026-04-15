@@ -724,19 +724,25 @@ function New-VibeSpecialistDecisionProjection {
             if ($null -ne $_ -and (Test-VibeObjectHasProperty -InputObject $_ -PropertyName 'skill_id')) { [string]$_.skill_id } else { '' }
         } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     }
-    $matchedSkillIds = if (@($MatchedSkillIds).Count -gt 0) {
-        @($MatchedSkillIds | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
-    } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'matched_skill_ids')) {
-        @($dispatchSource.matched_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
-    } else {
-        @()
+    $explicitMatchedSkillIds = @()
+    if ($null -ne $MatchedSkillIds) {
+        $explicitMatchedSkillIds = @($MatchedSkillIds | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     }
-    $surfacedSkillIds = if (@($SurfacedSkillIds).Count -gt 0) {
-        @($SurfacedSkillIds | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $matchedSkillIds = @()
+    if (@($explicitMatchedSkillIds).Count -gt 0) {
+        $matchedSkillIds = @($explicitMatchedSkillIds)
+    } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'matched_skill_ids')) {
+        $matchedSkillIds = @($dispatchSource.matched_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    }
+    $explicitSurfacedSkillIds = @()
+    if ($null -ne $SurfacedSkillIds) {
+        $explicitSurfacedSkillIds = @($SurfacedSkillIds | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    }
+    $surfacedSkillIds = @()
+    if (@($explicitSurfacedSkillIds).Count -gt 0) {
+        $surfacedSkillIds = @($explicitSurfacedSkillIds)
     } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'surfaced_skill_ids')) {
-        @($dispatchSource.surfaced_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
-    } else {
-        @()
+        $surfacedSkillIds = @($dispatchSource.surfaced_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     }
     $recommendationCountResolved = if ($RecommendationCount -ge 0) {
         [int]$RecommendationCount
@@ -794,12 +800,20 @@ function New-VibeSpecialistDecisionProjection {
             } else {
                 @()
             }
+            $repoAssetFallbackTraceabilityBasis = if (
+                (Test-VibeObjectHasProperty -InputObject $repoAssetFallbackSource -PropertyName 'traceability_basis') -and
+                $null -ne $repoAssetFallbackSource.traceability_basis
+            ) {
+                @($repoAssetFallbackSource.traceability_basis | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+            } else {
+                @()
+            }
             $repoAssetFallback = [pscustomobject]@{
                 used = if (Test-VibeObjectHasProperty -InputObject $repoAssetFallbackSource -PropertyName 'used') { [bool]$repoAssetFallbackSource.used } else { @($repoAssetFallbackAssetPaths).Count -gt 0 }
                 asset_paths = @($repoAssetFallbackAssetPaths)
                 reason = if ((Test-VibeObjectHasProperty -InputObject $repoAssetFallbackSource -PropertyName 'reason') -and -not [string]::IsNullOrWhiteSpace([string]$repoAssetFallbackSource.reason)) { [string]$repoAssetFallbackSource.reason } else { '' }
                 legal_basis = if ((Test-VibeObjectHasProperty -InputObject $repoAssetFallbackSource -PropertyName 'legal_basis') -and -not [string]::IsNullOrWhiteSpace([string]$repoAssetFallbackSource.legal_basis)) { [string]$repoAssetFallbackSource.legal_basis } else { '' }
-                traceability_basis = @($repoAssetFallbackSource.traceability_basis | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+                traceability_basis = @($repoAssetFallbackTraceabilityBasis)
             }
         }
         if (-not $overrideProvidedNotes) {
