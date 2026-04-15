@@ -5,6 +5,7 @@ from typing import Any
 
 from .bootstrap_doctor_support import (
     command_present,
+    inspect_global_instruction_bootstrap,
     load_json,
     os_environ,
     resolved_setting_state,
@@ -179,6 +180,7 @@ def collect_host_runtime(target_root: Path) -> dict[str, Any]:
 
     host_closure_payload: dict[str, Any] = {}
     host_closure_valid = False
+    host_id = ""
     if host_closure_path.exists():
         try:
             loaded = load_json(host_closure_path)
@@ -187,6 +189,7 @@ def collect_host_runtime(target_root: Path) -> dict[str, Any]:
         if isinstance(loaded, dict):
             host_closure_payload = loaded
             host_closure_valid = True
+            host_id = str(host_closure_payload.get("host_id") or "").strip()
 
     runtime_skill_entry_path = str(runtime_skill_entry.resolve())
     commands_root_path = str(commands_root.resolve())
@@ -208,6 +211,10 @@ def collect_host_runtime(target_root: Path) -> dict[str, Any]:
         and host_closure_commands_match
         and host_closure_commands_materialized
     )
+    global_instruction_bootstrap = inspect_global_instruction_bootstrap(
+        target_root,
+        host_id=host_id or None,
+    )
     return {
         "runtime_skill_entry_path": runtime_skill_entry_path,
         "runtime_skill_entry_exists": runtime_skill_entry.exists(),
@@ -223,6 +230,7 @@ def collect_host_runtime(target_root: Path) -> dict[str, Any]:
         "settings_surface_exists": settings_surface_exists,
         "settings_surface_kind": settings_surface_kind,
         "vibe_host_ready": vibe_host_ready,
+        "global_instruction_bootstrap": global_instruction_bootstrap,
     }
 
 
@@ -313,6 +321,7 @@ def build_summary(
     plugins: list[dict[str, Any]],
     mcp_servers: list[dict[str, Any]],
     external_tools: list[dict[str, Any]],
+    global_instruction_bootstrap: dict[str, Any] | None,
 ) -> dict[str, Any]:
     blocking_issues: list[str] = []
     manual_actions: list[str] = []
@@ -320,6 +329,12 @@ def build_summary(
 
     if not settings_path.exists():
         blocking_issues.append("settings.json is missing in target root.")
+    if isinstance(global_instruction_bootstrap, dict) and bool(global_instruction_bootstrap.get("applicable")):
+        if not bool(global_instruction_bootstrap.get("healthy")):
+            status = str(global_instruction_bootstrap.get("status") or "unhealthy")
+            blocking_issues.append(
+                f"global instruction bootstrap is unhealthy ({status})"
+            )
     if install_state != "installed_locally":
         warnings.append(f"Install state is '{install_state}'; verify the local install receipt.")
     intent_advice_api_key_state, intent_advice_api_key_source = resolved_setting_state(settings, "VCO_INTENT_ADVICE_API_KEY")
@@ -416,6 +431,7 @@ def build_bootstrap_artifact(
         plugins=plugins,
         mcp_servers=mcp_servers,
         external_tools=external_tools,
+        global_instruction_bootstrap=host_runtime.get("global_instruction_bootstrap"),
     )
 
     return {

@@ -19,6 +19,7 @@ from .host_closure import (
     is_closed_ready_required,
     materialize_host_closure,
 )
+from .global_instruction_service import materialize_global_instruction_bootstrap
 from .install_plan import build_install_plan
 from .ledger_service import (
     MaterializationLedgerState,
@@ -119,16 +120,20 @@ def record_managed_json(path: Path) -> None:
     record_config_rollback(path, created_if_absent=False)
 
 
-def record_merged_file(path: Path, *, created_if_absent: bool) -> None:
+def record_merged_file(path: Path, *, created_if_absent: bool, managed_block_id: str | None = None) -> None:
     try:
         resolved = path.resolve()
     except FileNotFoundError:
         resolved = path
-    ledger_state["merged_files"][str(resolved)] = {
+    entry = {
         "path": str(resolved),
         "created_if_absent": bool(created_if_absent),
     }
-    record_config_rollback(path, created_if_absent=created_if_absent)
+    if managed_block_id:
+        entry["managed_block_id"] = str(managed_block_id)
+    ledger_state["merged_files"][str(resolved)] = entry
+    if not managed_block_id:
+        record_config_rollback(path, created_if_absent=created_if_absent)
 
 
 def record_generated_from_template(path: Path) -> None:
@@ -592,6 +597,13 @@ def main(argv: list[str] | None = None):
         record_managed_json=record_managed_json,
         record_bridge_launcher=record_bridge_launcher,
     )
+    global_instruction_bootstrap = materialize_global_instruction_bootstrap(
+        repo_root,
+        target_root,
+        adapter,
+        track_created_path=track_created_path,
+        record_merged_file=record_merged_file,
+    )
     record_sidecar_root(target_root / ".vibeskills")
     require_closed_ready_effective = bool(args.require_closed_ready and is_closed_ready_required(adapter))
     if require_closed_ready_effective and closure["host_closure_state"] != "closed_ready":
@@ -640,6 +652,11 @@ def main(argv: list[str] | None = None):
             "host_closure_path": str(closure_path),
             "host_closure_state": closure["host_closure_state"],
             "settings_materialized": closure["settings_materialized"],
+            "global_instruction_bootstrap_receipt": (
+                str(global_instruction_bootstrap["receipt_path"])
+                if isinstance(global_instruction_bootstrap, dict) and global_instruction_bootstrap.get("receipt_path")
+                else None
+            ),
             "legacy_opencode_config_cleanup": legacy_opencode_config_cleanup,
             "specialist_wrapper_ready": bool(closure["specialist_wrapper"]["ready"]),
             "require_closed_ready_requested": bool(args.require_closed_ready),

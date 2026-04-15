@@ -45,12 +45,16 @@ class OpenCodeManagedPreviewTests(unittest.TestCase):
             target_root = Path(tempdir)
             _, payload = run_package_install(host="opencode", target_root=target_root)
             closure_path = target_root / ".vibeskills" / "host-closure.json"
+            bootstrap_receipt_path = Path(str(payload["global_instruction_bootstrap_receipt"]))
+            agents_path = target_root / "AGENTS.md"
             settings_path = target_root / "opencode.json"
             example_path = target_root / "opencode.json.example"
 
             self.assertEqual("opencode", payload["host_id"])
             self.assertEqual("preview-guidance", payload["install_mode"])
             self.assertTrue(closure_path.exists())
+            self.assertTrue(bootstrap_receipt_path.exists())
+            self.assertTrue(agents_path.exists())
             self.assertFalse(settings_path.exists())
             self.assertTrue(example_path.exists())
             self.assertTrue((target_root / ".vibeskills" / "host-settings.json").exists())

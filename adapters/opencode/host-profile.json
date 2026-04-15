@@ -17,6 +17,22 @@
     "managed_by_repo": false,
     "notes": "The repository installs skills, commands, agents, host-closure metadata, and an opencode.json.example scaffold; the real opencode.json stays host-managed."
   },
+  "global_instruction_surface": {
+    "relpath": "AGENTS.md",
+    "documented_path": "~/.config/opencode/AGENTS.md",
+    "format": "markdown-rules",
+    "managed_block_id": "global-vibe-bootstrap",
+    "merge_policy": "managed-block-only",
+    "overwrite_policy": "forbidden",
+    "trigger_tokens": [
+      "$vibe",
+      "/vibe"
+    ],
+    "authority_owner": "vibe",
+    "bootstrap_only": true,
+    "template_relpath": "config/global-bootstrap/opencode-vibe-bootstrap.md",
+    "template_version": 1
+  },
   "discoverable_entries": {
     "shared_source": "config/vibe-entry-surfaces.json",
     "authority_owner": "vibe",

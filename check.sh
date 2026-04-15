@@ -888,10 +888,6 @@ if [[ "${HOST_ID}" == "codex" && "${ADAPTER_CHECK_MODE}" == "governed" && "${PRO
 fi
 if [[ "${HOST_ID}" == "codex" && "${ADAPTER_CHECK_MODE}" == "governed" ]]; then
   codex_command_names=(vibe vibe-what-do-i-want vibe-how-do-we-do vibe-do-it)
-  codex_kernel="$(uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')"
-  if [[ "${codex_kernel}" != mingw* && "${codex_kernel}" != msys* && "${codex_kernel}" != cygwin* ]]; then
-    codex_command_names=("vibe" "vibe:what-do-i-want" "vibe:how-do-we-do" "vibe:do-it")
-  fi
   for n in "${codex_command_names[@]}"; do
     check_path "codex command/${n}" "${TARGET_ROOT}/commands/${n}.md" false
   done

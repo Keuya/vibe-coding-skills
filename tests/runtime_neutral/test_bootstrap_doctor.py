@@ -279,6 +279,322 @@ class BootstrapDoctorTests(unittest.TestCase):
         self.assertTrue(artifact["host_runtime"]["host_closure_exists"])
         self.assertTrue(artifact["host_runtime"]["settings_surface_exists"])
 
+    def test_bootstrap_doctor_reports_healthy_global_instruction_bootstrap(self) -> None:
+        sidecar_root = self.target_root / ".vibeskills"
+        sidecar_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "mcp-auto-provision.json").write_text(
+            json.dumps(
+                {
+                    "install_state": "installed_locally",
+                    "mcp_auto_provision_attempted": True,
+                    "mcp_results": [],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runtime_skill_entry = self.target_root / "skills" / "vibe" / "SKILL.md"
+        runtime_skill_entry.parent.mkdir(parents=True, exist_ok=True)
+        runtime_skill_entry.write_text("---\nname: vibe\n---\n", encoding="utf-8")
+        commands_root = self.target_root / "commands"
+        commands_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "host-closure.json").write_text(
+            json.dumps(
+                {
+                    "host_id": "codex",
+                    "runtime_skill_entry": str(runtime_skill_entry.resolve()),
+                    "commands_root": str(commands_root.resolve()),
+                    "commands_materialized": True,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (self.target_root / "mcp").mkdir(parents=True, exist_ok=True)
+        (self.target_root / "mcp" / "servers.active.json").write_text('{"profile":"full"}\n', encoding="utf-8")
+        (self.target_root / "settings.json").write_text(
+            json.dumps({"vco": {"mcp_profile": "full"}, "env": {"VCO_INTENT_ADVICE_API_KEY": "<pending>"}}) + "\n",
+            encoding="utf-8",
+        )
+        bootstrap_path = self.target_root / "AGENTS.md"
+        bootstrap_path.write_text(
+            "<!-- VIBESKILLS:BEGIN managed-block host=codex block=global-vibe-bootstrap version=1 hash=deadbeef -->\n"
+            "Use canonical vibe.\n"
+            "<!-- VIBESKILLS:END managed-block -->\n",
+            encoding="utf-8",
+        )
+        (sidecar_root / "global-instruction-bootstrap.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "status": "ok",
+                    "host": "codex",
+                    "target_file": str(bootstrap_path.resolve()),
+                    "target_relpath": "AGENTS.md",
+                    "documented_path": "~/.codex/AGENTS.md",
+                    "block_id": "global-vibe-bootstrap",
+                    "action": "inserted",
+                    "template_version": 1,
+                    "content_hash": "deadbeef",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        artifact = self.module.evaluate(self.root, self.target_root)
+
+        self.assertIn("global_instruction_bootstrap", artifact["host_runtime"])
+        self.assertTrue(artifact["host_runtime"]["global_instruction_bootstrap"]["healthy"])
+        self.assertEqual("AGENTS.md", artifact["host_runtime"]["global_instruction_bootstrap"]["target_relpath"])
+
+    def test_bootstrap_doctor_fails_when_global_instruction_bootstrap_is_duplicated(self) -> None:
+        sidecar_root = self.target_root / ".vibeskills"
+        sidecar_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "mcp-auto-provision.json").write_text(
+            json.dumps(
+                {
+                    "install_state": "installed_locally",
+                    "mcp_auto_provision_attempted": True,
+                    "mcp_results": [],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runtime_skill_entry = self.target_root / "skills" / "vibe" / "SKILL.md"
+        runtime_skill_entry.parent.mkdir(parents=True, exist_ok=True)
+        runtime_skill_entry.write_text("---\nname: vibe\n---\n", encoding="utf-8")
+        commands_root = self.target_root / "commands"
+        commands_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "host-closure.json").write_text(
+            json.dumps(
+                {
+                    "host_id": "codex",
+                    "runtime_skill_entry": str(runtime_skill_entry.resolve()),
+                    "commands_root": str(commands_root.resolve()),
+                    "commands_materialized": True,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (self.target_root / "mcp").mkdir(parents=True, exist_ok=True)
+        (self.target_root / "mcp" / "servers.active.json").write_text('{"profile":"full"}\n', encoding="utf-8")
+        (self.target_root / "settings.json").write_text(
+            json.dumps({"vco": {"mcp_profile": "full"}, "env": {"VCO_INTENT_ADVICE_API_KEY": "<pending>"}}) + "\n",
+            encoding="utf-8",
+        )
+        block = (
+            "<!-- VIBESKILLS:BEGIN managed-block host=codex block=global-vibe-bootstrap version=1 hash=deadbeef -->\n"
+            "Use canonical vibe.\n"
+            "<!-- VIBESKILLS:END managed-block -->\n"
+        )
+        bootstrap_path = self.target_root / "AGENTS.md"
+        bootstrap_path.write_text(block + "\n" + block, encoding="utf-8")
+        (sidecar_root / "global-instruction-bootstrap.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "status": "ok",
+                    "host": "codex",
+                    "target_file": str(bootstrap_path.resolve()),
+                    "target_relpath": "AGENTS.md",
+                    "documented_path": "~/.codex/AGENTS.md",
+                    "block_id": "global-vibe-bootstrap",
+                    "action": "inserted",
+                    "template_version": 1,
+                    "content_hash": "deadbeef",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        artifact = self.module.evaluate(self.root, self.target_root)
+
+        self.assertEqual("FAIL", artifact["gate_result"])
+        self.assertIn("global instruction bootstrap", " ".join(artifact["summary"]["blocking_issues"]))
+
+    def test_bootstrap_doctor_reports_missing_receipt_without_host_closure(self) -> None:
+        sidecar_root = self.target_root / ".vibeskills"
+        sidecar_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "mcp-auto-provision.json").write_text(
+            json.dumps(
+                {
+                    "install_state": "installed_locally",
+                    "mcp_auto_provision_attempted": True,
+                    "mcp_results": [],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runtime_skill_entry = self.target_root / "skills" / "vibe" / "SKILL.md"
+        runtime_skill_entry.parent.mkdir(parents=True, exist_ok=True)
+        runtime_skill_entry.write_text("---\nname: vibe\n---\n", encoding="utf-8")
+        commands_root = self.target_root / "commands"
+        commands_root.mkdir(parents=True, exist_ok=True)
+        (self.target_root / "mcp").mkdir(parents=True, exist_ok=True)
+        (self.target_root / "mcp" / "servers.active.json").write_text('{"profile":"full"}\n', encoding="utf-8")
+        (self.target_root / "settings.json").write_text(
+            json.dumps({"vco": {"mcp_profile": "full"}, "env": {"VCO_INTENT_ADVICE_API_KEY": "<pending>"}}) + "\n",
+            encoding="utf-8",
+        )
+        bootstrap_path = self.target_root / "AGENTS.md"
+        bootstrap_path.write_text(
+            "<!-- VIBESKILLS:BEGIN managed-block host=codex block=global-vibe-bootstrap version=1 hash=deadbeef -->\n"
+            "Use canonical vibe.\n"
+            "<!-- VIBESKILLS:END managed-block -->\n",
+            encoding="utf-8",
+        )
+
+        artifact = self.module.evaluate(self.root, self.target_root)
+
+        self.assertEqual("missing_receipt", artifact["host_runtime"]["global_instruction_bootstrap"]["status"])
+        self.assertTrue(artifact["host_runtime"]["global_instruction_bootstrap"]["applicable"])
+
+    def test_bootstrap_doctor_treats_malformed_bootstrap_receipt_as_unhealthy(self) -> None:
+        sidecar_root = self.target_root / ".vibeskills"
+        sidecar_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "mcp-auto-provision.json").write_text(
+            json.dumps(
+                {
+                    "install_state": "installed_locally",
+                    "mcp_auto_provision_attempted": True,
+                    "mcp_results": [],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runtime_skill_entry = self.target_root / "skills" / "vibe" / "SKILL.md"
+        runtime_skill_entry.parent.mkdir(parents=True, exist_ok=True)
+        runtime_skill_entry.write_text("---\nname: vibe\n---\n", encoding="utf-8")
+        commands_root = self.target_root / "commands"
+        commands_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "host-closure.json").write_text(
+            json.dumps(
+                {
+                    "host_id": "codex",
+                    "runtime_skill_entry": str(runtime_skill_entry.resolve()),
+                    "commands_root": str(commands_root.resolve()),
+                    "commands_materialized": True,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (self.target_root / "mcp").mkdir(parents=True, exist_ok=True)
+        (self.target_root / "mcp" / "servers.active.json").write_text('{"profile":"full"}\n', encoding="utf-8")
+        (self.target_root / "settings.json").write_text(
+            json.dumps({"vco": {"mcp_profile": "full"}, "env": {"VCO_INTENT_ADVICE_API_KEY": "<pending>"}}) + "\n",
+            encoding="utf-8",
+        )
+        bootstrap_path = self.target_root / "AGENTS.md"
+        bootstrap_path.write_text(
+            "<!-- VIBESKILLS:BEGIN managed-block host=codex block=global-vibe-bootstrap version=1 hash=deadbeef -->\n"
+            "Use canonical vibe.\n"
+            "<!-- VIBESKILLS:END managed-block -->\n",
+            encoding="utf-8",
+        )
+        (sidecar_root / "global-instruction-bootstrap.codex.agents-md.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "status": "ok",
+                    "host": "codex",
+                    "target_file": str(bootstrap_path.resolve()),
+                    "target_relpath": "AGENTS.md",
+                    "documented_path": "~/.codex/AGENTS.md",
+                    "block_id": "global-vibe-bootstrap",
+                    "action": "inserted",
+                    "template_version": "oops",
+                    "content_hash": "deadbeef",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        artifact = self.module.evaluate(self.root, self.target_root)
+
+        self.assertEqual("FAIL", artifact["gate_result"])
+        self.assertFalse(artifact["host_runtime"]["global_instruction_bootstrap"]["healthy"])
+        self.assertEqual("unhealthy", artifact["host_runtime"]["global_instruction_bootstrap"]["status"])
+
+    def test_bootstrap_doctor_does_not_treat_other_host_block_as_duplicate(self) -> None:
+        sidecar_root = self.target_root / ".vibeskills"
+        sidecar_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "mcp-auto-provision.json").write_text(
+            json.dumps(
+                {
+                    "install_state": "installed_locally",
+                    "mcp_auto_provision_attempted": True,
+                    "mcp_results": [],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runtime_skill_entry = self.target_root / "skills" / "vibe" / "SKILL.md"
+        runtime_skill_entry.parent.mkdir(parents=True, exist_ok=True)
+        runtime_skill_entry.write_text("---\nname: vibe\n---\n", encoding="utf-8")
+        commands_root = self.target_root / "commands"
+        commands_root.mkdir(parents=True, exist_ok=True)
+        (sidecar_root / "host-closure.json").write_text(
+            json.dumps(
+                {
+                    "host_id": "codex",
+                    "runtime_skill_entry": str(runtime_skill_entry.resolve()),
+                    "commands_root": str(commands_root.resolve()),
+                    "commands_materialized": True,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (self.target_root / "mcp").mkdir(parents=True, exist_ok=True)
+        (self.target_root / "mcp" / "servers.active.json").write_text('{"profile":"full"}\n', encoding="utf-8")
+        (self.target_root / "settings.json").write_text(
+            json.dumps({"vco": {"mcp_profile": "full"}, "env": {"VCO_INTENT_ADVICE_API_KEY": "<pending>"}}) + "\n",
+            encoding="utf-8",
+        )
+        bootstrap_path = self.target_root / "AGENTS.md"
+        bootstrap_path.write_text(
+            "<!-- VIBESKILLS:BEGIN managed-block host=codex block=global-vibe-bootstrap version=1 hash=deadbeef -->\n"
+            "Use canonical vibe.\n"
+            "<!-- VIBESKILLS:END managed-block -->\n\n"
+            "<!-- VIBESKILLS:BEGIN managed-block host=opencode block=global-vibe-bootstrap version=1 hash=beadfeed -->\n"
+            "Use canonical vibe.\n"
+            "<!-- VIBESKILLS:END managed-block -->\n",
+            encoding="utf-8",
+        )
+        (sidecar_root / "global-instruction-bootstrap.codex.agents-md.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "status": "ok",
+                    "host": "codex",
+                    "target_file": str(bootstrap_path.resolve()),
+                    "target_relpath": "AGENTS.md",
+                    "documented_path": "~/.codex/AGENTS.md",
+                    "block_id": "global-vibe-bootstrap",
+                    "action": "inserted",
+                    "template_version": 1,
+                    "content_hash": "deadbeef",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        artifact = self.module.evaluate(self.root, self.target_root)
+
+        self.assertEqual("PASS", artifact["gate_result"])
+        self.assertTrue(artifact["host_runtime"]["global_instruction_bootstrap"]["healthy"])
+        self.assertEqual(1, artifact["host_runtime"]["global_instruction_bootstrap"]["duplicate_count"])
+
     def test_malformed_non_dict_mcp_receipt_degrades_to_unknown_state(self) -> None:
         (self.target_root / ".vibeskills").mkdir(parents=True, exist_ok=True)
         (self.target_root / ".vibeskills" / "mcp-auto-provision.json").write_text("[1]\n", encoding="utf-8")

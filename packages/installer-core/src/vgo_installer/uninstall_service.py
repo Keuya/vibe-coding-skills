@@ -17,6 +17,7 @@ from vgo_contracts.mirror_topology_contract import resolve_generated_nested_comp
 from .adapter_registry import resolve_adapter
 from .materializer import compatibility_projection_names
 from .runtime_packaging import resolve_runtime_core_packaging
+from .global_instruction_service import remove_global_instruction_bootstrap
 
 
 def should_remove_claude_pretooluse_hook_entry(
@@ -247,7 +248,11 @@ def parse_merged_files(values: object, target_root: Path) -> dict[str, dict[str,
             continue
         rel = relativize_to_target(entry.get("path"), target_root)
         if rel:
-            merged[rel] = {"created_if_absent": bool(entry.get("created_if_absent", False))}
+            merged_entry = {"created_if_absent": bool(entry.get("created_if_absent", False))}
+            managed_block_id = str(entry.get("managed_block_id") or "").strip()
+            if managed_block_id:
+                merged_entry["managed_block_id"] = managed_block_id
+            merged[rel] = merged_entry
     return merged
 
 
@@ -492,12 +497,20 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
     if not managed_json_paths:
         managed_json_paths = parse_managed_json_paths(ledger.get("managed_json_paths") if isinstance(ledger, dict) else None, target_root)
     merged_files = parse_merged_files(ledger.get("merged_files") if isinstance(ledger, dict) else None, target_root)
+    managed_text_blocks = {
+        rel: dict(config)
+        for rel, config in merged_files.items()
+        if str(config.get("managed_block_id") or "").strip()
+    }
+    for rel in managed_text_blocks:
+        managed_files.discard(rel)
 
     return {
         "managed_files": {entry for entry in managed_files if entry},
         "deleted_dirs": deleted_dirs,
         "managed_json_paths": managed_json_paths,
         "merged_files": merged_files,
+        "managed_text_blocks": managed_text_blocks,
         "template_candidates": template_candidates,
         "warnings": warnings,
         "ownership_source": ownership_source,
@@ -516,12 +529,14 @@ def apply_uninstall(
     plan = plan_uninstall(repo_root, target_root, adapter)
     deleted_paths: list[str] = []
     mutated_json_paths: list[str] = []
+    mutated_text_paths: list[str] = []
     warnings = list(plan["warnings"])
 
     managed_files = sorted(plan["managed_files"])
     deleted_dirs = sorted(plan["deleted_dirs"])
     managed_json_paths = dict(plan["managed_json_paths"])
     merged_files = dict(plan["merged_files"])
+    managed_text_blocks = dict(plan.get("managed_text_blocks") or {})
     protected_relpaths = set(plan["protected_relpaths"])
 
     for rel in plan["template_candidates"]:
@@ -573,6 +588,21 @@ def apply_uninstall(
             preview=preview,
         )
 
+    for rel, config in managed_text_blocks.items():
+        removal = remove_global_instruction_bootstrap(
+            target_root,
+            adapter,
+            allow_delete_empty_target=bool(config.get("created_if_absent", False)),
+            preview=preview,
+        )
+        if not isinstance(removal, dict):
+            continue
+        if removal.get("action") == "removed":
+            if removal.get("removed_file"):
+                deleted_paths.append(rel)
+            else:
+                mutated_text_paths.append(rel)
+
     empty_dirs_removed: list[str] = []
     if purge_empty and not preview:
         empty_dirs_removed = purge_empty_dirs(target_root)
@@ -588,6 +618,7 @@ def apply_uninstall(
         "mode": "preview" if preview else "apply",
         "deleted_paths": deleted_paths,
         "mutated_json_paths": mutated_json_paths,
+        "mutated_text_paths": mutated_text_paths,
         "skipped_foreign_paths": skipped_foreign_paths,
         "warnings": warnings,
         "empty_dirs_removed": empty_dirs_removed,

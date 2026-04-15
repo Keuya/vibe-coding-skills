@@ -38,6 +38,11 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
             check=True,
         )
 
+    def bootstrap_receipt_path(self, target_root: Path) -> Path:
+        matches = sorted((target_root / ".vibeskills").glob("global-instruction-bootstrap*.json"))
+        self.assertTrue(matches)
+        return matches[0]
+
     def uninstall_host(self, host: str, target_root: Path) -> dict[str, object]:
         result = subprocess.run(
             [
@@ -69,6 +74,84 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         self.assertFalse((target_root / "config" / "plugins-manifest.codex.json").exists())
         self.assertTrue(sentinel.exists())
         self.assertIn("PASS", payload["gate_result"])
+
+    def test_codex_uninstall_preserves_user_agents_file_and_removes_only_managed_block(self) -> None:
+        target_root = self.root / "codex-root-user-agents"
+        agents_path = target_root / "AGENTS.md"
+        agents_path.parent.mkdir(parents=True, exist_ok=True)
+        agents_path.write_text("# My rules\n\n- keep me\n", encoding="utf-8")
+
+        self.install_host("codex", target_root)
+        self.uninstall_host("codex", target_root)
+
+        self.assertTrue(agents_path.exists())
+        remaining = agents_path.read_text(encoding="utf-8")
+        self.assertIn("# My rules", remaining)
+        self.assertIn("keep me", remaining)
+        self.assertNotIn("VIBESKILLS:BEGIN", remaining)
+
+    def test_codex_uninstall_removes_agents_file_if_installer_created_it_only_for_managed_block(self) -> None:
+        target_root = self.root / "codex-root-managed-agents-only"
+
+        self.install_host("codex", target_root)
+        receipt_path = self.bootstrap_receipt_path(target_root)
+        self.assertTrue((target_root / "AGENTS.md").exists())
+        self.assertTrue(receipt_path.exists())
+        self.uninstall_host("codex", target_root)
+
+        self.assertFalse((target_root / "AGENTS.md").exists())
+
+    def test_codex_uninstall_preserves_preexisting_empty_agents_file(self) -> None:
+        target_root = self.root / "codex-root-empty-agents"
+        agents_path = target_root / "AGENTS.md"
+        agents_path.parent.mkdir(parents=True, exist_ok=True)
+        agents_path.write_text("", encoding="utf-8")
+
+        self.install_host("codex", target_root)
+        receipt_path = self.bootstrap_receipt_path(target_root)
+        self.assertTrue(receipt_path.exists())
+        self.assertIn("VIBESKILLS:BEGIN", agents_path.read_text(encoding="utf-8"))
+
+        payload = self.uninstall_host("codex", target_root)
+
+        self.assertTrue(agents_path.exists())
+        self.assertEqual("", agents_path.read_text(encoding="utf-8"))
+        self.assertIn("AGENTS.md", payload["mutated_text_paths"])
+        self.assertNotIn("AGENTS.md", payload["deleted_paths"])
+
+    def test_codex_uninstall_reports_mutated_text_when_user_tail_survives(self) -> None:
+        target_root = self.root / "codex-root-managed-agents-with-user-tail"
+
+        self.install_host("codex", target_root)
+        receipt_path = self.bootstrap_receipt_path(target_root)
+        agents_path = target_root / "AGENTS.md"
+        self.assertTrue(receipt_path.exists())
+        agents_path.write_text(agents_path.read_text(encoding="utf-8") + "\n# user tail\n", encoding="utf-8")
+
+        payload = self.uninstall_host("codex", target_root)
+
+        self.assertTrue(agents_path.exists())
+        remaining = agents_path.read_text(encoding="utf-8")
+        self.assertIn("# user tail", remaining)
+        self.assertNotIn("VIBESKILLS:BEGIN", remaining)
+        self.assertIn("AGENTS.md", payload["mutated_text_paths"])
+        self.assertNotIn("AGENTS.md", payload["deleted_paths"])
+
+    def test_shared_target_root_codex_uninstall_preserves_opencode_block(self) -> None:
+        target_root = self.root / "shared-root-codex-opencode"
+
+        self.install_host("codex", target_root)
+        self.install_host("opencode", target_root)
+        before = (target_root / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("host=codex block=global-vibe-bootstrap", before)
+        self.assertIn("host=opencode block=global-vibe-bootstrap", before)
+
+        payload = self.uninstall_host("codex", target_root)
+
+        remaining = (target_root / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertNotIn("host=codex block=global-vibe-bootstrap", remaining)
+        self.assertIn("host=opencode block=global-vibe-bootstrap", remaining)
+        self.assertIn("AGENTS.md", payload["mutated_text_paths"])
 
     def test_claude_code_uninstall_removes_vibe_managed_surface(self) -> None:
         target_root = self.root / "claude-root"
@@ -230,6 +313,20 @@ class InstalledRuntimeUninstallTests(unittest.TestCase):
         remaining = json.loads(settings_path.read_text(encoding="utf-8"))
         self.assertIn("vibeskills", remaining)
         self.assertTrue(remaining["user.keep"])
+
+    def test_opencode_uninstall_preserves_user_agents_file_and_removes_only_managed_block(self) -> None:
+        target_root = self.root / "opencode-root-user-agents"
+        agents_path = target_root / "AGENTS.md"
+        agents_path.parent.mkdir(parents=True, exist_ok=True)
+        agents_path.write_text("# Existing OpenCode rules\n", encoding="utf-8")
+
+        self.install_host("opencode", target_root)
+        self.uninstall_host("opencode", target_root)
+
+        self.assertTrue(agents_path.exists())
+        remaining = agents_path.read_text(encoding="utf-8")
+        self.assertIn("# Existing OpenCode rules", remaining)
+        self.assertNotIn("VIBESKILLS:BEGIN", remaining)
 
 
 if __name__ == "__main__":

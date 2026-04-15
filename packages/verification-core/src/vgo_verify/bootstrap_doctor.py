@@ -40,6 +40,20 @@ def write_artifacts(repo_root: Path, artifact: dict[str, Any], output_directory:
         f"- `VCO_VECTOR_DIFF_MODEL`: `{artifact['settings']['vector_diff_model_state']}` via `{artifact['settings']['vector_diff_model_source']}`",
         "",
     ]
+    global_instruction_bootstrap = ((artifact.get("host_runtime") or {}).get("global_instruction_bootstrap") or {})
+    if global_instruction_bootstrap:
+        lines += [
+            "## Global Instruction Bootstrap",
+            "",
+            f"- Status: `{global_instruction_bootstrap.get('status')}`",
+            f"- Applicable: `{global_instruction_bootstrap.get('applicable')}`",
+            f"- Healthy: `{global_instruction_bootstrap.get('healthy')}`",
+            f"- Target: `{global_instruction_bootstrap.get('target_relpath')}`",
+            f"- Receipt Exists: `{global_instruction_bootstrap.get('receipt_exists')}`",
+            f"- Duplicate Count: `{global_instruction_bootstrap.get('duplicate_count')}`",
+            f"- Corruption: `{global_instruction_bootstrap.get('corruption')}`",
+            "",
+        ]
     if artifact["plugins"]:
         lines += ["## Plugin Readiness", ""]
         for plugin in artifact["plugins"]:

@@ -760,9 +760,6 @@ function Invoke-AdapterSpecificChecks {
 
   if ([string]$Adapter.id -eq 'codex' -and [string]$Adapter.check_mode -eq 'governed') {
     $codexCommandNames = @('vibe', 'vibe-what-do-i-want', 'vibe-how-do-we-do', 'vibe-do-it')
-    if ($env:OS -ne 'Windows_NT') {
-      $codexCommandNames = @('vibe', 'vibe:what-do-i-want', 'vibe:how-do-we-do', 'vibe:do-it')
-    }
     foreach ($name in $codexCommandNames) {
       Check-Path -Label "codex command/$name" -Path (Join-Path (Join-Path $TargetRoot 'commands') "$name.md") -Required:$false
     }
