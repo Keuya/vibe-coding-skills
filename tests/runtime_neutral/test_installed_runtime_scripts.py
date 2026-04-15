@@ -38,6 +38,20 @@ CODEX_WRAPPER_SKILL_NAMES = {
     "vibe-do-it",
     "vibe-upgrade",
 }
+ISSUE_167_INSTALLED_RUNTIME_SURFACES = (
+    "docs/requirements/README.md",
+    "protocols/runtime.md",
+    "protocols/think.md",
+    "protocols/do.md",
+    "protocols/review.md",
+    "protocols/team.md",
+    "protocols/retro.md",
+    "core/skill-contracts/v1/vibe.json",
+    "scripts/verify/vibe-no-silent-fallback-contract-gate.ps1",
+    "scripts/verify/vibe-no-self-introduced-fallback-gate.ps1",
+    "scripts/verify/vibe-release-truth-consistency-gate.ps1",
+    "config/operator-preview-contract.json",
+)
 
 
 def resolve_powershell() -> str | None:
@@ -357,6 +371,32 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertTrue((installed_root / "upgrade_state.py").exists())
         self.assertTrue((installed_root / "upgrade_service.py").exists())
         self.assertTrue((installed_root / "version_reminder.py").exists())
+
+    def test_shell_install_materializes_issue_167_governed_runtime_dependency_surfaces(self) -> None:
+        self.install_shell_runtime("codex")
+
+        installed_root = self.target_root / "skills" / "vibe"
+        for relpath in ISSUE_167_INSTALLED_RUNTIME_SURFACES:
+            self.assertTrue((installed_root / relpath).exists(), relpath)
+
+    def test_shell_reinstall_restores_issue_167_governed_runtime_dependency_surfaces(self) -> None:
+        self.install_shell_runtime("codex")
+
+        installed_root = self.target_root / "skills" / "vibe"
+        removed = [
+            installed_root / "protocols" / "runtime.md",
+            installed_root / "scripts" / "verify" / "vibe-no-silent-fallback-contract-gate.ps1",
+            installed_root / "config" / "operator-preview-contract.json",
+        ]
+        for path in removed:
+            self.assertTrue(path.exists(), path.as_posix())
+            path.unlink()
+            self.assertFalse(path.exists())
+
+        self.install_shell_runtime("codex")
+
+        for path in removed:
+            self.assertTrue(path.exists(), path.as_posix())
 
     def test_shell_install_writes_upgrade_status_sidecar(self) -> None:
         self.install_shell_runtime("codex")

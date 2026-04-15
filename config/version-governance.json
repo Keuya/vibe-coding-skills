@@ -50,6 +50,7 @@
         "check.sh",
         "install.ps1",
         "install.sh",
+        "core/skill-contracts/v1/vibe.json",
         "config/runtime-core-packaging.json",
         "config/runtime-core-packaging.minimal.json",
         "config/runtime-core-packaging.full.json",
@@ -57,6 +58,8 @@
         "config/runtime-config-manifest.json"
       ],
       "directories": [
+        "docs",
+        "protocols",
         "templates",
         "mcp"
       ]
@@ -92,7 +95,8 @@
           "check.ps1",
           "check.sh",
           "install.ps1",
-          "install.sh"
+          "install.sh",
+          "core/skill-contracts/v1/vibe.json"
         ],
         "governance_manifests": [
           "config/runtime-core-packaging.json",
@@ -104,6 +108,8 @@
       },
       "directories": {
         "runtime_support_assets": [
+          "docs",
+          "protocols",
           "templates",
           "mcp"
         ]
@@ -126,8 +132,12 @@
       "required_runtime_markers": [
         "SKILL.md",
         "config/version-governance.json",
+        "config/plugins-manifest.codex.json",
         "config/runtime-script-manifest.json",
         "config/runtime-config-manifest.json",
+        "config/secrets-policy.json",
+        "config/tool-registry.json",
+        "config/vibe-entry-surfaces.json",
         "apps/vgo-cli/src/vgo_cli/__init__.py",
         "apps/vgo-cli/src/vgo_cli/main.py",
         "apps/vgo-cli/src/vgo_cli/errors.py",
@@ -172,6 +182,7 @@
         "scripts/runtime/Write-XlPlan.ps1",
         "scripts/runtime/memory_backend_driver.py",
         "scripts/runtime/workspace_memory_driver.py",
+        "scripts/verify/vibe-bootstrap-doctor-gate.ps1",
         "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
         "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1",
         "scripts/verify/vibe-governed-runtime-contract-gate.ps1",
@@ -205,8 +216,12 @@
         "governance_and_manifests": [
           "SKILL.md",
           "config/version-governance.json",
+          "config/plugins-manifest.codex.json",
           "config/runtime-script-manifest.json",
           "config/runtime-config-manifest.json",
+          "config/secrets-policy.json",
+          "config/tool-registry.json",
+          "config/vibe-entry-surfaces.json",
           "config/runtime-contract.json",
           "config/runtime-modes.json",
           "config/runtime-input-packet-policy.json",
@@ -275,6 +290,7 @@
           "scripts/runtime/workspace_memory_driver.py"
         ],
         "verification_surfaces": [
+          "scripts/verify/vibe-bootstrap-doctor-gate.ps1",
           "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
           "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1",
           "scripts/verify/vibe-governed-runtime-contract-gate.ps1",

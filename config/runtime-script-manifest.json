@@ -76,9 +76,13 @@
     "scripts/install/Install-VgoAdapter.ps1",
     "scripts/uninstall/Uninstall-VgoAdapter.ps1",
     "scripts/verify/vibe-bom-frontmatter-gate.ps1",
+    "scripts/verify/vibe-bootstrap-doctor-gate.ps1",
     "scripts/verify/vibe-governed-runtime-contract-gate.ps1",
     "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
     "scripts/verify/vibe-linux-router-no-pwsh-gate.ps1",
+    "scripts/verify/vibe-no-silent-fallback-contract-gate.ps1",
+    "scripts/verify/vibe-no-self-introduced-fallback-gate.ps1",
+    "scripts/verify/vibe-release-truth-consistency-gate.ps1",
     "scripts/verify/vibe-runtime-execution-proof-gate.ps1",
     "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1"
   ],
@@ -104,9 +108,13 @@
       ],
       "verification_gates": [
         "scripts/verify/vibe-bom-frontmatter-gate.ps1",
+        "scripts/verify/vibe-bootstrap-doctor-gate.ps1",
         "scripts/verify/vibe-governed-runtime-contract-gate.ps1",
         "scripts/verify/vibe-installed-runtime-freshness-gate.ps1",
         "scripts/verify/vibe-linux-router-no-pwsh-gate.ps1",
+        "scripts/verify/vibe-no-silent-fallback-contract-gate.ps1",
+        "scripts/verify/vibe-no-self-introduced-fallback-gate.ps1",
+        "scripts/verify/vibe-release-truth-consistency-gate.ps1",
         "scripts/verify/vibe-runtime-execution-proof-gate.ps1",
         "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1"
       ],

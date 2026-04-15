@@ -99,13 +99,55 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
         self.assertNotIn("config", packaging["directories"])
         self.assertIn("config/runtime-script-manifest.json", packaging["files"])
         self.assertIn("config/runtime-config-manifest.json", packaging["files"])
-        self.assertNotIn("docs", packaging["directories"])
+        self.assertIn("docs", packaging["directories"])
         self.assertNotIn("references", packaging["directories"])
-        self.assertNotIn("protocols", packaging["directories"])
+        self.assertIn("protocols", packaging["directories"])
+        self.assertIn("core/skill-contracts/v1/vibe.json", packaging["files"])
+
+        script_manifest = json.loads(
+            (REPO_ROOT / "config" / "runtime-script-manifest.json").read_text(encoding="utf-8")
+        )
+        verification_gates = set(script_manifest["role_groups"]["files"]["verification_gates"])
+        self.assertTrue(
+            {
+                "scripts/verify/vibe-bootstrap-doctor-gate.ps1",
+                "scripts/verify/vibe-no-silent-fallback-contract-gate.ps1",
+                "scripts/verify/vibe-no-self-introduced-fallback-gate.ps1",
+                "scripts/verify/vibe-release-truth-consistency-gate.ps1",
+            }.issubset(verification_gates)
+        )
+
+        config_manifest = json.loads(
+            (REPO_ROOT / "config" / "runtime-config-manifest.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("config/operator-preview-contract.json", set(config_manifest["files"]))
+        self.assertIn("config/secrets-policy.json", set(config_manifest["files"]))
+        self.assertIn("config/tool-registry.json", set(config_manifest["files"]))
+        self.assertIn("config/vibe-entry-surfaces.json", set(config_manifest["files"]))
+        self.assertIn(
+            "config/operator-preview-contract.json",
+            set(config_manifest["role_groups"]["files"]["runtime_governance_files"]),
+        )
+        self.assertIn(
+            "config/secrets-policy.json",
+            set(config_manifest["role_groups"]["files"]["runtime_governance_files"]),
+        )
+        self.assertIn(
+            "config/tool-registry.json",
+            set(config_manifest["role_groups"]["files"]["runtime_governance_files"]),
+        )
+        self.assertIn(
+            "config/vibe-entry-surfaces.json",
+            set(config_manifest["role_groups"]["files"]["runtime_governance_files"]),
+        )
 
         required_markers = set(runtime["required_runtime_markers"])
+        self.assertIn("config/plugins-manifest.codex.json", required_markers)
         self.assertIn("config/runtime-script-manifest.json", required_markers)
         self.assertIn("config/runtime-config-manifest.json", required_markers)
+        self.assertIn("config/secrets-policy.json", required_markers)
+        self.assertIn("config/tool-registry.json", required_markers)
+        self.assertIn("config/vibe-entry-surfaces.json", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/__init__.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/main.py", required_markers)
         self.assertIn("apps/vgo-cli/src/vgo_cli/errors.py", required_markers)
@@ -143,6 +185,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
         self.assertIn("scripts/runtime/Invoke-DelegatedLaneUnit.ps1", required_markers)
         self.assertIn("scripts/runtime/Invoke-PlanExecute.ps1", required_markers)
         self.assertIn("scripts/runtime/Invoke-PhaseCleanup.ps1", required_markers)
+        self.assertIn("scripts/verify/vibe-bootstrap-doctor-gate.ps1", required_markers)
         self.assertIn("scripts/verify/vibe-governed-runtime-contract-gate.ps1", required_markers)
         self.assertIn("config/runtime-contract.json", required_markers)
         self.assertIn("config/runtime-modes.json", required_markers)

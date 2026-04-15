@@ -46,6 +46,10 @@ def test_runtime_payload_roles_cover_runtime_payload_projection() -> None:
     assert set(grouped_directories) == set(runtime_payload["directories"])
     assert len(grouped_directories) == len(set(grouped_directories))
     assert role_groups["notes"]["flat_projection_contract"]
+    assert "docs" in runtime_payload["directories"]
+    assert "protocols" in runtime_payload["directories"]
+    assert "references" not in runtime_payload["directories"]
+    assert "core/skill-contracts/v1/vibe.json" in runtime_payload["files"]
 
 
 def test_required_runtime_marker_groups_cover_flat_marker_projection() -> None:
@@ -107,8 +111,13 @@ def test_required_runtime_marker_groups_keep_owners_separate_from_compatibility(
     assert "scripts/router/invoke-pack-route.py" in router_and_compat
     assert "scripts/router/runtime_neutral/router_contract.py" in router_and_compat
     assert "scripts/verify/runtime_neutral/router_bridge_gate.py" in router_and_compat
+    assert "scripts/verify/vibe-bootstrap-doctor-gate.ps1" in verification_surfaces
     assert "scripts/verify/vibe-installed-runtime-freshness-gate.ps1" in verification_surfaces
     assert "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1" in verification_surfaces
+    assert "config/plugins-manifest.codex.json" in governance["runtime"]["installed_runtime"]["required_runtime_markers"]
+    assert "config/secrets-policy.json" in governance["runtime"]["installed_runtime"]["required_runtime_markers"]
+    assert "config/tool-registry.json" in governance["runtime"]["installed_runtime"]["required_runtime_markers"]
+    assert "config/vibe-entry-surfaces.json" in governance["runtime"]["installed_runtime"]["required_runtime_markers"]
 
     assert all(path.startswith(("apps/", "packages/")) for path in semantic_owners)
 

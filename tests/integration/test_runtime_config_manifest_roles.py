@@ -55,10 +55,14 @@ def test_runtime_config_manifest_groups_separate_runtime_domains() -> None:
             assert current.isdisjoint(other)
 
     assert runtime_governance >= {
+        "config/operator-preview-contract.json",
+        "config/secrets-policy.json",
+        "config/tool-registry.json",
         "config/runtime-config-manifest.json",
         "config/runtime-script-manifest.json",
         "config/runtime-contract.json",
         "config/runtime-core-packaging.json",
+        "config/vibe-entry-surfaces.json",
         "config/version-governance.json",
     }
     assert router_and_discovery >= {
