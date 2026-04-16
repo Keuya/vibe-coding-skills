@@ -3,6 +3,9 @@ param(
     [string]$Mode = 'interactive_governed',
     [string]$RunId = '',
     [string]$ArtifactRoot = '',
+    [AllowEmptyString()] [string]$EntryIntentId = '',
+    [AllowEmptyString()] [string]$RequestedStageStop = '',
+    [AllowEmptyString()] [string]$RequestedGradeFloor = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
     [AllowEmptyString()] [string]$RootRunId = '',
     [AllowEmptyString()] [string]$ParentRunId = '',
@@ -71,20 +74,28 @@ function Get-VibeSkillMetadata {
     )
 
     $skillPath = $null
-    $bundledSkillPath = Join-Path $RepoRoot ("bundled\skills\{0}\SKILL.md" -f $SkillId)
-    if (Test-Path -LiteralPath $bundledSkillPath) {
-        $skillPath = $bundledSkillPath
+    foreach ($candidatePath in @(
+        (Join-Path $RepoRoot ("bundled\skills\{0}\SKILL.md" -f $SkillId)),
+        (Join-Path $RepoRoot ("bundled\skills\{0}\SKILL.runtime-mirror.md" -f $SkillId))
+    )) {
+        if (Test-Path -LiteralPath $candidatePath) {
+            $skillPath = $candidatePath
+            break
+        }
     }
 
     if (-not $skillPath) {
         $installedSkillsRoot = Resolve-VgoInstalledSkillsRoot -TargetRoot $TargetRoot -HostId $HostId
-        $installedSkillPath = Join-Path $installedSkillsRoot (Join-Path $SkillId 'SKILL.md')
-        $customInstalledSkillPath = Join-Path $installedSkillsRoot (Join-Path 'custom' (Join-Path $SkillId 'SKILL.md'))
-
-        if (Test-Path -LiteralPath $installedSkillPath) {
-            $skillPath = $installedSkillPath
-        } elseif (Test-Path -LiteralPath $customInstalledSkillPath) {
-            $skillPath = $customInstalledSkillPath
+        foreach ($candidatePath in @(
+            (Join-Path $installedSkillsRoot (Join-Path $SkillId 'SKILL.md')),
+            (Join-Path $installedSkillsRoot (Join-Path $SkillId 'SKILL.runtime-mirror.md')),
+            (Join-Path $installedSkillsRoot (Join-Path 'custom' (Join-Path $SkillId 'SKILL.md'))),
+            (Join-Path $installedSkillsRoot (Join-Path 'custom' (Join-Path $SkillId 'SKILL.runtime-mirror.md')))
+        )) {
+            if (Test-Path -LiteralPath $candidatePath) {
+                $skillPath = $candidatePath
+                break
+            }
         }
     }
 
@@ -667,7 +678,11 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 
 $sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
 $policy = $runtime.runtime_input_packet_policy
-$grade = Get-VibeInternalGrade -Task $Task
+$effectiveRequestedStageStop = Resolve-VibeEntryRequestedStageStop `
+    -RepoRoot $runtime.repo_root `
+    -EntryIntentId $EntryIntentId `
+    -RequestedStageStop $RequestedStageStop
+$grade = Get-VibeInternalGrade -Task $Task -RequestedGradeFloor $RequestedGradeFloor
 $taskType = Get-VibeRouterTaskType -Task $Task
 $routerScriptPath = Join-Path $runtime.repo_root ([string]$policy.router_script_path)
 $routerHostId = Resolve-VgoHostId -HostId $env:VCO_HOST_ID
@@ -677,7 +692,13 @@ $storageProjection = New-VibeWorkspaceArtifactProjection `
     -Runtime $runtime `
     -ArtifactRoot $ArtifactRoot `
     -RouterTargetRoot $routerTargetRoot
-$requestedSkill = if ($policy.default_requested_skill) { [string]$policy.default_requested_skill } else { 'vibe' }
+$requestedSkill = if (-not [string]::IsNullOrWhiteSpace($EntryIntentId)) {
+    [string]$EntryIntentId
+} elseif ($policy.default_requested_skill) {
+    [string]$policy.default_requested_skill
+} else {
+    'vibe'
+}
 $unattended = $false
 $hierarchyState = Get-VibeHierarchyState `
     -GovernanceScope $GovernanceScope `
@@ -767,6 +788,9 @@ $packet = New-VibeRuntimeInputPacketProjection `
     -Runtime $runtime `
     -TaskType $taskType `
     -RequestedSkill $requestedSkill `
+    -EntryIntentId $EntryIntentId `
+    -RequestedStageStop $effectiveRequestedStageStop `
+    -RequestedGradeFloor $RequestedGradeFloor `
     -RouterHostId $routerHostId `
     -RouterTargetRoot $routerTargetRoot `
     -Unattended ([bool]$unattended) `

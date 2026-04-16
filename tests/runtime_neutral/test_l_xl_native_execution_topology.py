@@ -184,30 +184,34 @@ def run_write_xl_plan(
     task: str,
     artifact_root: Path,
     requirement_doc_path: Path,
-    runtime_input_packet_path: Path,
+    runtime_input_packet_path: Path | None = None,
+    *,
+    run_id: str | None = None,
 ) -> dict[str, object]:
     shell = resolve_powershell()
     if shell is None:
         raise unittest.SkipTest("PowerShell executable not available in PATH")
 
     script_path = REPO_ROOT / "scripts" / "runtime" / "Write-XlPlan.ps1"
-    run_id = "pytest-write-plan-" + uuid.uuid4().hex[:10]
+    effective_run_id = run_id or ("pytest-write-plan-" + uuid.uuid4().hex[:10])
+    ps_command = (
+        "& { "
+        f"$result = & '{script_path}' "
+        f"-Task '{task}' "
+        "-Mode interactive_governed "
+        f"-RunId '{effective_run_id}' "
+        f"-RequirementDocPath '{requirement_doc_path}' "
+        f"-ArtifactRoot '{artifact_root}' "
+    )
+    if runtime_input_packet_path is not None:
+        ps_command += f"-RuntimeInputPacketPath '{runtime_input_packet_path}' "
+    ps_command += "$result | ConvertTo-Json -Depth 20 }"
     command = [
         shell,
         "-NoLogo",
         "-NoProfile",
         "-Command",
-        (
-            "& { "
-            f"$result = & '{script_path}' "
-            f"-Task '{task}' "
-            "-Mode interactive_governed "
-            f"-RunId '{run_id}' "
-            f"-RequirementDocPath '{requirement_doc_path}' "
-            f"-RuntimeInputPacketPath '{runtime_input_packet_path}' "
-            f"-ArtifactRoot '{artifact_root}'; "
-            "$result | ConvertTo-Json -Depth 20 }"
-        ),
+        ps_command,
     ]
     completed = subprocess.run(
         command,
@@ -216,7 +220,22 @@ def run_write_xl_plan(
         text=True,
         check=True,
     )
-    return json.loads(completed.stdout)
+    stdout = completed.stdout.strip()
+    if stdout not in ("", "null"):
+        return json.loads(stdout)
+
+    receipt_path = artifact_root / "outputs" / "runtime" / "vibe-sessions" / effective_run_id / "execution-plan-receipt.json"
+    if not receipt_path.exists():
+        raise AssertionError(
+            "Write-XlPlan returned null payload and did not emit a receipt. "
+            f"stderr={completed.stderr.strip()}"
+        )
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    return {
+        "execution_plan_path": receipt["execution_plan_path"],
+        "receipt_path": str(receipt_path),
+        "receipt": receipt,
+    }
 
 
 def run_plan_execute(
@@ -503,6 +522,36 @@ class NativeExecutionTopologyTests(unittest.TestCase):
             self.assertEqual("XL", plan_receipt["internal_grade"])
             self.assertEqual("XL", execution_receipt["internal_grade"])
             self.assertEqual("XL", execution_manifest["internal_grade"])
+
+    def test_write_xl_plan_uses_session_runtime_input_packet_when_path_is_omitted(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            artifact_root = Path(tempdir)
+            initial_payload = run_runtime(
+                task="Plan a small bounded migration.",
+                artifact_root=artifact_root,
+                governance_scope="root",
+                entry_intent_id="vibe-how",
+                requested_grade_floor="XL",
+            )
+            initial_summary = initial_payload["summary"]
+            run_id = str(initial_payload["run_id"])
+            requirement_doc_path = Path(initial_summary["artifacts"]["requirement_doc"])
+            runtime_input_packet_path = Path(initial_summary["artifacts"]["runtime_input_packet"])
+
+            plan_payload = run_write_xl_plan(
+                task="Plan a small bounded migration.",
+                artifact_root=artifact_root,
+                requirement_doc_path=requirement_doc_path,
+                run_id=run_id,
+            )
+            plan_receipt = load_json(plan_payload["receipt_path"])
+            execution_plan = Path(plan_payload["execution_plan_path"]).read_text(encoding="utf-8")
+
+            self.assertEqual(str(runtime_input_packet_path), plan_receipt["runtime_input_packet_path"])
+            self.assertEqual("XL", plan_receipt["internal_grade"])
+            self.assertIn("Entry intent: vibe-how", execution_plan)
+            self.assertIn("Requested stop stage: xl_plan", execution_plan)
+            self.assertIn("Requested grade floor: XL", execution_plan)
 
     def test_plan_execute_marks_legacy_dispatch_packets_incomplete_without_crashing(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

@@ -3,6 +3,9 @@ param(
     [ValidateSet('interactive_governed')] [string]$Mode = 'interactive_governed',
     [string]$RunId = '',
     [string]$ArtifactRoot = '',
+    [AllowEmptyString()] [string]$EntryIntentId = '',
+    [AllowEmptyString()] [string]$RequestedStageStop = '',
+    [AllowEmptyString()] [string]$RequestedGradeFloor = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
     [AllowEmptyString()] [string]$RootRunId = '',
     [AllowEmptyString()] [string]$ParentRunId = '',
@@ -46,6 +49,145 @@ function Wait-VibeArtifactSet {
     return [pscustomobject]@{
         ready = $false
         missing = @($Paths | Where-Object { -not (Test-Path -LiteralPath $_) })
+    }
+}
+
+function Complete-VibeGovernedRuntimeStop {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$Mode,
+        [Parameter(Mandatory)] [string]$Task,
+        [Parameter(Mandatory)] [string]$ArtifactBaseRoot,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [Parameter(Mandatory)] [object]$HierarchyState,
+        [Parameter(Mandatory)] [object]$StorageProjection,
+        [Parameter(Mandatory)] [object]$Skeleton,
+        [Parameter(Mandatory)] [object]$RuntimeInput,
+        [Parameter(Mandatory)] [object]$GovernanceCapsule,
+        [Parameter(Mandatory)] [object]$StageLineage,
+        [Parameter(Mandatory)] [object]$Interview,
+        [Parameter(Mandatory)] [object]$Requirement,
+        [AllowNull()] [object]$Plan = $null,
+        [AllowNull()] [object]$Execute = $null,
+        [AllowNull()] [object]$Cleanup = $null,
+        [AllowNull()] [object]$DiscussionConsultation = $null,
+        [AllowNull()] [object]$PlanningConsultation = $null,
+        [AllowNull()] [object]$HostStageDisclosure = $null,
+        [AllowEmptyString()] [string]$HostStageDisclosurePath = '',
+        [AllowNull()] [object]$HostUserBriefing = $null,
+        [AllowEmptyString()] [string]$HostUserBriefingPath = '',
+        [AllowNull()] [object]$MemoryActivationReport = $null,
+        [AllowEmptyString()] [string]$MemoryActivationReportPath = '',
+        [AllowEmptyString()] [string]$MemoryActivationMarkdownPath = '',
+        [AllowNull()] [object]$DeliveryAcceptanceReport = $null,
+        [AllowEmptyString()] [string]$DeliveryAcceptanceReportPath = '',
+        [AllowEmptyString()] [string]$DeliveryAcceptanceMarkdownPath = '',
+        [AllowNull()] [object]$ExecutionManifestDocument = $null,
+        [AllowNull()] [object]$SpecialistLifecycleDisclosure = $null,
+        [AllowEmptyString()] [string]$SpecialistLifecycleDisclosurePath = '',
+        [AllowNull()] [object]$DelegationValidation = $null
+    )
+
+    $criticalArtifactPaths = @(
+        [string]$Skeleton.receipt_path,
+        [string]$RuntimeInput.packet_path,
+        [string]$GovernanceCapsule.path,
+        [string]$StageLineage.path,
+        [string]$Interview.receipt_path,
+        [string]$Requirement.requirement_doc_path,
+        [string]$Requirement.receipt_path,
+        $(if ($Plan) { [string]$Plan.execution_plan_path } else { '' }),
+        $(if ($Plan) { [string]$Plan.receipt_path } else { '' }),
+        $(if ($Execute) { [string]$Execute.receipt_path } else { '' }),
+        $(if ($Execute) { [string]$Execute.execution_manifest_path } else { '' }),
+        $(if ($Execute) { [string]$Execute.execution_topology_path } else { '' }),
+        $(if ($Execute) { [string]$Execute.execution_proof_manifest_path } else { '' }),
+        $(if ($DiscussionConsultation) { [string]$DiscussionConsultation.receipt_path } else { '' }),
+        $(if ($PlanningConsultation) { [string]$PlanningConsultation.receipt_path } else { '' }),
+        [string]$SpecialistLifecycleDisclosurePath,
+        $(if ($Cleanup) { [string]$Cleanup.receipt_path } else { '' }),
+        [string]$DeliveryAcceptanceReportPath,
+        [string]$MemoryActivationReportPath,
+        [string]$MemoryActivationMarkdownPath
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+
+    if ($HostStageDisclosure) {
+        $criticalArtifactPaths += [string]$HostStageDisclosurePath
+    }
+    if (-not [string]::IsNullOrWhiteSpace([string]$HostUserBriefingPath)) {
+        $criticalArtifactPaths += [string]$HostUserBriefingPath
+    }
+    if ($DelegationValidation) {
+        $criticalArtifactPaths += [string]$DelegationValidation.receipt_path
+    }
+
+    $artifactReadiness = Wait-VibeArtifactSet -Paths $criticalArtifactPaths
+    if (-not $artifactReadiness.ready) {
+        throw ("Governed runtime returned before critical artifacts were durable. Missing: {0}" -f (@($artifactReadiness.missing) -join ', '))
+    }
+
+    $delegationValidationReceiptPath = if ($DelegationValidation) { [string]$DelegationValidation.receipt_path } else { '' }
+    $summaryArtifacts = New-VibeRuntimeSummaryArtifactProjection `
+        -SkeletonReceiptPath ([string]$Skeleton.receipt_path) `
+        -RuntimeInputPacketPath ([string]$RuntimeInput.packet_path) `
+        -GovernanceCapsulePath ([string]$GovernanceCapsule.path) `
+        -StageLineagePath ([string]$StageLineage.path) `
+        -IntentContractPath ([string]$Interview.receipt_path) `
+        -RequirementDocPath ([string]$Requirement.requirement_doc_path) `
+        -RequirementReceiptPath ([string]$Requirement.receipt_path) `
+        -ExecutionPlanPath $(if ($Plan) { [string]$Plan.execution_plan_path } else { '' }) `
+        -ExecutionPlanReceiptPath $(if ($Plan) { [string]$Plan.receipt_path } else { '' }) `
+        -ExecuteReceiptPath $(if ($Execute) { [string]$Execute.receipt_path } else { '' }) `
+        -ExecutionManifestPath $(if ($Execute) { [string]$Execute.execution_manifest_path } else { '' }) `
+        -ExecutionTopologyPath $(if ($Execute) { [string]$Execute.execution_topology_path } else { '' }) `
+        -ExecutionProofManifestPath $(if ($Execute) { [string]$Execute.execution_proof_manifest_path } else { '' }) `
+        -DiscussionSpecialistConsultationPath $(if ($DiscussionConsultation) { [string]$DiscussionConsultation.receipt_path } else { '' }) `
+        -PlanningSpecialistConsultationPath $(if ($PlanningConsultation) { [string]$PlanningConsultation.receipt_path } else { '' }) `
+        -SpecialistLifecycleDisclosurePath ([string]$SpecialistLifecycleDisclosurePath) `
+        -HostStageDisclosurePath $(if ($HostStageDisclosure) { [string]$HostStageDisclosurePath } else { '' }) `
+        -HostUserBriefingPath ([string]$HostUserBriefingPath) `
+        -CleanupReceiptPath $(if ($Cleanup) { [string]$Cleanup.receipt_path } else { '' }) `
+        -DeliveryAcceptanceReportPath ([string]$DeliveryAcceptanceReportPath) `
+        -DeliveryAcceptanceMarkdownPath ([string]$DeliveryAcceptanceMarkdownPath) `
+        -MemoryActivationReportPath ([string]$MemoryActivationReportPath) `
+        -MemoryActivationMarkdownPath ([string]$MemoryActivationMarkdownPath) `
+        -DelegationEnvelopePath ([string]$HierarchyState.delegation_envelope_path) `
+        -DelegationValidationReceiptPath $delegationValidationReceiptPath
+    $relativeArtifacts = New-VibeRuntimeSummaryRelativeArtifactProjection -BasePath $ArtifactBaseRoot -Artifacts $summaryArtifacts
+
+    $summary = New-VibeRuntimeSummaryProjection `
+        -RunId $RunId `
+        -Mode $Mode `
+        -Task $Task `
+        -ArtifactRoot $ArtifactBaseRoot `
+        -SessionRoot $SessionRoot `
+        -HierarchyState $HierarchyState `
+        -Artifacts $summaryArtifacts `
+        -RelativeArtifacts $relativeArtifacts `
+        -StageLineage $StageLineage `
+        -StorageProjection $StorageProjection `
+        -MemoryActivationReport $MemoryActivationReport `
+        -DeliveryAcceptanceReport $DeliveryAcceptanceReport `
+        -SpecialistDecision $(if ($ExecutionManifestDocument -and $ExecutionManifestDocument.PSObject.Properties.Name -contains 'specialist_decision' -and $null -ne $ExecutionManifestDocument.specialist_decision) { $ExecutionManifestDocument.specialist_decision } elseif ($Execute -and $Execute.receipt -and $Execute.receipt.PSObject.Properties.Name -contains 'specialist_decision' -and $null -ne $Execute.receipt.specialist_decision) { $Execute.receipt.specialist_decision } else { $null }) `
+        -SpecialistUserDisclosure $(if ($Execute -and $Execute.receipt -and $Execute.receipt.PSObject.Properties.Name -contains 'specialist_user_disclosure') { $Execute.receipt.specialist_user_disclosure } else { $null }) `
+        -SpecialistConsultation (New-VibeSpecialistConsultationRuntimeProjection -Receipts @($(if ($DiscussionConsultation) { $DiscussionConsultation.receipt } else { $null }), $(if ($PlanningConsultation) { $PlanningConsultation.receipt } else { $null }))) `
+        -SpecialistLifecycleDisclosure $SpecialistLifecycleDisclosure `
+        -HostStageDisclosure $HostStageDisclosure `
+        -HostUserBriefing $HostUserBriefing
+
+    $summaryPath = Join-Path $SessionRoot 'runtime-summary.json'
+    Write-VibeJsonArtifact -Path $summaryPath -Value $summary
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        mode = $Mode
+        session_root = $SessionRoot
+        summary_path = $summaryPath
+        host_stage_disclosure_path = if ($HostStageDisclosure) { [string]$HostStageDisclosurePath } else { $null }
+        host_stage_disclosure = $HostStageDisclosure
+        host_user_briefing_path = $HostUserBriefingPath
+        host_user_briefing = $HostUserBriefing
+        summary = $summary
     }
 }
 
@@ -126,6 +268,9 @@ $freezeArgs = @{
     Mode = $Mode
     RunId = $RunId
     ArtifactRoot = $ArtifactRoot
+    EntryIntentId = $EntryIntentId
+    RequestedStageStop = $RequestedStageStop
+    RequestedGradeFloor = $RequestedGradeFloor
     ApprovedSpecialistSkillIds = $ApprovedSpecialistSkillIds
 }
 foreach ($key in @($hierarchyArgs.Keys)) {
@@ -137,6 +282,7 @@ $runtimeInputPacket = if ($runtimeInput -and $runtimeInput.PSObject.Properties.N
 } else {
     $null
 }
+$requestedStop = Resolve-VibeRequestedStageStop -RequestedStageStop $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.requested_stage_stop } else { '' })
 $discussionRoutingLayer = New-VibeSpecialistRoutingLifecycleLayerProjection -RuntimeInputPacket $runtimeInputPacket
 if ($discussionRoutingLayer) {
     $discussionRoutingSegment = New-VibeHostUserBriefingSegmentProjection -LifecycleLayer $discussionRoutingLayer
@@ -197,6 +343,33 @@ $stageLineage = Add-VibeStageLineageEntry `
     -PreviousStageReceiptPath ([string]$interview.receipt_path) `
     -CurrentReceiptPath ([string]$requirement.receipt_path) `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
+if ($requestedStop -eq 'requirement_doc') {
+    $hostStageDisclosurePath = Get-VibeHostStageDisclosurePath -SessionRoot ([string]$skeleton.session_root)
+    $hostStageDisclosure = if (Test-Path -LiteralPath $hostStageDisclosurePath) {
+        Get-Content -LiteralPath $hostStageDisclosurePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } else {
+        $null
+    }
+
+    return Complete-VibeGovernedRuntimeStop `
+        -RunId $RunId `
+        -Mode $Mode `
+        -Task $Task `
+        -ArtifactBaseRoot $artifactBaseRoot `
+        -SessionRoot ([string]$skeleton.session_root) `
+        -HierarchyState $hierarchyState `
+        -StorageProjection $storageProjection `
+        -Skeleton $skeleton `
+        -RuntimeInput $runtimeInput `
+        -GovernanceCapsule $governanceCapsule `
+        -StageLineage $stageLineage `
+        -Interview $interview `
+        -Requirement $requirement `
+        -DiscussionConsultation $discussionConsultation `
+        -HostStageDisclosure $hostStageDisclosure `
+        -HostStageDisclosurePath $hostStageDisclosurePath `
+        -DelegationValidation $delegationValidation
+}
 $planArgs = @{
     Task = $Task
     Mode = $Mode
@@ -244,6 +417,35 @@ $stageLineage = Add-VibeStageLineageEntry `
     -PreviousStageReceiptPath ([string]$requirement.receipt_path) `
     -CurrentReceiptPath ([string]$plan.receipt_path) `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
+if ($requestedStop -eq 'xl_plan') {
+    $hostStageDisclosurePath = Get-VibeHostStageDisclosurePath -SessionRoot ([string]$skeleton.session_root)
+    $hostStageDisclosure = if (Test-Path -LiteralPath $hostStageDisclosurePath) {
+        Get-Content -LiteralPath $hostStageDisclosurePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } else {
+        $null
+    }
+
+    return Complete-VibeGovernedRuntimeStop `
+        -RunId $RunId `
+        -Mode $Mode `
+        -Task $Task `
+        -ArtifactBaseRoot $artifactBaseRoot `
+        -SessionRoot ([string]$skeleton.session_root) `
+        -HierarchyState $hierarchyState `
+        -StorageProjection $storageProjection `
+        -Skeleton $skeleton `
+        -RuntimeInput $runtimeInput `
+        -GovernanceCapsule $governanceCapsule `
+        -StageLineage $stageLineage `
+        -Interview $interview `
+        -Requirement $requirement `
+        -Plan $plan `
+        -DiscussionConsultation $discussionConsultation `
+        -PlanningConsultation $planningConsultation `
+        -HostStageDisclosure $hostStageDisclosure `
+        -HostStageDisclosurePath $hostStageDisclosurePath `
+        -DelegationValidation $delegationValidation
+}
 $grade = if ($plan.receipt -and $plan.receipt.internal_grade) { [string]$plan.receipt.internal_grade } else { Get-VibeInternalGrade -Task $Task }
 $memoryPlanExecuteRead = Get-VibeRufloReadAction -Runtime $runtime -Task $Task -SessionRoot ([string]$skeleton.session_root) -Grade $grade
 $executionMemoryContext = New-VibePlanMemoryContextPack -Runtime $runtime -ReadActions @($memoryPlanExecuteRead) -SessionRoot ([string]$skeleton.session_root) -Stage 'plan_execute' -ArtifactName 'execution-context-pack.json'
@@ -272,6 +474,42 @@ $stageLineage = Add-VibeStageLineageEntry `
     -PreviousStageReceiptPath ([string]$plan.receipt_path) `
     -CurrentReceiptPath ([string]$execute.receipt_path) `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
+if ($requestedStop -eq 'plan_execute') {
+    $hostStageDisclosurePath = Get-VibeHostStageDisclosurePath -SessionRoot ([string]$skeleton.session_root)
+    $hostStageDisclosure = if (Test-Path -LiteralPath $hostStageDisclosurePath) {
+        Get-Content -LiteralPath $hostStageDisclosurePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } else {
+        $null
+    }
+    $executionManifestDocument = if (Test-Path -LiteralPath ([string]$execute.execution_manifest_path)) {
+        Get-Content -LiteralPath ([string]$execute.execution_manifest_path) -Raw -Encoding UTF8 | ConvertFrom-Json
+    } else {
+        $null
+    }
+
+    return Complete-VibeGovernedRuntimeStop `
+        -RunId $RunId `
+        -Mode $Mode `
+        -Task $Task `
+        -ArtifactBaseRoot $artifactBaseRoot `
+        -SessionRoot ([string]$skeleton.session_root) `
+        -HierarchyState $hierarchyState `
+        -StorageProjection $storageProjection `
+        -Skeleton $skeleton `
+        -RuntimeInput $runtimeInput `
+        -GovernanceCapsule $governanceCapsule `
+        -StageLineage $stageLineage `
+        -Interview $interview `
+        -Requirement $requirement `
+        -Plan $plan `
+        -Execute $execute `
+        -DiscussionConsultation $discussionConsultation `
+        -PlanningConsultation $planningConsultation `
+        -HostStageDisclosure $hostStageDisclosure `
+        -HostStageDisclosurePath $hostStageDisclosurePath `
+        -ExecutionManifestDocument $executionManifestDocument `
+        -DelegationValidation $delegationValidation
+}
 $cleanup = & (Join-Path $PSScriptRoot 'Invoke-PhaseCleanup.ps1') -Task $Task -Mode $Mode -RunId $RunId -ArtifactRoot $ArtifactRoot -ExecuteGovernanceCleanup:$ExecuteGovernanceCleanup -ApplyManagedNodeCleanup:$ApplyManagedNodeCleanup
 $stageLineage = Add-VibeStageLineageEntry `
     -SessionRoot ([string]$skeleton.session_root) `
@@ -471,6 +709,7 @@ $summary = New-VibeRuntimeSummaryProjection `
     -HierarchyState $hierarchyState `
     -Artifacts $summaryArtifacts `
     -RelativeArtifacts $relativeArtifacts `
+    -StageLineage $stageLineage `
     -StorageProjection $storageProjection `
     -MemoryActivationReport $memoryActivation.report `
     -DeliveryAcceptanceReport $deliveryAcceptanceReport `

@@ -18,7 +18,7 @@ DEBUG_TASK = "I have a failing test and a stack trace. Help me debug systematica
 EXECUTION_TASK = "Implement a bounded runtime enhancement with verification and cleanup $vibe"
 MEMORY_TASK_FIRST = "Record that hidden skill topology must stay under vibe and planner depends on this decision. $vibe"
 MEMORY_TASK_SECOND = "Follow up on the hidden skill topology decision and recall planner dependency before proposing the next step. $vibe"
-HOSTS = ("codex", "claude-code", "cursor", "windsurf", "openclaw", "opencode")
+SUPPORTED_CANONICAL_HOSTS = ("codex", "claude-code", "opencode")
 INSTALLED_RUNTIME_ADVISORY_FAILURE_UNITS = {
     "runtime-neutral-freshness-gate-tests",
     "version-consistency-gate",
@@ -66,6 +66,7 @@ def create_fake_bridge(directory: Path, host_id: str) -> Path:
         bridge_path.write_text(
             "@echo off\r\n"
             "setlocal EnableDelayedExpansion\r\n"
+            "set RAW_ARGS=%*\r\n"
             "set OUT=\r\n"
             ":loop\r\n"
             "if \"%~1\"==\"\" goto done\r\n"
@@ -79,6 +80,12 @@ def create_fake_bridge(directory: Path, host_id: str) -> Path:
             "goto loop\r\n"
             ":done\r\n"
             "if \"%OUT%\"==\"\" exit /b 2\r\n"
+            "echo %RAW_ARGS% | findstr /C:\"consultation_role:\" >nul\r\n"
+            "if %errorlevel%==0 (\r\n"
+            f"> \"%OUT%\" echo {{\"status\":\"completed\",\"summary\":\"{host_id} bridge consultation executed\",\"consultation_notes\":[\"{host_id} simulated consultation guidance\"],\"adoption_notes\":[\"Apply the bounded consultation result in the next governed artifact.\"],\"verification_notes\":[\"{host_id} simulated consultation stayed read-only\"]}}\r\n"
+            f"echo {host_id} bridge consultation ok\r\n"
+            "exit /b 0\r\n"
+            ")\r\n"
             f"> \"%OUT%\" echo {{\"status\":\"completed\",\"summary\":\"{host_id} bridge executed specialist\",\"verification_notes\":[\"{host_id} simulated bridge ok\"],\"changed_files\":[],\"bounded_output_notes\":[\"{host_id} simulated host specialist\"]}}\r\n"
             f"echo {host_id} bridge ok\r\n"
             "exit /b 0\r\n",
@@ -88,6 +95,9 @@ def create_fake_bridge(directory: Path, host_id: str) -> Path:
         bridge_path.write_text(
             "#!/usr/bin/env sh\n"
             "set -eu\n"
+            "RAW_ARGS=\"$*\"\n"
+            "IS_CONSULTATION=0\n"
+            "printf '%s' \"$RAW_ARGS\" | grep -F \"consultation_role:\" >/dev/null && IS_CONSULTATION=1\n"
             "OUT=''\n"
             "while [ \"$#\" -gt 0 ]; do\n"
             "  case \"$1\" in\n"
@@ -102,6 +112,11 @@ def create_fake_bridge(directory: Path, host_id: str) -> Path:
             "done\n"
             "if [ -z \"$OUT\" ]; then\n"
             "  exit 2\n"
+            "fi\n"
+            "if [ \"$IS_CONSULTATION\" -eq 1 ]; then\n"
+            f"  printf '%s' '{{\"status\":\"completed\",\"summary\":\"{host_id} bridge consultation executed\",\"consultation_notes\":[\"{host_id} simulated consultation guidance\"],\"adoption_notes\":[\"Apply the bounded consultation result in the next governed artifact.\"],\"verification_notes\":[\"{host_id} simulated consultation stayed read-only\"]}}' > \"$OUT\"\n"
+            f"  printf '{host_id} bridge consultation ok\\n'\n"
+            "  exit 0\n"
             "fi\n"
             f"printf '%s' '{{\"status\":\"completed\",\"summary\":\"{host_id} bridge executed specialist\",\"verification_notes\":[\"{host_id} simulated bridge ok\"],\"changed_files\":[],\"bounded_output_notes\":[\"{host_id} simulated host specialist\"]}}' > \"$OUT\"\n"
             f"printf '{host_id} bridge ok\\n'\n",
@@ -118,6 +133,7 @@ def create_fake_codex_command(directory: Path) -> Path:
         command_path.write_text(
             "@echo off\r\n"
             "setlocal EnableDelayedExpansion\r\n"
+            "set RAW_ARGS=%*\r\n"
             "set OUT=\r\n"
             ":loop\r\n"
             "if \"%~1\"==\"\" goto done\r\n"
@@ -131,6 +147,12 @@ def create_fake_codex_command(directory: Path) -> Path:
             "goto loop\r\n"
             ":done\r\n"
             "if \"%OUT%\"==\"\" exit /b 2\r\n"
+            "echo %RAW_ARGS% | findstr /C:\"consultation_role:\" >nul\r\n"
+            "if %errorlevel%==0 (\r\n"
+            "> \"%OUT%\" echo {\"status\":\"completed\",\"summary\":\"fake codex consultation executed\",\"consultation_notes\":[\"Validate the failing path before proposing a fix.\"],\"adoption_notes\":[\"Use the consultation guidance to shape the next frozen artifact.\"],\"verification_notes\":[\"Consultation stayed read-only and returned structured guidance.\"]}\r\n"
+            "echo fake codex consultation ok\r\n"
+            "exit /b 0\r\n"
+            ")\r\n"
             "> \"%OUT%\" echo {\"status\":\"completed\",\"summary\":\"fake codex specialist executed\",\"verification_notes\":[\"fake native specialist executed\"],\"changed_files\":[],\"bounded_output_notes\":[\"fake codex adapter\"]}\r\n"
             "echo fake codex ok\r\n"
             "exit /b 0\r\n",
@@ -139,6 +161,9 @@ def create_fake_codex_command(directory: Path) -> Path:
     else:
         command_path.write_text(
             "#!/usr/bin/env sh\n"
+            "RAW_ARGS=\"$*\"\n"
+            "IS_CONSULTATION=0\n"
+            "printf '%s' \"$RAW_ARGS\" | grep -F \"consultation_role:\" >/dev/null && IS_CONSULTATION=1\n"
             "OUT=''\n"
             "while [ \"$#\" -gt 0 ]; do\n"
             "  case \"$1\" in\n"
@@ -153,6 +178,11 @@ def create_fake_codex_command(directory: Path) -> Path:
             "done\n"
             "if [ -z \"$OUT\" ]; then\n"
             "  exit 2\n"
+            "fi\n"
+            "if [ \"$IS_CONSULTATION\" -eq 1 ]; then\n"
+            "printf '%s' '{\"status\":\"completed\",\"summary\":\"fake codex consultation executed\",\"consultation_notes\":[\"Validate the failing path before proposing a fix.\"],\"adoption_notes\":[\"Use the consultation guidance to shape the next frozen artifact.\"],\"verification_notes\":[\"Consultation stayed read-only and returned structured guidance.\"]}' > \"$OUT\"\n"
+            "printf 'fake codex consultation ok\\n'\n"
+            "exit 0\n"
             "fi\n"
             "printf '%s' '{\"status\":\"completed\",\"summary\":\"fake codex specialist executed\",\"verification_notes\":[\"fake native specialist executed\"],\"changed_files\":[],\"bounded_output_notes\":[\"fake codex adapter\"]}' > \"$OUT\"\n"
             "printf 'fake codex ok\\n'\n",
@@ -268,6 +298,8 @@ class InstalledHostRuntimeSimulationTests(unittest.TestCase):
 
         self.assertEqual("vibe", runtime_input["authority_flags"]["explicit_runtime_skill"], host_id)
         self.assertEqual("vibe", runtime_input["route_snapshot"]["selected_skill"], host_id)
+        self.assertIn("route_snapshot", runtime_input, host_id)
+        self.assertIn("specialist_dispatch", runtime_input, host_id)
         self.assertTrue(Path(artifacts["requirement_doc"]).exists(), host_id)
         self.assertTrue(Path(artifacts["execution_plan"]).exists(), host_id)
         self.assertTrue(Path(artifacts["cleanup_receipt"]).exists(), host_id)
@@ -295,7 +327,7 @@ class InstalledHostRuntimeSimulationTests(unittest.TestCase):
         }
 
     def test_installed_hosts_support_high_fidelity_planning_debug_and_execution_tasks(self) -> None:
-        for host_id in HOSTS:
+        for host_id in SUPPORTED_CANONICAL_HOSTS:
             with self.subTest(host=host_id):
                 target_root, installed_root, base_env = self._install_context(host_id)
                 runtime_env = {
@@ -336,17 +368,13 @@ class InstalledHostRuntimeSimulationTests(unittest.TestCase):
                     1,
                     host_id,
                 )
-                if host_id == "codex" or host_id in HOST_BRIDGE_ENV:
-                    self.assertEqual(
-                        "live_native_executed",
-                        debug_state["execution_manifest"]["specialist_accounting"]["effective_execution_status"],
-                        host_id,
-                    )
-                    self.assertGreaterEqual(
-                        int(debug_state["execution_manifest"]["specialist_accounting"]["executed_specialist_unit_count"]),
-                        1,
-                        host_id,
-                    )
+                execution_status = debug_state["execution_manifest"]["specialist_accounting"]["effective_execution_status"]
+                self.assertEqual("live_native_executed", execution_status, host_id)
+                self.assertGreaterEqual(
+                    int(debug_state["execution_manifest"]["specialist_accounting"]["executed_specialist_unit_count"]),
+                    1,
+                    host_id,
+                )
 
                 execution = run_installed_runtime(
                     installed_root,
@@ -361,7 +389,7 @@ class InstalledHostRuntimeSimulationTests(unittest.TestCase):
                 self.assertTrue(Path(execute_receipt["plan_shadow_path"]).exists(), host_id)
 
     def test_installed_hosts_support_high_fidelity_memory_continuity(self) -> None:
-        for host_id in HOSTS:
+        for host_id in SUPPORTED_CANONICAL_HOSTS:
             with self.subTest(host=host_id):
                 target_root, installed_root, base_env = self._install_context(host_id)
                 backend_root = target_root / ".vibeskills" / "memory-backend"

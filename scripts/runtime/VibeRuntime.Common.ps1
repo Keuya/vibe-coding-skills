@@ -852,6 +852,9 @@ function New-VibeRuntimeInputPacketProjection {
         [Parameter(Mandatory)] [object]$Runtime,
         [AllowEmptyString()] [string]$TaskType = '',
         [AllowNull()] [string]$RequestedSkill = $null,
+        [AllowEmptyString()] [string]$EntryIntentId = '',
+        [AllowEmptyString()] [string]$RequestedStageStop = '',
+        [AllowEmptyString()] [string]$RequestedGradeFloor = '',
         [AllowEmptyString()] [string]$RouterHostId = '',
         [AllowEmptyString()] [string]$RouterTargetRoot = '',
         [bool]$Unattended = $false,
@@ -898,6 +901,9 @@ function New-VibeRuntimeInputPacketProjection {
         run_id = $RunId
         governance_scope = [string]$HierarchyState.governance_scope
         task = $Task
+        entry_intent_id = if ([string]::IsNullOrWhiteSpace($EntryIntentId)) { $null } else { [string]$EntryIntentId }
+        requested_stage_stop = if ([string]::IsNullOrWhiteSpace($RequestedStageStop)) { $null } else { [string]$RequestedStageStop }
+        requested_grade_floor = if ([string]::IsNullOrWhiteSpace($RequestedGradeFloor)) { $null } else { [string]$RequestedGradeFloor }
         generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         runtime_mode = $Mode
         internal_grade = $InternalGrade
@@ -992,6 +998,83 @@ function Get-VibeGovernedRuntimeStageOrder {
         'plan_execute',
         'phase_cleanup'
     )
+}
+
+function Resolve-VibeRequestedStageStop {
+    param(
+        [AllowEmptyString()] [string]$RequestedStageStop = ''
+    )
+
+    $stageOrder = @(Get-VibeGovernedRuntimeStageOrder)
+    if ([string]::IsNullOrWhiteSpace($RequestedStageStop)) {
+        return [string]$stageOrder[$stageOrder.Count - 1]
+    }
+
+    $normalized = [string]$RequestedStageStop
+    if ($stageOrder -notcontains $normalized) {
+        throw ("unsupported requested governed stage stop: {0}" -f $RequestedStageStop)
+    }
+    return $normalized
+}
+
+function Read-VibeEntrySurfaceConfig {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot
+    )
+
+    $configPath = Join-Path $RepoRoot 'config\vibe-entry-surfaces.json'
+    if (-not (Test-Path -LiteralPath $configPath)) {
+        throw ("vibe entry surface config not found: {0}" -f $configPath)
+    }
+
+    return Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+}
+
+function Resolve-VibeEntryRequestedStageStop {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot,
+        [AllowEmptyString()] [string]$EntryIntentId = '',
+        [AllowEmptyString()] [string]$RequestedStageStop = ''
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedStageStop)) {
+        return Resolve-VibeRequestedStageStop -RequestedStageStop $RequestedStageStop
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($EntryIntentId)) {
+        $surfaceConfig = Read-VibeEntrySurfaceConfig -RepoRoot $RepoRoot
+        foreach ($entry in @($surfaceConfig.entries)) {
+            if ($null -eq $entry) {
+                continue
+            }
+            $entryId = if (
+                $entry.PSObject.Properties.Name -contains 'id' -and
+                -not [string]::IsNullOrWhiteSpace([string]$entry.id)
+            ) {
+                [string]$entry.id
+            } else {
+                ''
+            }
+            if ($entryId -ne [string]$EntryIntentId) {
+                continue
+            }
+
+            $entryRequestedStop = if (
+                $entry.PSObject.Properties.Name -contains 'requested_stage_stop' -and
+                -not [string]::IsNullOrWhiteSpace([string]$entry.requested_stage_stop)
+            ) {
+                [string]$entry.requested_stage_stop
+            } else {
+                ''
+            }
+            if (-not [string]::IsNullOrWhiteSpace($entryRequestedStop)) {
+                return Resolve-VibeRequestedStageStop -RequestedStageStop $entryRequestedStop
+            }
+            break
+        }
+    }
+
+    return Resolve-VibeRequestedStageStop -RequestedStageStop ''
 }
 
 function Get-VibeGovernanceArtifactContract {
@@ -1325,22 +1408,22 @@ function New-VibeRuntimeSummaryArtifactProjection {
         [Parameter(Mandatory)] [string]$IntentContractPath,
         [Parameter(Mandatory)] [string]$RequirementDocPath,
         [Parameter(Mandatory)] [string]$RequirementReceiptPath,
-        [Parameter(Mandatory)] [string]$ExecutionPlanPath,
-        [Parameter(Mandatory)] [string]$ExecutionPlanReceiptPath,
-        [Parameter(Mandatory)] [string]$ExecuteReceiptPath,
-        [Parameter(Mandatory)] [string]$ExecutionManifestPath,
-        [Parameter(Mandatory)] [string]$ExecutionTopologyPath,
-        [Parameter(Mandatory)] [string]$ExecutionProofManifestPath,
+        [AllowEmptyString()] [string]$ExecutionPlanPath = '',
+        [AllowEmptyString()] [string]$ExecutionPlanReceiptPath = '',
+        [AllowEmptyString()] [string]$ExecuteReceiptPath = '',
+        [AllowEmptyString()] [string]$ExecutionManifestPath = '',
+        [AllowEmptyString()] [string]$ExecutionTopologyPath = '',
+        [AllowEmptyString()] [string]$ExecutionProofManifestPath = '',
         [AllowEmptyString()] [string]$DiscussionSpecialistConsultationPath = '',
         [AllowEmptyString()] [string]$PlanningSpecialistConsultationPath = '',
         [AllowEmptyString()] [string]$SpecialistLifecycleDisclosurePath = '',
         [AllowEmptyString()] [string]$HostStageDisclosurePath = '',
         [AllowEmptyString()] [string]$HostUserBriefingPath = '',
-        [Parameter(Mandatory)] [string]$CleanupReceiptPath,
-        [Parameter(Mandatory)] [string]$DeliveryAcceptanceReportPath,
-        [Parameter(Mandatory)] [string]$DeliveryAcceptanceMarkdownPath,
-        [Parameter(Mandatory)] [string]$MemoryActivationReportPath,
-        [Parameter(Mandatory)] [string]$MemoryActivationMarkdownPath,
+        [AllowEmptyString()] [string]$CleanupReceiptPath = '',
+        [AllowEmptyString()] [string]$DeliveryAcceptanceReportPath = '',
+        [AllowEmptyString()] [string]$DeliveryAcceptanceMarkdownPath = '',
+        [AllowEmptyString()] [string]$MemoryActivationReportPath = '',
+        [AllowEmptyString()] [string]$MemoryActivationMarkdownPath = '',
         [AllowEmptyString()] [string]$DelegationEnvelopePath = '',
         [AllowEmptyString()] [string]$DelegationValidationReceiptPath = ''
     )
@@ -1353,22 +1436,22 @@ function New-VibeRuntimeSummaryArtifactProjection {
         intent_contract = $IntentContractPath
         requirement_doc = $RequirementDocPath
         requirement_receipt = $RequirementReceiptPath
-        execution_plan = $ExecutionPlanPath
-        execution_plan_receipt = $ExecutionPlanReceiptPath
-        execute_receipt = $ExecuteReceiptPath
-        execution_manifest = $ExecutionManifestPath
-        execution_topology = $ExecutionTopologyPath
-        execution_proof_manifest = $ExecutionProofManifestPath
+        execution_plan = if ([string]::IsNullOrWhiteSpace($ExecutionPlanPath)) { $null } else { $ExecutionPlanPath }
+        execution_plan_receipt = if ([string]::IsNullOrWhiteSpace($ExecutionPlanReceiptPath)) { $null } else { $ExecutionPlanReceiptPath }
+        execute_receipt = if ([string]::IsNullOrWhiteSpace($ExecuteReceiptPath)) { $null } else { $ExecuteReceiptPath }
+        execution_manifest = if ([string]::IsNullOrWhiteSpace($ExecutionManifestPath)) { $null } else { $ExecutionManifestPath }
+        execution_topology = if ([string]::IsNullOrWhiteSpace($ExecutionTopologyPath)) { $null } else { $ExecutionTopologyPath }
+        execution_proof_manifest = if ([string]::IsNullOrWhiteSpace($ExecutionProofManifestPath)) { $null } else { $ExecutionProofManifestPath }
         discussion_specialist_consultation = if ([string]::IsNullOrWhiteSpace($DiscussionSpecialistConsultationPath)) { $null } else { $DiscussionSpecialistConsultationPath }
         planning_specialist_consultation = if ([string]::IsNullOrWhiteSpace($PlanningSpecialistConsultationPath)) { $null } else { $PlanningSpecialistConsultationPath }
         specialist_lifecycle_disclosure = if ([string]::IsNullOrWhiteSpace($SpecialistLifecycleDisclosurePath)) { $null } else { $SpecialistLifecycleDisclosurePath }
         host_stage_disclosure = if ([string]::IsNullOrWhiteSpace($HostStageDisclosurePath)) { $null } else { $HostStageDisclosurePath }
         host_user_briefing = if ([string]::IsNullOrWhiteSpace($HostUserBriefingPath)) { $null } else { $HostUserBriefingPath }
-        cleanup_receipt = $CleanupReceiptPath
-        delivery_acceptance_report = $DeliveryAcceptanceReportPath
-        delivery_acceptance_markdown = $DeliveryAcceptanceMarkdownPath
-        memory_activation_report = $MemoryActivationReportPath
-        memory_activation_markdown = $MemoryActivationMarkdownPath
+        cleanup_receipt = if ([string]::IsNullOrWhiteSpace($CleanupReceiptPath)) { $null } else { $CleanupReceiptPath }
+        delivery_acceptance_report = if ([string]::IsNullOrWhiteSpace($DeliveryAcceptanceReportPath)) { $null } else { $DeliveryAcceptanceReportPath }
+        delivery_acceptance_markdown = if ([string]::IsNullOrWhiteSpace($DeliveryAcceptanceMarkdownPath)) { $null } else { $DeliveryAcceptanceMarkdownPath }
+        memory_activation_report = if ([string]::IsNullOrWhiteSpace($MemoryActivationReportPath)) { $null } else { $MemoryActivationReportPath }
+        memory_activation_markdown = if ([string]::IsNullOrWhiteSpace($MemoryActivationMarkdownPath)) { $null } else { $MemoryActivationMarkdownPath }
         delegation_envelope = if ([string]::IsNullOrWhiteSpace($DelegationEnvelopePath)) { $null } else { $DelegationEnvelopePath }
         delegation_validation_receipt = if ([string]::IsNullOrWhiteSpace($DelegationValidationReceiptPath)) { $null } else { $DelegationValidationReceiptPath }
     }
@@ -1426,6 +1509,90 @@ function New-VibeRuntimeSummaryDeliveryAcceptanceProjection {
         manual_review_layer_count = [int]$DeliveryAcceptanceReport.summary.manual_review_layer_count
         failing_layer_count = [int]$DeliveryAcceptanceReport.summary.failing_layer_count
     }
+}
+
+function Get-VibeStageLineageExecutedStageOrder {
+    param(
+        [AllowNull()] [object]$StageLineage = $null
+    )
+
+    if ($null -eq $StageLineage) {
+        return @()
+    }
+
+    $lineageSource = if ((Test-VibeObjectHasProperty -InputObject $StageLineage -PropertyName 'lineage') -and $null -ne $StageLineage.lineage) {
+        $StageLineage.lineage
+    } else {
+        $StageLineage
+    }
+
+    $stageEntries = @()
+    if ((Test-VibeObjectHasProperty -InputObject $lineageSource -PropertyName 'stages') -and $null -ne $lineageSource.stages) {
+        $stageEntries = @($lineageSource.stages)
+    } elseif ((Test-VibeObjectHasProperty -InputObject $lineageSource -PropertyName 'entries') -and $null -ne $lineageSource.entries) {
+        $stageEntries = @($lineageSource.entries)
+    }
+
+    $stageNames = New-Object System.Collections.ArrayList
+    foreach ($entry in @($stageEntries)) {
+        if ($null -eq $entry) {
+            continue
+        }
+        $stageName = if ((Test-VibeObjectHasProperty -InputObject $entry -PropertyName 'stage_name') -and -not [string]::IsNullOrWhiteSpace([string]$entry.stage_name)) {
+            [string]$entry.stage_name
+        } elseif ((Test-VibeObjectHasProperty -InputObject $entry -PropertyName 'stage') -and -not [string]::IsNullOrWhiteSpace([string]$entry.stage)) {
+            [string]$entry.stage
+        } else {
+            ''
+        }
+        if (-not [string]::IsNullOrWhiteSpace($stageName)) {
+            [void]$stageNames.Add($stageName)
+        }
+    }
+
+    if ($stageNames.Count -eq 0) {
+        $topLevelStageName = if ((Test-VibeObjectHasProperty -InputObject $lineageSource -PropertyName 'stage_name') -and -not [string]::IsNullOrWhiteSpace([string]$lineageSource.stage_name)) {
+            [string]$lineageSource.stage_name
+        } elseif ((Test-VibeObjectHasProperty -InputObject $lineageSource -PropertyName 'stage') -and -not [string]::IsNullOrWhiteSpace([string]$lineageSource.stage)) {
+            [string]$lineageSource.stage
+        } else {
+            ''
+        }
+        if (-not [string]::IsNullOrWhiteSpace($topLevelStageName)) {
+            [void]$stageNames.Add($topLevelStageName)
+        }
+    }
+
+    return [string[]]$stageNames.ToArray()
+}
+
+function Get-VibeStageLineageTerminalStage {
+    param(
+        [AllowNull()] [object]$StageLineage = $null
+    )
+
+    if ($null -eq $StageLineage) {
+        return $null
+    }
+
+    $lineageSource = if ((Test-VibeObjectHasProperty -InputObject $StageLineage -PropertyName 'lineage') -and $null -ne $StageLineage.lineage) {
+        $StageLineage.lineage
+    } else {
+        $StageLineage
+    }
+
+    foreach ($propertyName in @('last_stage_name', 'last_stage')) {
+        if ((Test-VibeObjectHasProperty -InputObject $lineageSource -PropertyName $propertyName) -and -not [string]::IsNullOrWhiteSpace([string]$lineageSource.$propertyName)) {
+            return [string]$lineageSource.$propertyName
+        }
+    }
+
+    $executedStageOrder = @(Get-VibeStageLineageExecutedStageOrder -StageLineage $lineageSource)
+    if ($executedStageOrder.Count -gt 0) {
+        return [string]$executedStageOrder[$executedStageOrder.Count - 1]
+    }
+
+    return $null
 }
 
 function Get-VibeInteractiveSpecialistDisclosurePolicy {
@@ -2149,6 +2316,7 @@ function New-VibeRuntimeSummaryProjection {
         [Parameter(Mandatory)] [object]$HierarchyState,
         [Parameter(Mandatory)] [object]$Artifacts,
         [Parameter(Mandatory)] [object]$RelativeArtifacts,
+        [AllowNull()] [object]$StageLineage = $null,
         [AllowNull()] [object]$StorageProjection = $null,
         [AllowNull()] [object]$MemoryActivationReport,
         [AllowNull()] [object]$DeliveryAcceptanceReport,
@@ -2171,6 +2339,8 @@ function New-VibeRuntimeSummaryProjection {
         session_root_relative = Get-VibeRelativePathCompat -BasePath $ArtifactRoot -TargetPath $SessionRoot
         hierarchy = New-VibeHierarchyProjection -HierarchyState $HierarchyState
         stage_order = @(Get-VibeGovernedRuntimeStageOrder)
+        executed_stage_order = @(Get-VibeStageLineageExecutedStageOrder -StageLineage $StageLineage)
+        terminal_stage = Get-VibeStageLineageTerminalStage -StageLineage $StageLineage
         artifacts = $Artifacts
         storage = $StorageProjection
         memory_activation = New-VibeRuntimeSummaryMemoryActivationProjection -MemoryActivationReport $MemoryActivationReport
@@ -2280,30 +2450,56 @@ function Write-VibeMarkdownArtifact {
 
 function Get-VibeInternalGrade {
     param(
-        [Parameter(Mandatory)] [string]$Task
+        [Parameter(Mandatory)] [string]$Task,
+        [AllowEmptyString()] [string]$RequestedGradeFloor = ''
     )
 
+    $grade = ''
     $taskLower = $Task.ToLowerInvariant()
     $xlPatterns = @('xl', 'multi-agent', 'parallel', 'wave', 'batch', '无人值守', 'autonomous', 'benchmark', 'front.*back', 'end-to-end')
     $lPatterns = @('design', 'plan', 'architecture', 'refactor', 'migrate', 'research', 'governance', '访谈', '规划', '设计', '治理')
 
     foreach ($pattern in $xlPatterns) {
         if ($taskLower -match $pattern) {
-            return 'XL'
+            $grade = 'XL'
+            break
         }
     }
 
-    foreach ($pattern in $lPatterns) {
-        if ($taskLower -match $pattern) {
-            return 'L'
+    if (-not $grade) {
+        foreach ($pattern in $lPatterns) {
+            if ($taskLower -match $pattern) {
+                $grade = 'L'
+                break
+            }
         }
     }
 
-    if ($Task.Length -gt 180) {
-        return 'L'
+    if (-not $grade -and $Task.Length -gt 180) {
+        $grade = 'L'
     }
 
-    return 'M'
+    if (-not $grade) {
+        $grade = 'M'
+    }
+
+    $requestedFloor = [string]$RequestedGradeFloor
+    if (-not [string]::IsNullOrWhiteSpace($requestedFloor)) {
+        $normalizedFloor = $requestedFloor.Trim().ToUpperInvariant()
+        $rank = @{
+            'M' = 0
+            'L' = 1
+            'XL' = 2
+        }
+        if (-not $rank.ContainsKey($normalizedFloor)) {
+            throw ("unsupported requested grade floor: {0}" -f $RequestedGradeFloor)
+        }
+        if ($rank[$normalizedFloor] -gt $rank[$grade]) {
+            $grade = $normalizedFloor
+        }
+    }
+
+    return $grade
 }
 
 function New-VibeIntentContractObject {

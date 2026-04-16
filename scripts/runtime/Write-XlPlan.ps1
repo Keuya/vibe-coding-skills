@@ -57,7 +57,45 @@ $hierarchyState = Get-VibeHierarchyState `
     -InheritedExecutionPlanPath $InheritedExecutionPlanPath `
     -DelegationEnvelopePath $DelegationEnvelopePath `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
-$grade = Get-VibeInternalGrade -Task $Task
+$runtimeInputPath = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath)) {
+    $RuntimeInputPacketPath
+} else {
+    Get-VibeRuntimeInputPacketPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
+}
+$runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($runtimeInputPath) -and (Test-Path -LiteralPath $runtimeInputPath)) {
+    Get-Content -LiteralPath $runtimeInputPath -Raw -Encoding UTF8 | ConvertFrom-Json
+} else {
+    $null
+}
+$requestedGradeFloor = if (
+    $runtimeInputPacket -and
+    $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_grade_floor' -and
+    -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_grade_floor)
+) {
+    [string]$runtimeInputPacket.requested_grade_floor
+} else {
+    ''
+}
+$entryIntentId = if (
+    $runtimeInputPacket -and
+    $runtimeInputPacket.PSObject.Properties.Name -contains 'entry_intent_id' -and
+    -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.entry_intent_id)
+) {
+    [string]$runtimeInputPacket.entry_intent_id
+} else {
+    'vibe'
+}
+$requestedStageStop = if (
+    $runtimeInputPacket -and
+    $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_stage_stop' -and
+    -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_stage_stop)
+) {
+    [string]$runtimeInputPacket.requested_stage_stop
+} else {
+    'phase_cleanup'
+}
+$requestedGradeFloorDisplay = if ([string]::IsNullOrWhiteSpace($requestedGradeFloor)) { 'none' } else { $requestedGradeFloor }
+$grade = Get-VibeInternalGrade -Task $Task -RequestedGradeFloor $requestedGradeFloor
 $isChildScope = ([string]$hierarchyState.governance_scope -eq 'child')
 $planPath = if ($isChildScope) {
     if ([string]::IsNullOrWhiteSpace([string]$hierarchyState.inherited_execution_plan_path)) {
@@ -69,11 +107,6 @@ $planPath = if ($isChildScope) {
 }
 $requirementPath = if (-not [string]::IsNullOrWhiteSpace($RequirementDocPath)) { $RequirementDocPath } else { Get-VibeRequirementDocPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $antiDriftDraft = Get-VgoAntiProxyGoalDriftPacketFromRequirementDoc -RequirementDocPath $requirementPath
-$runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath) -and (Test-Path -LiteralPath $RuntimeInputPacketPath)) {
-    Get-Content -LiteralPath $RuntimeInputPacketPath -Raw -Encoding UTF8 | ConvertFrom-Json
-} else {
-    $null
-}
 $specialistDecision = if (
     $runtimeInputPacket -and
     $runtimeInputPacket.PSObject.Properties.Name -contains 'specialist_decision' -and
@@ -173,7 +206,7 @@ $lines = @(
     '',
     '## Frozen Inputs',
     "- Requirement doc: $([System.IO.Path]::GetFullPath($requirementPath))",
-    "- Runtime input packet: $RuntimeInputPacketPath",
+    "- Runtime input packet: $runtimeInputPath",
     "- Source task: $Task"
 )
 $lines += @('')
@@ -181,6 +214,9 @@ if ($runtimeInputPacket) {
     $lines += @(
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
+        "- Entry intent: $entryIntentId",
+        "- Requested stop stage: $requestedStageStop",
+        "- Requested grade floor: $requestedGradeFloorDisplay",
         "- Frozen route pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",
         "- Frozen route skill: $([string]$runtimeInputPacket.route_snapshot.selected_skill)",
         "- Frozen route mode: $([string]$runtimeInputPacket.route_snapshot.route_mode)",
@@ -446,7 +482,7 @@ $receipt = [pscustomobject]@{
     child_execution_handoff_path = $childHandoffPath
     canonical_write_allowed = -not $isChildScope
     inherited_execution_plan_path = if ($isChildScope) { $planPath } else { $null }
-    runtime_input_packet_path = $RuntimeInputPacketPath
+    runtime_input_packet_path = $runtimeInputPath
     planning_consultation_path = if ($planningConsultation) { $PlanningConsultationPath } else { $null }
     planning_consultation_count = if ($planningConsultation) { @($planningConsultation.consulted_units).Count } else { 0 }
     planning_consultation_user_disclosure_count = if ($planningConsultation) { @($planningConsultation.user_disclosures).Count } else { 0 }

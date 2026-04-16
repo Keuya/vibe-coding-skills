@@ -251,8 +251,13 @@ if (@($artifactReviewRequirements).Count -eq 0 -and @($baselineDocumentQualityDi
 if (@($baselineUiQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsManualSpotChecks -Task $Task -Deliverable ([string]$intentContract.deliverable))) {
     $baselineUiQualityDimensions = Get-VibeDefaultBaselineUiQualityDimensions
 }
-$runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath) -and (Test-Path -LiteralPath $RuntimeInputPacketPath)) {
-    Get-Content -LiteralPath $RuntimeInputPacketPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$runtimeInputPath = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath)) {
+    $RuntimeInputPacketPath
+} else {
+    Get-VibeRuntimeInputPacketPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
+}
+$runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($runtimeInputPath) -and (Test-Path -LiteralPath $runtimeInputPath)) {
+    Get-Content -LiteralPath $runtimeInputPath -Raw -Encoding UTF8 | ConvertFrom-Json
 } else {
     $null
 }
@@ -410,15 +415,43 @@ $lines += @(
     '## Evidence Inputs',
     "- Source task: $Task",
     "- Intent contract: $([System.IO.Path]::GetFileName((Join-Path $sessionRoot 'intent-contract.json')))",
-    "- Runtime input packet: $([System.IO.Path]::GetFileName($RuntimeInputPacketPath))"
+    "- Runtime input packet: $([System.IO.Path]::GetFileName($runtimeInputPath))"
 )
 
 if ($runtimeInputPacket) {
+    $entryIntentId = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'entry_intent_id' -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.entry_intent_id)
+    ) {
+        [string]$runtimeInputPacket.entry_intent_id
+    } else {
+        'vibe'
+    }
+    $requestedStageStop = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_stage_stop' -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_stage_stop)
+    ) {
+        [string]$runtimeInputPacket.requested_stage_stop
+    } else {
+        'phase_cleanup'
+    }
+    $requestedGradeFloor = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_grade_floor' -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_grade_floor)
+    ) {
+        [string]$runtimeInputPacket.requested_grade_floor
+    } else {
+        'none'
+    }
+
     $lines += @(
         '',
         '## Runtime Input Truth',
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
+        "- Entry intent: $entryIntentId",
+        "- Requested stop stage: $requestedStageStop",
+        "- Requested grade floor: $requestedGradeFloor",
         "- Selected pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",
         "- Router-selected skill: $([string]$runtimeInputPacket.route_snapshot.selected_skill)",
         "- Runtime-selected skill: $([string]$runtimeInputPacket.authority_flags.explicit_runtime_skill)",
@@ -589,7 +622,7 @@ $receipt = [pscustomobject]@{
     child_requirement_handoff_path = $childHandoffPath
     canonical_write_allowed = -not $isChildScope
     inherited_requirement_doc_path = if ($isChildScope) { $docPath } else { $null }
-    runtime_input_packet_path = $RuntimeInputPacketPath
+    runtime_input_packet_path = $runtimeInputPath
     discussion_consultation_path = if ($discussionConsultation) { $DiscussionConsultationPath } else { $null }
     discussion_consultation_count = if ($discussionConsultation) { @($discussionConsultation.consulted_units).Count } else { 0 }
     discussion_consultation_user_disclosure_count = if ($discussionConsultation) { @($discussionConsultation.user_disclosures).Count } else { 0 }
