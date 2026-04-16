@@ -42,18 +42,7 @@ def _frontmatter_lines(host_id: str, entry: DiscoverableEntry, *, relpath: Path)
 
 def _wrapper_contract(host_id: str) -> dict[str, object]:
     normalized = (host_id or "").strip().lower()
-    try:
-        return resolve_canonical_vibe_contract(None, normalized)
-    except ValueError:
-        return {
-            "host_id": normalized,
-            "entry_mode": "bridged_runtime",
-            "fallback_policy": "blocked",
-            "proof_required": True,
-            "allow_skill_doc_fallback": False,
-            "launcher_kind": "managed_bridge",
-            "supports_bounded_stop": True,
-        }
+    return resolve_canonical_vibe_contract(None, normalized)
 
 
 def _body_lines(host_id: str, entry: DiscoverableEntry, *, contract: dict[str, object]) -> list[str]:

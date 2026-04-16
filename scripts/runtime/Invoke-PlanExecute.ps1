@@ -732,7 +732,21 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 }
 
 $sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
-$grade = Get-VibeInternalGrade -Task $Task
+$runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath) -and (Test-Path -LiteralPath $RuntimeInputPacketPath)) {
+    Get-Content -LiteralPath $RuntimeInputPacketPath -Raw -Encoding UTF8 | ConvertFrom-Json
+} else {
+    $null
+}
+$requestedGradeFloor = if (
+    $runtimeInputPacket -and
+    $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_grade_floor' -and
+    -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_grade_floor)
+) {
+    [string]$runtimeInputPacket.requested_grade_floor
+} else {
+    ''
+}
+$grade = Get-VibeInternalGrade -Task $Task -RequestedGradeFloor $requestedGradeFloor
 $requirementPath = if (-not [string]::IsNullOrWhiteSpace($RequirementDocPath)) { $RequirementDocPath } else { Get-VibeRequirementDocPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $planPath = if (-not [string]::IsNullOrWhiteSpace($ExecutionPlanPath)) { $ExecutionPlanPath } else { Get-VibeExecutionPlanPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $runtimeInputPath = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath)) { $RuntimeInputPacketPath } else { Get-VibeRuntimeInputPacketPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot }

@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACTS_SRC = ROOT / 'packages' / 'contracts' / 'src'
@@ -12,6 +14,7 @@ for src in (CONTRACTS_SRC, INSTALLER_SRC):
         sys.path.insert(0, str(src))
 
 from vgo_contracts.discoverable_entry_surface import load_discoverable_entry_surface
+import vgo_installer.discoverable_wrappers as discoverable_wrappers
 from vgo_installer.discoverable_wrappers import build_wrapper_descriptors
 
 
@@ -63,3 +66,18 @@ def test_build_wrapper_descriptors_renders_skill_wrappers_for_skill_only_hosts()
     assert 'Use the `vibe` skill' not in rendered['vibe-how'].content
     assert 'Default stop target: `xl_plan`' in rendered['vibe-how'].content
     assert '$ARGUMENTS' in rendered['vibe-how'].content
+
+
+def test_build_wrapper_descriptors_fails_closed_when_canonical_contract_is_unresolved(monkeypatch) -> None:
+    surface = load_discoverable_entry_surface(ROOT)
+
+    def fail_contract(repo_root, host_id):  # type: ignore[no-untyped-def]
+        raise ValueError(f"canonical_vibe contract missing for host: {host_id}")
+
+    monkeypatch.setattr(discoverable_wrappers, "resolve_canonical_vibe_contract", fail_contract)
+
+    with pytest.raises(ValueError, match="canonical_vibe contract missing"):
+        build_wrapper_descriptors(
+            host_id="codex",
+            surface=surface,
+        )

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -21,6 +23,56 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_valid_truth_artifacts(
+    session_root: Path,
+    *,
+    host_id: str = "codex",
+    entry_intent_id: str = "vibe",
+    router_selected_skill: str = "systematic-debugging",
+    requested_stage_stop: str = "phase_cleanup",
+    requested_grade_floor: str | None = None,
+) -> None:
+    _write_json(
+        session_root / "runtime-input-packet.json",
+        {
+            "host_id": host_id,
+            "entry_intent_id": entry_intent_id,
+            "requested_stage_stop": requested_stage_stop,
+            "requested_grade_floor": requested_grade_floor,
+            "canonical_router": {
+                "host_id": host_id,
+                "requested_skill": entry_intent_id,
+            },
+            "route_snapshot": {
+                "selected_skill": router_selected_skill,
+                "route_mode": "governed",
+            },
+            "specialist_recommendations": [
+                {
+                    "skill_id": router_selected_skill,
+                }
+            ],
+            "specialist_dispatch": {
+                "approved_dispatch": [],
+                "local_specialist_suggestions": [],
+            },
+            "divergence_shadow": {
+                "router_selected_skill": router_selected_skill,
+                "runtime_selected_skill": "vibe",
+                "skill_mismatch": router_selected_skill != "vibe",
+            },
+        },
+    )
+    _write_json(session_root / "governance-capsule.json", {"runtime_selected_skill": "vibe"})
+    _write_json(
+        session_root / "stage-lineage.json",
+        {
+            "last_stage_name": requested_stage_stop,
+            "stages": [{"stage_name": requested_stage_stop}],
+        },
+    )
+
+
 def test_canonical_entry_writes_host_launch_receipt(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -36,9 +88,7 @@ def test_canonical_entry_writes_host_launch_receipt(
     def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
         assert kwargs["prompt"] == "plan runtime entry hardening"
         assert kwargs["requested_stage_stop"] == "phase_cleanup"
-        _write_json(session_root / "runtime-input-packet.json", {"host_id": "codex", "requested_stage_stop": "phase_cleanup"})
-        _write_json(session_root / "governance-capsule.json", {"runtime_selected_skill": "vibe"})
-        _write_json(session_root / "stage-lineage.json", {"entries": [{"stage_name": "phase_cleanup"}]})
+        _write_valid_truth_artifacts(session_root)
         return {
             "run_id": run_id,
             "session_root": str(session_root),
@@ -133,9 +183,7 @@ def test_canonical_entry_fails_when_runtime_packet_disagrees_with_receipt(
     )
 
     def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
-        _write_json(session_root / "runtime-input-packet.json", {"host_id": "claude-code", "requested_stage_stop": "phase_cleanup"})
-        _write_json(session_root / "governance-capsule.json", {"runtime_selected_skill": "vibe"})
-        _write_json(session_root / "stage-lineage.json", {"entries": [{"stage_name": "phase_cleanup"}]})
+        _write_valid_truth_artifacts(session_root, host_id="claude-code")
         return {
             "run_id": run_id,
             "session_root": str(session_root),
@@ -154,6 +202,305 @@ def test_canonical_entry_fails_when_runtime_packet_disagrees_with_receipt(
             requested_stage_stop="phase_cleanup",
             artifact_root=tmp_path,
         )
+
+
+def test_canonical_entry_preserves_canonical_receipt_for_presentational_entry_ids(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-presentational"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+    monkeypatch.setattr(
+        canonical_entry,
+        "load_allowed_vibe_entry_ids",
+        lambda: frozenset({"vibe", "vibe-how"}),
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(
+            session_root,
+            entry_intent_id="vibe-how",
+            requested_stage_stop="xl_plan",
+            requested_grade_floor="XL",
+        )
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    result = canonical_entry.launch_canonical_vibe(
+        repo_root=tmp_path,
+        host_id="codex",
+        entry_id="vibe-how",
+        prompt="x",
+        requested_stage_stop="xl_plan",
+        requested_grade_floor="XL",
+        artifact_root=tmp_path,
+    )
+
+    receipt = json.loads((result.host_launch_receipt_path).read_text(encoding="utf-8"))
+    assert receipt["entry_id"] == "vibe"
+    assert receipt["launch_status"] == "verified"
+
+
+def test_canonical_entry_rejects_incomplete_truth_packets_before_verifying(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-incomplete-truth"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+    monkeypatch.setattr(
+        canonical_entry,
+        "load_allowed_vibe_entry_ids",
+        lambda: frozenset({"vibe"}),
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_json(
+            session_root / "runtime-input-packet.json",
+            {"host_id": "codex", "requested_stage_stop": "phase_cleanup"},
+        )
+        _write_json(session_root / "governance-capsule.json", {"runtime_selected_skill": "vibe"})
+        _write_json(
+            session_root / "stage-lineage.json",
+            {"last_stage_name": "phase_cleanup", "stages": [{"stage_name": "phase_cleanup"}]},
+        )
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="canonical truth"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe",
+            prompt="x",
+            requested_stage_stop="phase_cleanup",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_unsupported_presentational_entry_ids(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+    monkeypatch.setattr(
+        canonical_entry,
+        "load_allowed_vibe_entry_ids",
+        lambda: frozenset({"vibe", "vibe-how"}),
+    )
+
+    with pytest.raises(RuntimeError, match="unsupported canonical vibe entry id"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="not-a-real-entry",
+            prompt="x",
+            artifact_root=tmp_path,
+        )
+
+
+def test_extract_terminal_stage_reads_current_stage_lineage_schema() -> None:
+    terminal = canonical_entry._extract_terminal_stage(
+        {
+            "last_stage_name": "xl_plan",
+            "stages": [{"stage_name": "requirement_doc"}, {"stage_name": "xl_plan"}],
+        }
+    )
+
+    assert terminal == "xl_plan"
+
+
+def test_canonical_entry_rejects_when_runtime_packet_drops_requested_stop(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-dropped-stop"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(
+            session_root,
+            entry_intent_id="vibe-how",
+            requested_stage_stop="phase_cleanup",
+        )
+        runtime_packet_path = session_root / "runtime-input-packet.json"
+        runtime_packet = json.loads(runtime_packet_path.read_text(encoding="utf-8"))
+        runtime_packet["requested_stage_stop"] = None
+        _write_json(runtime_packet_path, runtime_packet)
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="runtime packet dropped requested_stage_stop"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe-how",
+            prompt="x",
+            requested_stage_stop="xl_plan",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_when_runtime_packet_drops_requested_grade_floor(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-dropped-grade"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(
+            session_root,
+            entry_intent_id="vibe-how",
+            requested_stage_stop="xl_plan",
+            requested_grade_floor="XL",
+        )
+        runtime_packet_path = session_root / "runtime-input-packet.json"
+        runtime_packet = json.loads(runtime_packet_path.read_text(encoding="utf-8"))
+        runtime_packet["requested_grade_floor"] = None
+        _write_json(runtime_packet_path, runtime_packet)
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="runtime packet dropped requested_grade_floor"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe-how",
+            prompt="x",
+            requested_stage_stop="xl_plan",
+            requested_grade_floor="XL",
+            artifact_root=tmp_path,
+        )
+
+
+def test_bridge_forwards_entry_intent_stop_and_grade_to_runtime(tmp_path: Path) -> None:
+    powershell = shutil.which("pwsh") or shutil.which("powershell")
+    if not powershell:
+        pytest.skip("PowerShell executable not available in PATH")
+
+    bridge_dir = tmp_path / "scripts" / "runtime"
+    bridge_dir.mkdir(parents=True, exist_ok=True)
+    bridge_path = bridge_dir / "Invoke-VibeCanonicalEntry.ps1"
+    bridge_path.write_text(
+        (REPO_ROOT / "scripts" / "runtime" / "Invoke-VibeCanonicalEntry.ps1").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    fake_runtime_path = bridge_dir / "invoke-vibe-runtime.ps1"
+    fake_runtime_path.write_text(
+        """
+param(
+  [string]$Task,
+  [string]$Mode,
+  [string]$EntryIntentId = '',
+  [string]$RequestedStageStop = '',
+  [string]$RequestedGradeFloor = '',
+  [string]$RunId = '',
+  [string]$ArtifactRoot = ''
+)
+[pscustomobject]@{
+  run_id = $RunId
+  session_root = [string](Join-Path $PSScriptRoot 'session')
+  summary_path = [string](Join-Path $PSScriptRoot 'summary.json')
+  summary = [pscustomobject]@{
+    received = [pscustomobject]@{
+      EntryIntentId = if ([string]::IsNullOrWhiteSpace($EntryIntentId)) { $null } else { $EntryIntentId }
+      RequestedStageStop = if ([string]::IsNullOrWhiteSpace($RequestedStageStop)) { $null } else { $RequestedStageStop }
+      RequestedGradeFloor = if ([string]::IsNullOrWhiteSpace($RequestedGradeFloor)) { $null } else { $RequestedGradeFloor }
+    }
+  }
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            powershell,
+            "-NoLogo",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(bridge_path),
+            "-Task",
+            "demo",
+            "-HostId",
+            "codex",
+            "-EntryId",
+            "vibe-how",
+            "-RequestedStageStop",
+            "xl_plan",
+            "-RequestedGradeFloor",
+            "XL",
+            "-RunId",
+            "run-42",
+            "-ArtifactRoot",
+            str(tmp_path / "artifacts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["summary"]["received"] == {
+        "EntryIntentId": "vibe-how",
+        "RequestedStageStop": "xl_plan",
+        "RequestedGradeFloor": "XL",
+    }
 
 
 def test_canonical_entry_main_emits_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:

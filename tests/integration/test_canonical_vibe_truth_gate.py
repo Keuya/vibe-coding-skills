@@ -42,7 +42,13 @@ def _run_truth_gate(session_root: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
+def _write_valid_canonical_entry_artifacts(
+    session_root: Path,
+    *,
+    entry_intent_id: str = "vibe",
+    router_selected_skill: str = "systematic-debugging",
+    requested_stage_stop: str = "phase_cleanup",
+) -> None:
     _write_json(
         session_root / "host-launch-receipt.json",
         {
@@ -50,7 +56,7 @@ def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
             "entry_id": "vibe",
             "launch_mode": "canonical-entry",
             "launcher_path": "scripts/runtime/Invoke-VibeCanonicalEntry.ps1",
-            "requested_stage_stop": "phase_cleanup",
+            "requested_stage_stop": requested_stage_stop,
             "requested_grade_floor": "XL",
             "runtime_entrypoint": "scripts/runtime/invoke-vibe-runtime.ps1",
             "run_id": "pytest-truth-gate",
@@ -61,10 +67,12 @@ def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
     _write_json(
         session_root / "runtime-input-packet.json",
         {
+            "entry_intent_id": entry_intent_id,
+            "requested_stage_stop": requested_stage_stop,
             "canonical_router": {
                 "host_id": "codex",
                 "prompt": "validate proof",
-                "requested_skill": "vibe",
+                "requested_skill": entry_intent_id,
                 "route_script_path": "scripts/router/resolve-pack-route.ps1",
                 "target_root": "/tmp/target",
                 "task_type": "debug",
@@ -72,7 +80,7 @@ def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
             },
             "route_snapshot": {
                 "selected_pack": "vibe",
-                "selected_skill": "vibe",
+                "selected_skill": router_selected_skill,
                 "route_mode": "governed",
                 "route_reason": "explicit vibe invocation",
                 "confirm_required": False,
@@ -87,7 +95,7 @@ def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
             },
             "specialist_recommendations": [
                 {
-                    "skill_id": "systematic-debugging",
+                    "skill_id": router_selected_skill,
                     "native_skill_entrypoint": "skills/systematic-debugging/SKILL.md",
                 }
             ],
@@ -106,8 +114,8 @@ def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
                 "escalation_status": "not_required",
             },
             "divergence_shadow": {
-                "skill_mismatch": False,
-                "router_selected_skill": "vibe",
+                "skill_mismatch": entry_intent_id != "vibe",
+                "router_selected_skill": router_selected_skill,
                 "runtime_selected_skill": "vibe",
                 "confirm_required": False,
                 "governance_scope_mismatch": False,
@@ -131,14 +139,22 @@ def _write_valid_canonical_entry_artifacts(session_root: Path) -> None:
         session_root / "stage-lineage.json",
         {
             "run_id": "pytest-truth-gate",
-            "last_stage_name": "phase_cleanup",
+            "last_stage_name": requested_stage_stop,
             "stages": [
                 {"stage_name": "skeleton_check"},
                 {"stage_name": "deep_interview"},
                 {"stage_name": "requirement_doc"},
-                {"stage_name": "xl_plan"},
-                {"stage_name": "plan_execute"},
-                {"stage_name": "phase_cleanup"},
+                *(
+                    [{"stage_name": "xl_plan"}]
+                    if requested_stage_stop in {"xl_plan", "plan_execute", "phase_cleanup"}
+                    else []
+                ),
+                *(
+                    [{"stage_name": "plan_execute"}]
+                    if requested_stage_stop in {"plan_execute", "phase_cleanup"}
+                    else []
+                ),
+                *([{"stage_name": "phase_cleanup"}] if requested_stage_stop == "phase_cleanup" else []),
             ],
         },
     )
@@ -186,3 +202,18 @@ def test_truth_gate_accepts_verified_canonical_entry_session(tmp_path: Path) -> 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "[PASS] host-launch-receipt.json exists" in result.stdout
     assert "[PASS] runtime packet includes route_snapshot" in result.stdout
+
+
+def test_truth_gate_accepts_presentational_entry_intent_with_canonical_authority(tmp_path: Path) -> None:
+    session_root = tmp_path / "session"
+    _write_valid_canonical_entry_artifacts(
+        session_root,
+        entry_intent_id="vibe-how",
+        requested_stage_stop="xl_plan",
+    )
+
+    result = _run_truth_gate(session_root)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "[PASS] runtime packet entry_intent_id matches canonical_router requested skill" in result.stdout
+    assert "[PASS] runtime packet route_snapshot records routed specialist truth" in result.stdout

@@ -22,6 +22,13 @@ try {
     $invokeArgs = @{
         Task = $Task
         Mode = 'interactive_governed'
+        EntryIntentId = $EntryId
+    }
+    if (-not [string]::IsNullOrWhiteSpace($RequestedStageStop)) {
+        $invokeArgs.RequestedStageStop = $RequestedStageStop
+    }
+    if (-not [string]::IsNullOrWhiteSpace($RequestedGradeFloor)) {
+        $invokeArgs.RequestedGradeFloor = $RequestedGradeFloor
     }
     if (-not [string]::IsNullOrWhiteSpace($RunId)) {
         $invokeArgs.RunId = $RunId
@@ -33,7 +40,8 @@ try {
     $result = & $runtimeEntrypoint @invokeArgs
     $payload = [pscustomobject]@{
         host_id = $HostId
-        entry_id = $EntryId
+        entry_id = 'vibe'
+        entry_intent_id = $EntryId
         requested_stage_stop = if ([string]::IsNullOrWhiteSpace($RequestedStageStop)) { $null } else { $RequestedStageStop }
         requested_grade_floor = if ([string]::IsNullOrWhiteSpace($RequestedGradeFloor)) { $null } else { $RequestedGradeFloor }
         launcher_path = $launcherPath

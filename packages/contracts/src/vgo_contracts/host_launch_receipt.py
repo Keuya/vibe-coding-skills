@@ -6,6 +6,16 @@ from pathlib import Path
 from typing import Any
 
 HOST_LAUNCH_RECEIPT_FILENAME = "host-launch-receipt.json"
+REQUIRED_HOST_LAUNCH_RECEIPT_FIELDS = (
+    "host_id",
+    "entry_id",
+    "launch_mode",
+    "launcher_path",
+    "runtime_entrypoint",
+    "run_id",
+    "created_at",
+    "launch_status",
+)
 
 
 @dataclass(slots=True)
@@ -26,6 +36,9 @@ class HostLaunchReceipt:
 
     @classmethod
     def model_validate(cls, payload: dict[str, Any]) -> "HostLaunchReceipt":
+        for field in REQUIRED_HOST_LAUNCH_RECEIPT_FIELDS:
+            if payload.get(field) is None:
+                raise ValueError(f"required field missing or null: {field}")
         return cls(
             host_id=str(payload["host_id"]),
             entry_id=str(payload["entry_id"]),
@@ -47,6 +60,16 @@ def resolve_host_launch_receipt_path(path: str | Path) -> Path:
     resolved = Path(path).resolve()
     if resolved.name == HOST_LAUNCH_RECEIPT_FILENAME:
         return resolved
+    if resolved.exists():
+        if resolved.is_file():
+            raise ValueError(
+                f"host launch receipt path points to existing file with wrong filename: {resolved}"
+            )
+        return resolved / HOST_LAUNCH_RECEIPT_FILENAME
+    if resolved.suffix:
+        raise ValueError(
+            f"host launch receipt path must be a directory or {HOST_LAUNCH_RECEIPT_FILENAME}: {resolved}"
+        )
     return resolved / HOST_LAUNCH_RECEIPT_FILENAME
 
 

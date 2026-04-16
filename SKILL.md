@@ -302,7 +302,7 @@ The governed runtime should leave behind:
 - `outputs/runtime/vibe-sessions/<run-id>/phase-*.json`
 - `outputs/runtime/vibe-sessions/<run-id>/cleanup-receipt.json`
 - specialist recommendation and dispatch accounting when bounded specialist help is planned
-- canonical host-entry receipts when host launch bridges are used (`host-launch-receipt.json`)
+- canonical host-entry receipts (`host-launch-receipt.json`)
 
 ## Known Boundaries
 

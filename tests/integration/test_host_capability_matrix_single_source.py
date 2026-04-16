@@ -96,9 +96,9 @@ def test_adapter_registry_mirrors_stay_in_sync_for_canonical_vibe_contracts() ->
 def test_supported_hosts_freeze_runtime_backed_canonical_vibe_contract() -> None:
     registry = _read_registry(REGISTRY_INDEX_PATH)
     expected = {
-        "codex": {"entry_mode": "direct_runtime", "launcher_kind": "native_command"},
-        "claude-code": {"entry_mode": "bridged_runtime", "launcher_kind": "managed_bridge"},
-        "opencode": {"entry_mode": "bridged_runtime", "launcher_kind": "managed_bridge"},
+        "codex": {"entry_mode": "direct_runtime", "launcher_kind": "native_command", "supports_bounded_stop": True},
+        "claude-code": {"entry_mode": "bridged_runtime", "launcher_kind": "managed_bridge", "supports_bounded_stop": True},
+        "opencode": {"entry_mode": "bridged_runtime", "launcher_kind": "managed_bridge", "supports_bounded_stop": True},
     }
 
     for host_id, contract_expectation in expected.items():
@@ -108,3 +108,4 @@ def test_supported_hosts_freeze_runtime_backed_canonical_vibe_contract() -> None
         assert canonical_vibe.get("fallback_policy") == "blocked", host_id
         assert canonical_vibe.get("allow_skill_doc_fallback") is False, host_id
         assert canonical_vibe.get("proof_required") is True, host_id
+        assert canonical_vibe.get("supports_bounded_stop") == contract_expectation["supports_bounded_stop"], host_id

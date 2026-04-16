@@ -69,15 +69,30 @@ function Invoke-VibeCapturedProcess {
     } catch {
     }
 
-    $quotedArguments = foreach ($argument in @($Arguments)) {
-        $text = [string]$argument
-        if ($text -match '[\s"]') {
-            '"' + ($text -replace '"', '\"') + '"'
-        } else {
-            $text
+    $usedArgumentList = $false
+    try {
+        $argumentList = $startInfo.ArgumentList
+        if ($null -ne $argumentList) {
+            foreach ($argument in @($Arguments)) {
+                [void]$argumentList.Add([string]$argument)
+            }
+            $usedArgumentList = $true
         }
+    } catch {
+        $usedArgumentList = $false
     }
-    $startInfo.Arguments = [string]::Join(' ', @($quotedArguments))
+
+    if (-not $usedArgumentList) {
+        $quotedArguments = foreach ($argument in @($Arguments)) {
+            $text = [string]$argument
+            if ($text -match '[\s"]') {
+                '"' + ($text -replace '"', '\"') + '"'
+            } else {
+                $text
+            }
+        }
+        $startInfo.Arguments = [string]::Join(' ', @($quotedArguments))
+    }
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo

@@ -103,11 +103,12 @@ def test_canonical_entry_command_delegates_to_runtime_core_bridge(monkeypatch: p
 
     monkeypatch.setattr(cli_commands, 'run_canonical_entry_core', fake_run_canonical_entry_core)
     monkeypatch.setattr(cli_commands, 'print_process_output', fake_print)
+    monkeypatch.setattr(cli_commands, 'normalize_host_id', lambda host_id: 'codex')
 
     args = argparse.Namespace(
         repo_root=str(tmp_path),
         prompt='plan runtime entry hardening',
-        host_id='codex',
+        host_id='CoDeX',
         entry_id='vibe',
         requested_stage_stop='phase_cleanup',
         requested_grade_floor='XL',

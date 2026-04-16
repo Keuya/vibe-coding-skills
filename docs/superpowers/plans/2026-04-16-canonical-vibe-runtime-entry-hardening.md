@@ -356,7 +356,7 @@ Wrapper body target:
 Run the canonical vibe entry launcher for this request.
 
 Required call:
-`vgo canonical-entry --host <host-id> --entry <entry-id> --requested-stage-stop <stop> --prompt "$ARGUMENTS"`
+`vgo canonical-entry --host-id <host-id> --entry-id <entry-id> --requested-stage-stop <stop> --prompt "$ARGUMENTS"`
 
 If the launcher cannot run, report blocked.
 Do not continue by reading `skills/vibe/SKILL.md`.

@@ -34,6 +34,7 @@ def test_canonical_entry_truth_gate_enforces_runtime_backed_launch_proof() -> No
     assert "runtime-input-packet.json" in content
     assert "governance-capsule.json" in content
     assert "stage-lineage.json" in content
+    assert "canonical_router" in content
     assert "route_snapshot" in content
     assert "specialist_recommendations" in content
     assert "specialist_dispatch" in content

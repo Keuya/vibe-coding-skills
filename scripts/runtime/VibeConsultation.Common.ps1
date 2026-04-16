@@ -620,6 +620,7 @@ function Invoke-VibeSpecialistConsultationUnit {
         $arguments += [string]$item
     }
     $arguments += @(
+        '-C', $RepoRoot,
         '--output-schema', $schemaPath,
         '-o', $responsePath,
         $prompt

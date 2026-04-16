@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -49,3 +52,37 @@ def test_host_launch_receipt_write_and_read(tmp_path: Path) -> None:
     restored = read_host_launch_receipt(receipt_path)
 
     assert restored == receipt
+
+
+def test_host_launch_receipt_rejects_missing_required_fields(tmp_path: Path) -> None:
+    payload = _sample_receipt().model_dump()
+    payload.pop("host_id")
+    receipt_path = tmp_path / HOST_LAUNCH_RECEIPT_FILENAME
+    receipt_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="required field missing or null: host_id"):
+        read_host_launch_receipt(receipt_path)
+
+
+def test_host_launch_receipt_rejects_invalid_json(tmp_path: Path) -> None:
+    receipt_path = tmp_path / HOST_LAUNCH_RECEIPT_FILENAME
+    receipt_path.write_text("{ not-json }\n", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        read_host_launch_receipt(receipt_path)
+
+
+def test_host_launch_receipt_rejects_non_object_payload(tmp_path: Path) -> None:
+    receipt_path = tmp_path / HOST_LAUNCH_RECEIPT_FILENAME
+    receipt_path.write_text("[1, 2, 3]\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="invalid host launch receipt payload"):
+        read_host_launch_receipt(receipt_path)
+
+
+def test_host_launch_receipt_rejects_existing_wrong_filename_path(tmp_path: Path) -> None:
+    wrong_path = tmp_path / "some-other-receipt.json"
+    wrong_path.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="wrong filename"):
+        write_host_launch_receipt(wrong_path, _sample_receipt())

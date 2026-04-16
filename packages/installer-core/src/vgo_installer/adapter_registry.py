@@ -124,11 +124,17 @@ def resolve_target_root_spec(repo_root: Path, host_id: str | None) -> tuple[str,
 def resolve_canonical_vibe_contract(repo_root: Path, host_id: str | None) -> dict[str, Any]:
     contract = resolve_host_canonical_vibe_contract(repo_root, host_id)
     entry = resolve_adapter(repo_root, str(host_id or ''))
+    bootstrap_mode = str(entry.get("bootstrap_mode") or "").strip() or str(contract.get("bootstrap_mode") or "").strip()
+    raw_discoverable_entries = entry.get("discoverable_entries")
     return {
         **contract,
         "host_id": str(entry.get("id") or contract["host_id"]).strip().lower(),
-        "bootstrap_mode": str(entry.get("bootstrap_mode") or "").strip(),
-        "discoverable_entries": dict(entry.get("discoverable_entries") or {}),
+        "bootstrap_mode": bootstrap_mode,
+        "discoverable_entries": (
+            dict(raw_discoverable_entries)
+            if isinstance(raw_discoverable_entries, dict) and raw_discoverable_entries
+            else dict(contract.get("discoverable_entries") or {})
+        ),
     }
 
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
+import pytest
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALLER_CORE_SRC = REPO_ROOT / 'packages' / 'installer-core' / 'src'
@@ -11,6 +13,7 @@ for src in (INSTALLER_CORE_SRC, CONTRACTS_SRC):
     if str(src) not in sys.path:
         sys.path.insert(0, str(src))
 
+import vgo_installer.adapter_registry as adapter_registry_module
 from vgo_installer.adapter_registry import (
     resolve_canonical_vibe_contract,
     resolve_default_target_root,
@@ -95,6 +98,40 @@ def test_resolve_canonical_vibe_contract_projects_supported_hosts() -> None:
     assert claude['launcher_kind'] == 'managed_bridge'
     assert opencode['entry_mode'] == 'bridged_runtime'
     assert opencode['launcher_kind'] == 'managed_bridge'
+
+
+def test_resolve_canonical_vibe_contract_preserves_host_defaults_when_adapter_overrides_are_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        adapter_registry_module,
+        "resolve_host_canonical_vibe_contract",
+        lambda repo_root, host_id: {
+            "host_id": "codex",
+            "entry_mode": "direct_runtime",
+            "launcher_kind": "native_command",
+            "fallback_policy": "blocked",
+            "allow_skill_doc_fallback": False,
+            "proof_required": True,
+            "supports_bounded_stop": True,
+            "bootstrap_mode": "managed_bootstrap",
+            "discoverable_entries": {"vibe": {"requested_stage_stop": "phase_cleanup"}},
+        },
+    )
+    monkeypatch.setattr(
+        adapter_registry_module,
+        "resolve_adapter",
+        lambda repo_root, host_id: {
+            "id": "codex",
+            "bootstrap_mode": "",
+            "discoverable_entries": {},
+        },
+    )
+
+    contract = resolve_canonical_vibe_contract(REPO_ROOT, "codex")
+
+    assert contract["bootstrap_mode"] == "managed_bootstrap"
+    assert contract["discoverable_entries"] == {"vibe": {"requested_stage_stop": "phase_cleanup"}}
 
 
 def test_resolve_default_target_root_uses_env_projection() -> None:

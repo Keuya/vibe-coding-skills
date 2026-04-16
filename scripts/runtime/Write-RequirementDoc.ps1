@@ -414,11 +414,39 @@ $lines += @(
 )
 
 if ($runtimeInputPacket) {
+    $entryIntentId = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'entry_intent_id' -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.entry_intent_id)
+    ) {
+        [string]$runtimeInputPacket.entry_intent_id
+    } else {
+        'vibe'
+    }
+    $requestedStageStop = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_stage_stop' -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_stage_stop)
+    ) {
+        [string]$runtimeInputPacket.requested_stage_stop
+    } else {
+        'phase_cleanup'
+    }
+    $requestedGradeFloor = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'requested_grade_floor' -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeInputPacket.requested_grade_floor)
+    ) {
+        [string]$runtimeInputPacket.requested_grade_floor
+    } else {
+        'none'
+    }
+
     $lines += @(
         '',
         '## Runtime Input Truth',
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
+        "- Entry intent: $entryIntentId",
+        "- Requested stop stage: $requestedStageStop",
+        "- Requested grade floor: $requestedGradeFloor",
         "- Selected pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",
         "- Router-selected skill: $([string]$runtimeInputPacket.route_snapshot.selected_skill)",
         "- Runtime-selected skill: $([string]$runtimeInputPacket.authority_flags.explicit_runtime_skill)",

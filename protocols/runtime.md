@@ -295,4 +295,4 @@ The governed runtime is considered healthy only when:
 - downstream delivery truth is evaluated separately from runtime/process truth before full completion wording is allowed
 - no fallback or degraded path is presented as equivalent success
 - any fallback or degraded path emits a standalone hazard alert
-- no run claims canonical vibe entry without runtime-input packet, route snapshot proof, and specialist dispatch accounting artifacts
+- no run claims canonical vibe entry without verified `host-launch-receipt.json`, `runtime-input-packet.json` (including `route_snapshot` and specialist surfaces), `governance-capsule.json`, `stage-lineage.json`, and required specialist dispatch accounting artifacts

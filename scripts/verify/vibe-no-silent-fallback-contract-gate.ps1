@@ -49,8 +49,10 @@ function Invoke-SupportedHostRuntimeTruthProbe {
             -RunId $runId `
             -ArtifactRoot $artifactRoot
 
-        $runtimeInputPacketPath = [string]$summary.summary.artifacts.runtime_input_packet
-        $executionManifestPath = [string]$summary.summary.artifacts.execution_manifest
+        $summaryBody = if ($summary -and $summary.PSObject.Properties.Name -contains 'summary') { $summary.summary } else { $null }
+        $summaryArtifacts = if ($summaryBody -and $summaryBody.PSObject.Properties.Name -contains 'artifacts') { $summaryBody.artifacts } else { $null }
+        $runtimeInputPacketPath = if ($summaryArtifacts -and $summaryArtifacts.PSObject.Properties.Name -contains 'runtime_input_packet') { [string]$summaryArtifacts.runtime_input_packet } else { '' }
+        $executionManifestPath = if ($summaryArtifacts -and $summaryArtifacts.PSObject.Properties.Name -contains 'execution_manifest') { [string]$summaryArtifacts.execution_manifest } else { '' }
         Add-Assertion -Assertions $Assertions -Pass (Test-Path -LiteralPath $runtimeInputPacketPath) -Message "$HostId runtime emits runtime-input-packet artifact" -Details $runtimeInputPacketPath
         Add-Assertion -Assertions $Assertions -Pass (Test-Path -LiteralPath $executionManifestPath) -Message "$HostId runtime emits execution-manifest artifact" -Details $executionManifestPath
 
@@ -62,13 +64,20 @@ function Invoke-SupportedHostRuntimeTruthProbe {
         $executionManifest = Get-Content -LiteralPath $executionManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
         Add-Assertion -Assertions $Assertions -Pass ($runtimeInput.PSObject.Properties.Name -contains 'route_snapshot') -Message "$HostId runtime-input-packet contains route_snapshot"
-        Add-Assertion -Assertions $Assertions -Pass ($runtimeInput.route_snapshot -and [string]$runtimeInput.route_snapshot.selected_skill -eq 'vibe') -Message "$HostId route_snapshot keeps vibe as selected_skill"
+        $routeSnapshot = if ($runtimeInput.PSObject.Properties.Name -contains 'route_snapshot') { $runtimeInput.route_snapshot } else { $null }
+        $routeSelectedSkill = if ($routeSnapshot -and $routeSnapshot.PSObject.Properties.Name -contains 'selected_skill') { [string]$routeSnapshot.selected_skill } else { '' }
+        Add-Assertion -Assertions $Assertions -Pass ($routeSnapshot -and -not [string]::IsNullOrWhiteSpace($routeSelectedSkill)) -Message "$HostId route_snapshot records routed specialist truth"
+        Add-Assertion -Assertions $Assertions -Pass ($runtimeInput.PSObject.Properties.Name -contains 'divergence_shadow') -Message "$HostId runtime-input-packet contains divergence_shadow artifact"
         Add-Assertion -Assertions $Assertions -Pass ($runtimeInput.PSObject.Properties.Name -contains 'specialist_dispatch') -Message "$HostId runtime-input-packet contains specialist_dispatch artifact"
         Add-Assertion -Assertions $Assertions -Pass ($runtimeInput.PSObject.Properties.Name -contains 'specialist_recommendations') -Message "$HostId runtime-input-packet contains specialist_recommendations artifact"
         Add-Assertion -Assertions $Assertions -Pass (@($runtimeInput.specialist_recommendations).Count -ge 1) -Message "$HostId runtime-input-packet preserves specialist recommendation evidence"
+        $divergenceShadow = if ($runtimeInput.PSObject.Properties.Name -contains 'divergence_shadow') { $runtimeInput.divergence_shadow } else { $null }
+        $runtimeSelectedSkill = if ($divergenceShadow -and $divergenceShadow.PSObject.Properties.Name -contains 'runtime_selected_skill') { [string]$divergenceShadow.runtime_selected_skill } else { '' }
+        Add-Assertion -Assertions $Assertions -Pass ($divergenceShadow -and $runtimeSelectedSkill -eq 'vibe') -Message "$HostId divergence_shadow keeps vibe as runtime authority"
 
         Add-Assertion -Assertions $Assertions -Pass ($executionManifest.PSObject.Properties.Name -contains 'specialist_accounting') -Message "$HostId execution-manifest contains specialist_accounting artifact"
-        Add-Assertion -Assertions $Assertions -Pass ($executionManifest.specialist_accounting.PSObject.Properties.Name -contains 'effective_execution_status') -Message "$HostId specialist_accounting records effective_execution_status"
+        $specialistAccounting = if ($executionManifest.PSObject.Properties.Name -contains 'specialist_accounting') { $executionManifest.specialist_accounting } else { $null }
+        Add-Assertion -Assertions $Assertions -Pass ($specialistAccounting -and $specialistAccounting.PSObject.Properties.Name -contains 'effective_execution_status') -Message "$HostId specialist_accounting records effective_execution_status"
     }
     finally {
         if ([string]::IsNullOrWhiteSpace($previousHostId)) {
