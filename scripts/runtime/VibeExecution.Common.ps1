@@ -17,6 +17,30 @@ function Expand-VibeExecutionTemplate {
     return $value
 }
 
+function Get-VibeDispatchUsageRequirementState {
+    param(
+        [Parameter(Mandatory)] [object]$Dispatch
+    )
+
+    $effectiveUsageRequired = if ($Dispatch.PSObject.Properties.Name -contains 'usage_required') {
+        [bool]$Dispatch.usage_required
+    } elseif ($Dispatch.PSObject.Properties.Name -contains 'native_usage_required') {
+        [bool]$Dispatch.native_usage_required
+    } else {
+        $false
+    }
+    $nativeUsageRequired = if ($Dispatch.PSObject.Properties.Name -contains 'native_usage_required') {
+        [bool]$Dispatch.native_usage_required
+    } else {
+        [bool]$effectiveUsageRequired
+    }
+
+    return [pscustomobject]@{
+        native_usage_required = [bool]$nativeUsageRequired
+        usage_required = [bool]$effectiveUsageRequired
+    }
+}
+
 function New-VibeExecutedSpecialistUnitSummary {
     param(
         [Parameter(Mandatory)] [object]$UnitReceipt,
@@ -1308,6 +1332,7 @@ function New-VibeNativeSpecialistPrompt {
         [AllowEmptyString()] [string]$ParentUnitId = ''
     )
 
+    $usageRequirementState = Get-VibeDispatchUsageRequirementState -Dispatch $Dispatch
     $lines = @(
         ('$' + [string]$Dispatch.skill_id),
         '',
@@ -1319,7 +1344,7 @@ function New-VibeNativeSpecialistPrompt {
         ('native_skill_entrypoint: {0}' -f [string]$(if ($Dispatch.PSObject.Properties.Name -contains 'native_skill_entrypoint') { $Dispatch.native_skill_entrypoint } else { '' })),
         ('skill_root: {0}' -f [string]$(if ($Dispatch.PSObject.Properties.Name -contains 'skill_root') { $Dispatch.skill_root } else { '' })),
         ('visibility_class: {0}' -f [string]$(if ($Dispatch.PSObject.Properties.Name -contains 'visibility_class') { $Dispatch.visibility_class } else { '' })),
-        ('usage_required: {0}' -f [string]([bool]$(if ($Dispatch.PSObject.Properties.Name -contains 'usage_required') { $Dispatch.usage_required } else { $Dispatch.native_usage_required })).ToString().ToLowerInvariant()),
+        ('usage_required: {0}' -f [string]([bool]$usageRequirementState.usage_required).ToString().ToLowerInvariant()),
         ('must_preserve_workflow: {0}' -f [string]([bool]$Dispatch.must_preserve_workflow).ToString().ToLowerInvariant()),
         ('governance_scope: {0}' -f $GovernanceScope),
         ('run_id: {0}' -f $RunId)
@@ -1381,10 +1406,11 @@ function Get-VibeSpecialistPromptInjectionAssessment {
         [Parameter(Mandatory)] [string]$Prompt
     )
 
+    $usageRequirementState = Get-VibeDispatchUsageRequirementState -Dispatch $Dispatch
     $requiredPairs = @()
     $requiredPairs += [pscustomobject]@{ name = 'native_skill_entrypoint'; value = [string]$(if ($Dispatch.PSObject.Properties.Name -contains 'native_skill_entrypoint') { $Dispatch.native_skill_entrypoint } else { '' }) }
     $requiredPairs += [pscustomobject]@{ name = 'skill_root'; value = [string]$(if ($Dispatch.PSObject.Properties.Name -contains 'skill_root') { $Dispatch.skill_root } else { '' }) }
-    $requiredPairs += [pscustomobject]@{ name = 'usage_required'; value = [string]([bool]$(if ($Dispatch.PSObject.Properties.Name -contains 'usage_required') { $Dispatch.usage_required } else { $Dispatch.native_usage_required })).ToString().ToLowerInvariant() }
+    $requiredPairs += [pscustomobject]@{ name = 'usage_required'; value = [string]([bool]$usageRequirementState.usage_required).ToString().ToLowerInvariant() }
     $requiredPairs += [pscustomobject]@{ name = 'must_preserve_workflow'; value = [string]([bool]$Dispatch.must_preserve_workflow).ToString().ToLowerInvariant() }
 
     $missingFields = @()
@@ -1437,6 +1463,7 @@ function New-VibeDegradedSpecialistDispatchResult {
     Write-VgoUtf8NoBomText -Path $stderrPath -Content ''
 
     $finishedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.ffffffZ')
+    $usageRequirementState = Get-VibeDispatchUsageRequirementState -Dispatch $Dispatch
     $unitResult = [pscustomobject]@{
         unit_id = $UnitId
         kind = 'specialist_dispatch'
@@ -1461,8 +1488,8 @@ function New-VibeDegradedSpecialistDispatchResult {
         verification_passed = [bool]$Policy.degrade_contract.verification_passed
         specialist_skill_id = [string]$Dispatch.skill_id
         bounded_role = [string]$Dispatch.bounded_role
-        native_usage_required = [bool]$Dispatch.native_usage_required
-        usage_required = [bool]$(if ($Dispatch.PSObject.Properties.Name -contains 'usage_required') { $Dispatch.usage_required } else { $Dispatch.native_usage_required })
+        native_usage_required = [bool]$usageRequirementState.native_usage_required
+        usage_required = [bool]$usageRequirementState.usage_required
         must_preserve_workflow = [bool]$Dispatch.must_preserve_workflow
         native_skill_entrypoint = if ($Dispatch.PSObject.Properties.Name -contains 'native_skill_entrypoint') { [string]$Dispatch.native_skill_entrypoint } else { $null }
         skill_root = if ($Dispatch.PSObject.Properties.Name -contains 'skill_root') { [string]$Dispatch.skill_root } else { $null }
@@ -1520,18 +1547,7 @@ function New-VibeDirectRoutedSpecialistDispatchResult {
     } else {
         $null
     }
-    $effectiveUsageRequired = if ($Dispatch.PSObject.Properties.Name -contains 'usage_required') {
-        [bool]$Dispatch.usage_required
-    } elseif ($Dispatch.PSObject.Properties.Name -contains 'native_usage_required') {
-        [bool]$Dispatch.native_usage_required
-    } else {
-        $false
-    }
-    $nativeUsageRequired = if ($Dispatch.PSObject.Properties.Name -contains 'native_usage_required') {
-        [bool]$Dispatch.native_usage_required
-    } else {
-        [bool]$effectiveUsageRequired
-    }
+    $usageRequirementState = Get-VibeDispatchUsageRequirementState -Dispatch $Dispatch
 
     $unitResult = [pscustomobject]@{
         unit_id = $UnitId
@@ -1555,8 +1571,8 @@ function New-VibeDirectRoutedSpecialistDispatchResult {
         verification_passed = $true
         specialist_skill_id = [string]$Dispatch.skill_id
         bounded_role = [string]$Dispatch.bounded_role
-        native_usage_required = [bool]$nativeUsageRequired
-        usage_required = [bool]$effectiveUsageRequired
+        native_usage_required = [bool]$usageRequirementState.native_usage_required
+        usage_required = [bool]$usageRequirementState.usage_required
         must_preserve_workflow = [bool]$Dispatch.must_preserve_workflow
         native_skill_entrypoint = $entrypoint
         skill_root = if ($Dispatch.PSObject.Properties.Name -contains 'skill_root') { [string]$Dispatch.skill_root } else { $null }
@@ -1619,6 +1635,7 @@ function New-VibeBlockedSpecialistDispatchResult {
     Write-VgoUtf8NoBomText -Path $stderrPath -Content ''
 
     $finishedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.ffffffZ')
+    $usageRequirementState = Get-VibeDispatchUsageRequirementState -Dispatch $Dispatch
     $unitResult = [pscustomobject]@{
         unit_id = $UnitId
         kind = 'specialist_dispatch'
@@ -1641,7 +1658,8 @@ function New-VibeBlockedSpecialistDispatchResult {
         verification_passed = $false
         specialist_skill_id = [string]$Dispatch.skill_id
         bounded_role = [string]$Dispatch.bounded_role
-        native_usage_required = [bool]$Dispatch.native_usage_required
+        native_usage_required = [bool]$usageRequirementState.native_usage_required
+        usage_required = [bool]$usageRequirementState.usage_required
         must_preserve_workflow = [bool]$Dispatch.must_preserve_workflow
         write_scope = $WriteScope
         review_mode = $ReviewMode
@@ -1862,6 +1880,7 @@ function Invoke-VibeSpecialistDispatchUnit {
     }
 
     $finishedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.ffffffZ')
+    $usageRequirementState = Get-VibeDispatchUsageRequirementState -Dispatch $Dispatch
     $unitResult = [pscustomobject]@{
         unit_id = $UnitId
         kind = 'specialist_dispatch'
@@ -1889,8 +1908,8 @@ function Invoke-VibeSpecialistDispatchUnit {
         verification_passed = [bool]$verificationPassed
         specialist_skill_id = [string]$Dispatch.skill_id
         bounded_role = [string]$Dispatch.bounded_role
-        native_usage_required = [bool]$Dispatch.native_usage_required
-        usage_required = [bool]$(if ($Dispatch.PSObject.Properties.Name -contains 'usage_required') { $Dispatch.usage_required } else { $Dispatch.native_usage_required })
+        native_usage_required = [bool]$usageRequirementState.native_usage_required
+        usage_required = [bool]$usageRequirementState.usage_required
         must_preserve_workflow = [bool]$Dispatch.must_preserve_workflow
         native_skill_entrypoint = if ($Dispatch.PSObject.Properties.Name -contains 'native_skill_entrypoint') { [string]$Dispatch.native_skill_entrypoint } else { $null }
         skill_root = if ($Dispatch.PSObject.Properties.Name -contains 'skill_root') { [string]$Dispatch.skill_root } else { $null }

@@ -41,6 +41,11 @@ function Get-VibeSpecialistConsultationPolicy {
     if (-not [string]::IsNullOrWhiteSpace($modeOverride)) {
         $consultationMode = [string]$modeOverride
     }
+    $consultationMode = $consultationMode.Trim().ToLowerInvariant()
+    $allowedConsultationModes = @('direct_current_session_route', 'host_subprocess')
+    if ($consultationMode -notin $allowedConsultationModes) {
+        throw ("Unsupported specialist consultation mode: {0}" -f $consultationMode)
+    }
 
     return [pscustomobject]@{
         enabled = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'enabled')) { [bool]$resolvedPolicy.enabled } else { $false }
@@ -144,7 +149,7 @@ function New-VibeSpecialistConsultationCandidate {
         required_inputs = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'required_inputs') { [object[]]@($Recommendation.required_inputs) } else { @() }
         expected_outputs = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'expected_outputs') { [object[]]@($Recommendation.expected_outputs) } else { @() }
         verification_expectation = if ((Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'verification_expectation') -and -not [string]::IsNullOrWhiteSpace([string]$Recommendation.verification_expectation)) { [string]$Recommendation.verification_expectation } else { 'Return bounded structured specialist guidance only.' }
-        native_usage_required = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'native_usage_required') { [bool]$Recommendation.native_usage_required } else { $true }
+        native_usage_required = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'native_usage_required') { [bool]$Recommendation.native_usage_required } elseif (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'usage_required') { [bool]$Recommendation.usage_required } else { $true }
         must_preserve_workflow = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'must_preserve_workflow') { [bool]$Recommendation.must_preserve_workflow } else { $true }
         contract_complete = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'contract_complete') { [bool]$Recommendation.contract_complete } else { $false }
         contract_missing_fields = if (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'contract_missing_fields') { [object[]]@($Recommendation.contract_missing_fields) } else { @() }

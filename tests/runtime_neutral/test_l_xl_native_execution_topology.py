@@ -586,11 +586,75 @@ class NativeExecutionTopologyTests(unittest.TestCase):
             )
             execution_receipt = load_json(execution_payload["receipt_path"])
             execution_manifest = load_json(execution_receipt["execution_manifest_path"])
+            execution_proof = load_json(execution_receipt["execution_proof_manifest_path"])
 
             self.assertIn(
                 legacy_skill_id,
                 list(execution_manifest["dispatch_integrity"]["dispatch_contract_incomplete_skill_ids"]),
             )
+            self.assertFalse(bool(execution_manifest["dispatch_integrity"]["proof_passed"]))
+            self.assertFalse(bool(execution_proof["dispatch_integrity_proof_passed"]))
+            self.assertFalse(bool(execution_proof["proof_passed"]))
+
+    def test_plan_execute_accepts_legacy_usage_required_only_dispatch_packets(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            artifact_root = Path(tempdir)
+            fake_codex = create_fake_codex_command(
+                artifact_root,
+                required_prompt_markers=[
+                    "native_skill_entrypoint:",
+                    "skill_root:",
+                    "usage_required: true",
+                    "must_preserve_workflow: true",
+                ],
+            )
+            initial_payload = run_runtime(
+                task="I have a failing test and a stack trace. Help me debug systematically before proposing fixes.",
+                artifact_root=artifact_root,
+                governance_scope="root",
+            )
+            initial_summary = initial_payload["summary"]
+            requirement_doc_path = Path(initial_summary["artifacts"]["requirement_doc"])
+            execution_plan_path = Path(initial_summary["artifacts"]["execution_plan"])
+            runtime_input_packet_path = Path(initial_summary["artifacts"]["runtime_input_packet"])
+            runtime_input_packet = load_json(runtime_input_packet_path)
+
+            approved_dispatch = list((runtime_input_packet.get("specialist_dispatch") or {}).get("approved_dispatch") or [])
+            self.assertGreaterEqual(len(approved_dispatch), 1)
+            legacy_skill_id = str(approved_dispatch[0]["skill_id"])
+            approved_dispatch[0].pop("native_usage_required", None)
+            approved_dispatch[0]["usage_required"] = True
+            runtime_input_packet_path.write_text(
+                json.dumps(runtime_input_packet, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            execution_payload = run_plan_execute(
+                task="I have a failing test and a stack trace. Help me debug systematically before proposing fixes.",
+                artifact_root=artifact_root,
+                requirement_doc_path=requirement_doc_path,
+                execution_plan_path=execution_plan_path,
+                runtime_input_packet_path=runtime_input_packet_path,
+                extra_env={
+                    "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
+                    "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "host_subprocess",
+                    "VGO_CODEX_EXECUTABLE": str(fake_codex),
+                },
+            )
+            execution_receipt = load_json(execution_payload["receipt_path"])
+            execution_manifest = load_json(execution_receipt["execution_manifest_path"])
+
+            self.assertGreaterEqual(int(execution_manifest["specialist_accounting"]["executed_specialist_unit_count"]), 1)
+            executed_units = list(execution_manifest["specialist_accounting"]["executed_specialist_units"])
+            legacy_units = [unit for unit in executed_units if str(unit.get("skill_id")) == legacy_skill_id]
+            self.assertGreaterEqual(len(legacy_units), 1)
+
+            result = load_json(legacy_units[0]["result_path"])
+            self.assertTrue(bool(result["live_native_execution"]))
+            self.assertTrue(bool(result["verification_passed"]))
+            self.assertTrue(bool(result["native_usage_required"]))
+            self.assertTrue(bool(result["usage_required"]))
 
     def test_specialist_binding_metadata_is_frozen_into_runtime_requirement_and_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

@@ -663,6 +663,54 @@ class VibeSpecialistConsultationTests(unittest.TestCase):
 
         self.assertEqual("discussion_consultation_routed", result["event_id"])
 
+    def test_invalid_specialist_consultation_mode_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            completed = run_runtime(
+                SPECIALIST_TASK,
+                Path(tempdir),
+                extra_env={
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "",
+                    "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1",
+                    "VGO_SPECIALIST_CONSULTATION_MODE": "typo-mode",
+                },
+                check=False,
+            )
+
+        assert isinstance(completed, subprocess.CompletedProcess)
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn(
+            "Unsupported specialist consultation mode: typo-mode",
+            "\n".join([completed.stdout, completed.stderr]),
+        )
+
+    def test_host_user_briefing_segment_handles_missing_consultation_receipt(self) -> None:
+        result = run_runtime_common_json(
+            """
+            $layer = [pscustomobject]@{
+                layer_id = 'discussion_consultation'
+                stage = 'deep_interview'
+                truth_layer = 'consultation'
+                skills = @(
+                    [pscustomobject]@{
+                        skill_id = 'systematic-debugging'
+                        state = 'direct_current_session_routed'
+                        why_now = 'need debugging guidance before requirement freeze'
+                        native_skill_entrypoint = 'scripts/runtime/systematic-debugging/SKILL.md'
+                    }
+                )
+            }
+            $result = New-VibeHostUserBriefingSegmentProjection -LifecycleLayer $layer -ConsultationReceipt $null
+            $result | ConvertTo-Json -Depth 20
+            """
+        )
+
+        self.assertEqual("consultation", result["category"])
+        self.assertEqual("gate_unknown", result["status"])
+        self.assertIn(
+            "Vibe recorded these Skills in the discussion consultation chain; freeze gate: not_applicable.",
+            result["rendered_text"],
+        )
+
     def test_consultation_window_invokes_specialist_and_emits_progressive_disclosure(self) -> None:
         shell = resolve_powershell()
         if shell is None:
@@ -1086,7 +1134,11 @@ class VibeSpecialistConsultationTests(unittest.TestCase):
             payload = run_runtime(
                 SPECIALIST_TASK,
                 artifact_root,
-                extra_env={"VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1"},
+                extra_env={
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "",
+                    "VGO_SPECIALIST_CONSULTATION_MODE": "",
+                    "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1",
+                },
             )
             summary = payload["summary"]
             artifacts = summary["artifacts"]

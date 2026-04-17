@@ -2248,8 +2248,13 @@ function New-VibeHostUserBriefingSegmentProjection {
                     (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt.summary -PropertyName 'consulted_unit_count')
                 ) {
                     [int]$ConsultationReceipt.summary.consulted_unit_count
-                } else {
+                } elseif (
+                    $ConsultationReceipt -and
+                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'consulted_units')
+                ) {
                     @($ConsultationReceipt.consulted_units).Count
+                } else {
+                    0
                 }
                 $routedCount = if (
                     $ConsultationReceipt -and
@@ -2258,8 +2263,13 @@ function New-VibeHostUserBriefingSegmentProjection {
                     (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt.summary -PropertyName 'routed_unit_count')
                 ) {
                     [int]$ConsultationReceipt.summary.routed_unit_count
-                } else {
+                } elseif (
+                    $ConsultationReceipt -and
+                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'routed_units')
+                ) {
                     @($ConsultationReceipt.routed_units).Count
+                } else {
+                    0
                 }
                 if ($routedCount -gt 0 -and $consultedCount -eq 0) {
                     $segmentLines += ('Vibe routed these Skills for direct current-session consultation during {0}; freeze gate: {1}.' -f $windowId, $gateStatus)

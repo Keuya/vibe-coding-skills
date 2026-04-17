@@ -1296,6 +1296,11 @@ $dispatchIntegrity | Add-Member -NotePropertyName 'proof_passed' -NotePropertyVa
     $dispatchIntegrity.native_contract_complete_for_approved_dispatch -and
     $dispatchIntegrity.matched_skills_resolved
 ))
+$topLevelProofPassed = [bool](
+    ($failedUnitCount -eq 0) -and
+    ($executedUnitCount -ge [int]$profile.expected_minimum_units) -and
+    $dispatchIntegrity.proof_passed
+)
 
 $baseStatus = if ($failedUnitCount -eq 0 -and $executedUnitCount -ge [int]$profile.expected_minimum_units) { 'completed' } elseif ($executedUnitCount -eq 0) { 'failed' } else { 'completed_with_failures' }
 $degradedSpecialistUnits = @(@($executedSpecialistUnits | Where-Object { [bool]$_.degraded }) + @($preDispatchDegradedUnits))
@@ -1501,7 +1506,7 @@ $proofManifest = [pscustomobject]@{
     review_receipt_count = [int]$reviewReceiptCount
     governance_scope = [string]$hierarchyState.governance_scope
     escalation_required = [bool]$escalationRequired
-    proof_passed = [bool](($failedUnitCount -eq 0) -and ($executedUnitCount -ge [int]$profile.expected_minimum_units))
+    proof_passed = [bool]$topLevelProofPassed
 }
 $proofManifestPath = Join-Path $proofRoot 'manifest.json'
 Write-VibeJsonArtifact -Path $proofManifestPath -Value $proofManifest
