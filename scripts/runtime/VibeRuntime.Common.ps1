@@ -1947,6 +1947,22 @@ function New-VibeSpecialistConsultationLifecycleLayerProjection {
     if ($windowId -notin @('discussion', 'planning')) {
         throw 'Enabled specialist consultation receipts must declare window_id as discussion or planning.'
     }
+    $consultedUnits = if (
+        (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'consulted_units') -and
+        $null -ne $ConsultationReceipt.consulted_units
+    ) {
+        @($ConsultationReceipt.consulted_units)
+    } else {
+        @()
+    }
+    $routedUnits = if (
+        (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'routed_units') -and
+        $null -ne $ConsultationReceipt.routed_units
+    ) {
+        @($ConsultationReceipt.routed_units)
+    } else {
+        @()
+    }
     $consultedCount = if (
         (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'summary') -and
         $null -ne $ConsultationReceipt.summary -and
@@ -1954,7 +1970,7 @@ function New-VibeSpecialistConsultationLifecycleLayerProjection {
     ) {
         [int]$ConsultationReceipt.summary.consulted_unit_count
     } else {
-        @($ConsultationReceipt.consulted_units).Count
+        @($consultedUnits).Count
     }
     $routedCount = if (
         (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'summary') -and
@@ -1963,7 +1979,7 @@ function New-VibeSpecialistConsultationLifecycleLayerProjection {
     ) {
         [int]$ConsultationReceipt.summary.routed_unit_count
     } else {
-        @($ConsultationReceipt.routed_units).Count
+        @($routedUnits).Count
     }
 
     $skills = New-Object System.Collections.Generic.List[object]
@@ -1978,14 +1994,14 @@ function New-VibeSpecialistConsultationLifecycleLayerProjection {
         }
 
         $consultedUnit = $null
-        foreach ($candidate in @($ConsultationReceipt.consulted_units)) {
+        foreach ($candidate in @($consultedUnits)) {
             if ($null -ne $candidate -and [string]$candidate.skill_id -eq [string]$disclosure.skill_id) {
                 $consultedUnit = $candidate
                 break
             }
         }
         $routedUnit = $null
-        foreach ($candidate in @($ConsultationReceipt.routed_units)) {
+        foreach ($candidate in @($routedUnits)) {
             if ($null -ne $candidate -and [string]$candidate.skill_id -eq [string]$disclosure.skill_id) {
                 $routedUnit = $candidate
                 break
@@ -2241,6 +2257,24 @@ function New-VibeHostUserBriefingSegmentProjection {
                     $status = 'gate_unknown'
                 }
                 $category = 'consultation'
+                $consultedUnits = if (
+                    $ConsultationReceipt -and
+                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'consulted_units') -and
+                    $null -ne $ConsultationReceipt.consulted_units
+                ) {
+                    @($ConsultationReceipt.consulted_units)
+                } else {
+                    @()
+                }
+                $routedUnits = if (
+                    $ConsultationReceipt -and
+                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'routed_units') -and
+                    $null -ne $ConsultationReceipt.routed_units
+                ) {
+                    @($ConsultationReceipt.routed_units)
+                } else {
+                    @()
+                }
                 $consultedCount = if (
                     $ConsultationReceipt -and
                     (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'summary') -and
@@ -2248,13 +2282,8 @@ function New-VibeHostUserBriefingSegmentProjection {
                     (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt.summary -PropertyName 'consulted_unit_count')
                 ) {
                     [int]$ConsultationReceipt.summary.consulted_unit_count
-                } elseif (
-                    $ConsultationReceipt -and
-                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'consulted_units')
-                ) {
-                    @($ConsultationReceipt.consulted_units).Count
                 } else {
-                    0
+                    @($consultedUnits).Count
                 }
                 $routedCount = if (
                     $ConsultationReceipt -and
@@ -2263,13 +2292,8 @@ function New-VibeHostUserBriefingSegmentProjection {
                     (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt.summary -PropertyName 'routed_unit_count')
                 ) {
                     [int]$ConsultationReceipt.summary.routed_unit_count
-                } elseif (
-                    $ConsultationReceipt -and
-                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'routed_units')
-                ) {
-                    @($ConsultationReceipt.routed_units).Count
                 } else {
-                    0
+                    @($routedUnits).Count
                 }
                 if ($routedCount -gt 0 -and $consultedCount -eq 0) {
                     $segmentLines += ('Vibe routed these Skills for direct current-session consultation during {0}; freeze gate: {1}.' -f $windowId, $gateStatus)
