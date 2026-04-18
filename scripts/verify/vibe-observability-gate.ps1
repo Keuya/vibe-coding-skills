@@ -1,4 +1,7 @@
-param()
+param(
+    [string]$TelemetryOutputRel = '',
+    [switch]$KeepTelemetry
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -32,7 +35,7 @@ function Invoke-Route {
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $policyPath = Join-Path $repoRoot "config\observability-policy.json"
-$tmpRel = "outputs/verify/tmp-telemetry"
+$tmpRel = if ([string]::IsNullOrWhiteSpace($TelemetryOutputRel)) { "outputs/verify/tmp-telemetry" } else { $TelemetryOutputRel }
 $tmpDir = Join-Path $repoRoot $tmpRel
 $originalRaw = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8
 $results = @()
@@ -82,23 +85,23 @@ try {
     $results += Assert-True -Condition ($events.Count -ge 3) -Message "telemetry event count >= routed samples"
 
     if ($events.Count -gt 0) {
-        $results += Assert-True -Condition (($events | Where-Object { -not $_.prompt_hash }).Count -eq 0) -Message "events include prompt_hash"
-        $results += Assert-True -Condition (($events | Where-Object { $_.prompt_excerpt }).Count -eq 0) -Message "raw prompt excerpt is disabled"
-        $results += Assert-True -Condition (($events | Where-Object { -not $_.environment_profile_id }).Count -eq 0) -Message "events include environment_profile_id"
-        $results += Assert-True -Condition (($events | Where-Object { -not $_.user_profile_id }).Count -eq 0) -Message "events include user_profile_id"
-        $results += Assert-True -Condition (($events | Where-Object { -not $_.scenario_key }).Count -eq 0) -Message "events include scenario_key"
-        $results += Assert-True -Condition (($events | Where-Object { -not $_.route.route_mode }).Count -eq 0) -Message "events include route core fields"
+        $results += Assert-True -Condition (@($events | Where-Object { -not $_.prompt_hash }).Count -eq 0) -Message "events include prompt_hash"
+        $results += Assert-True -Condition (@($events | Where-Object { $_.prompt_excerpt }).Count -eq 0) -Message "raw prompt excerpt is disabled"
+        $results += Assert-True -Condition (@($events | Where-Object { -not $_.environment_profile_id }).Count -eq 0) -Message "events include environment_profile_id"
+        $results += Assert-True -Condition (@($events | Where-Object { -not $_.user_profile_id }).Count -eq 0) -Message "events include user_profile_id"
+        $results += Assert-True -Condition (@($events | Where-Object { -not $_.scenario_key }).Count -eq 0) -Message "events include scenario_key"
+        $results += Assert-True -Condition (@($events | Where-Object { -not $_.route.route_mode }).Count -eq 0) -Message "events include route core fields"
     }
 } finally {
     Set-Content -LiteralPath $policyPath -Value $originalRaw -Encoding UTF8
-    if (Test-Path -LiteralPath $tmpDir) {
+    if (-not $KeepTelemetry -and (Test-Path -LiteralPath $tmpDir)) {
         Remove-Item -LiteralPath $tmpDir -Recurse -Force
     }
     Write-Host "Restored observability policy to original content."
 }
 
-$passCount = ($results | Where-Object { $_ }).Count
-$failCount = ($results | Where-Object { -not $_ }).Count
+$passCount = @($results | Where-Object { $_ }).Count
+$failCount = @($results | Where-Object { -not $_ }).Count
 $total = $results.Count
 
 Write-Host ""

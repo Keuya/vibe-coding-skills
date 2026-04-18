@@ -49,6 +49,38 @@ function Write-GateArtifacts {
     Write-VgoUtf8NoBomText -Path $mdPath -Content ($lines -join "`n")
 }
 
+function Get-RouteEventFiles {
+    param([string]$RepoRoot)
+
+    $telemetryDir = Join-Path $RepoRoot 'outputs\telemetry'
+    if (-not (Test-Path -LiteralPath $telemetryDir)) {
+        return @()
+    }
+
+    return @(Get-ChildItem -LiteralPath $telemetryDir -Filter 'route-events-*.jsonl' -File -ErrorAction SilentlyContinue)
+}
+
+function Ensure-RouteEventTelemetry {
+    param([string]$RepoRoot)
+
+    $existing = @(Get-RouteEventFiles -RepoRoot $RepoRoot)
+    if ($existing.Count -gt 0) {
+        return $existing
+    }
+
+    $observabilityGate = Join-Path $RepoRoot 'scripts\verify\vibe-observability-gate.ps1'
+    if (-not (Test-Path -LiteralPath $observabilityGate)) {
+        return @()
+    }
+
+    & $observabilityGate -TelemetryOutputRel 'outputs/telemetry' -KeepTelemetry
+    if ($LASTEXITCODE -ne 0) {
+        throw 'failed to seed route event telemetry via vibe-observability-gate.ps1'
+    }
+
+    return @(Get-RouteEventFiles -RepoRoot $RepoRoot)
+}
+
 $context = Get-VgoGovernanceContext -ScriptPath $PSCommandPath -EnforceExecutionContext
 $configPath = Join-Path $context.repoRoot 'config\adaptive-routing-eval-governance.json'
 $docPath = Join-Path $context.repoRoot 'docs\governance\adaptive-routing-eval-governance.md'
@@ -58,6 +90,7 @@ $requiredScripts = @(
     'scripts/verify/vibe-routing-stability-gate.ps1',
     'scripts/verify/vibe-pack-regression-matrix.ps1',
     'scripts/verify/vibe-keyword-precision-audit.ps1',
+    'scripts/verify/vibe-observability-gate.ps1',
     'scripts/verify/vibe-pilot-scenarios.ps1',
     'scripts/research/vibe-adaptive-train.ps1'
 )
@@ -74,8 +107,7 @@ if (-not (Test-Path -LiteralPath $configPath)) { exit 1 }
 
 $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $allowedStages = @('off', 'shadow_ready', 'soft_candidate', 'strict_candidate')
-$telemetryDir = Join-Path $context.repoRoot 'outputs\telemetry'
-$routeEvents = if (Test-Path -LiteralPath $telemetryDir) { @(Get-ChildItem -LiteralPath $telemetryDir -Filter 'route-events-*.jsonl' -File -ErrorAction SilentlyContinue) } else { @() }
+$routeEvents = @(Ensure-RouteEventTelemetry -RepoRoot $context.repoRoot)
 $routeEventCount = @($routeEvents).Count
 
 Add-Assertion -Assertions $assertions -Pass ($allowedStages -contains [string]$config.stage) -Message 'adaptive routing stage is in allowed readiness set' -Details $config.stage
