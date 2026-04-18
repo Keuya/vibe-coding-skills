@@ -1,5 +1,12 @@
 # VCO Changelog
 
+## v3.0.4 (2026-04-18)
+
+- Moved specialist routing onto the current session by default, strengthened canonical-entry truth artifacts and launch-failure receipt handling, and repaired upgrade intent/truth handling across target installs and empty `/vibe-upgrade` invocations.
+- Removed a release-train stop-ship contradiction by letting adaptive-routing readiness self-seed replay telemetry through the governed observability path instead of assuming tracked `outputs/telemetry` evidence in a clean checkout.
+- Detailed release notes: `docs/releases/v3.0.4.md`.
+
+
 ## v3.0.3 (2026-04-15)
 
 - Added host-global bootstrap lifecycle support so supported instruction-file hosts can carry an install-safe, idempotent, and uninstall-safe managed `$vibe` / `/vibe` bootstrap block.

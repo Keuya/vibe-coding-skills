@@ -38,3 +38,20 @@ def test_release_closure_gates_consume_contract_backed_apply_inventory() -> None
     assert "Get-VgoOperatorPreviewStringListProperty -RepoRoot $repoRoot -OperatorId 'release-cut' -PropertyName 'apply_gates'" in wave64_gate
     assert "Get-VgoOperatorPreviewStringListProperty -RepoRoot $repoRoot -OperatorId 'release-cut' -PropertyName 'apply_gates'" in wave83_gate
     assert 'release-cut contract preserves wave63-to-wave64 gate boundary' in wave83_gate
+
+
+def test_adaptive_routing_readiness_gate_can_seed_telemetry_without_tracked_outputs() -> None:
+    adaptive_gate = (REPO_ROOT / 'scripts' / 'verify' / 'vibe-adaptive-routing-readiness-gate.ps1').read_text(encoding='utf-8')
+    observability_gate = (REPO_ROOT / 'scripts' / 'verify' / 'vibe-observability-gate.ps1').read_text(encoding='utf-8')
+    gitignore = (REPO_ROOT / '.gitignore').read_text(encoding='utf-8')
+    wave_board = json.loads((REPO_ROOT / 'config' / 'wave40-63-execution-board.json').read_text(encoding='utf-8'))
+    wave54 = next(item for item in wave_board['waves'] if item['wave'] == 54)
+
+    assert 'Ensure-RouteEventTelemetry' in adaptive_gate
+    assert "vibe-observability-gate.ps1" in adaptive_gate
+    assert "outputs/telemetry" in adaptive_gate
+    assert '[string]$TelemetryOutputRel = \'\'' in observability_gate
+    assert '[switch]$KeepTelemetry' in observability_gate
+    assert '**/telemetry/' in gitignore
+    assert 'outputs/telemetry' not in wave54['required_assets']
+    assert 'scripts/verify/vibe-observability-gate.ps1' in wave54['required_assets']

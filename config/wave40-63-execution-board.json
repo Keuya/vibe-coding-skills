@@ -180,7 +180,7 @@
       "status": "completed",
       "required_assets": [
         "references/eval-replay-ledger-contract.md",
-        "outputs/telemetry"
+        "scripts/verify/vibe-observability-gate.ps1"
       ],
       "verify_gate": "vibe-adaptive-routing-readiness-gate"
     },
