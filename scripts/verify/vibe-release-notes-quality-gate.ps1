@@ -19,13 +19,8 @@ if (-not (Test-Path -LiteralPath $runnerPath)) {
     throw "release notes quality runner missing: $runnerPath"
 }
 
-$pythonCommand = Get-Command python3 -ErrorAction SilentlyContinue
-if (-not $pythonCommand) {
-    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
-}
-if (-not $pythonCommand) {
-    throw 'Python is required to run vibe-release-notes-quality-gate.'
-}
+. (Join-Path $RepoRoot 'scripts\common\vibe-governance-helpers.ps1')
+$pythonInvocation = Get-VgoPythonCommand
 
 $args = @(
     $runnerPath
@@ -42,7 +37,7 @@ if ($OutputDirectory) {
     $args += @('--output-directory', $OutputDirectory)
 }
 
-& $pythonCommand.Source @args
+& $pythonInvocation.host_path @($pythonInvocation.prefix_arguments) @args
 $exitCode = $LASTEXITCODE
 if ($exitCode -ne 0) {
     throw "vibe-release-notes-quality-gate failed with exit code $exitCode"

@@ -14,13 +14,7 @@ if (-not (Test-Path -LiteralPath $runnerPath)) {
     throw "runtime-neutral coherence gate missing: $runnerPath"
 }
 
-$pythonCommand = Get-Command python3 -ErrorAction SilentlyContinue
-if (-not $pythonCommand) {
-    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
-}
-if (-not $pythonCommand) {
-    throw 'Python is required to run vibe-release-install-runtime-coherence-gate.'
-}
+$pythonInvocation = Get-VgoPythonCommand
 
 $args = @(
     $runnerPath,
@@ -30,7 +24,7 @@ if ($WriteArtifacts) {
     $args += '--write-artifacts'
 }
 
-& $pythonCommand.Source @args
+& $pythonInvocation.host_path @($pythonInvocation.prefix_arguments) @args
 $exitCode = $LASTEXITCODE
 if ($exitCode -ne 0) {
     throw "vibe-release-install-runtime-coherence-gate failed with exit code $exitCode"
