@@ -12,10 +12,10 @@ def _preferred_bridge_encodings() -> tuple[str, ...]:
     candidates = [
         "utf-8-sig",
         "utf-8",
-        preferred,
         "utf-16",
         "utf-16-le",
         "utf-16-be",
+        preferred,
     ]
     ordered: list[str] = []
     seen: set[str] = set()
@@ -75,7 +75,7 @@ def _decode_json_object_stdout(
         raise RuntimeError(f"{bridge_label} returned empty stdout{detail}")
 
     decode_failures: list[str] = []
-    last_json_error: json.JSONDecodeError | None = None
+    last_json_error: tuple[str, json.JSONDecodeError] | None = None
     for encoding in _preferred_bridge_encodings():
         try:
             payload_text = stdout.decode(encoding)
@@ -87,7 +87,7 @@ def _decode_json_object_stdout(
         try:
             payload = json.loads(payload_text)
         except json.JSONDecodeError as exc:
-            last_json_error = exc
+            last_json_error = (encoding, exc)
             continue
         if not isinstance(payload, dict):
             raise RuntimeError(f"{bridge_label} returned non-object payload")
@@ -99,11 +99,13 @@ def _decode_json_object_stdout(
     stdout_preview = _preview_stream(stdout)
     if stdout_preview:
         detail_parts.append(f"stdout={stdout_preview}")
+    if last_json_error is not None:
+        detail_parts.append(f"decoded-as-{last_json_error[0]}")
     if stderr_preview:
         detail_parts.append(f"stderr={stderr_preview}")
     detail = f" ({'; '.join(detail_parts)})" if detail_parts else ""
     if last_json_error is not None:
-        raise RuntimeError(f"{bridge_label} returned invalid JSON stdout{detail}") from last_json_error
+        raise RuntimeError(f"{bridge_label} returned invalid JSON stdout{detail}") from last_json_error[1]
     raise RuntimeError(f"{bridge_label} returned undecodable JSON stdout{detail}")
 
 
@@ -118,9 +120,18 @@ def run_powershell_json_command(
         list(command),
         cwd=cwd,
         capture_output=True,
-        check=True,
+        check=False,
         env=dict(env) if env is not None else None,
     )
+    if completed.returncode != 0:
+        detail_parts = [f"exit={completed.returncode}"]
+        stdout_preview = _preview_stream(completed.stdout)
+        stderr_preview = _preview_stream(completed.stderr)
+        if stdout_preview:
+            detail_parts.append(f"stdout={stdout_preview}")
+        if stderr_preview:
+            detail_parts.append(f"stderr={stderr_preview}")
+        raise RuntimeError(f"{bridge_label} failed ({'; '.join(detail_parts)})")
     return _decode_json_object_stdout(
         completed.stdout,
         bridge_label=bridge_label,
