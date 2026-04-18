@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import json
 import locale
+import logging
 import os
 import subprocess
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _preferred_bridge_encodings() -> tuple[str, ...]:
@@ -90,6 +94,10 @@ def _resolve_bridge_timeout(timeout: float | None) -> float | None:
     try:
         resolved = float(raw)
     except ValueError:
+        LOGGER.warning(
+            "Invalid VGO_POWERSHELL_BRIDGE_TIMEOUT_SECONDS=%r; using default timeout 300.0s",
+            raw,
+        )
         return 300.0
     if resolved <= 0:
         return None
@@ -101,6 +109,27 @@ def _command_preview(command: Sequence[str]) -> str:
     if len(command) > 8:
         preview += " ..."
     return preview
+
+
+def _build_stream_detail(
+    *,
+    stdout: bytes | str | None,
+    stderr: bytes | str | None,
+    decoded_as: str | None = None,
+    extra_parts: Sequence[str] | None = None,
+) -> str:
+    detail_parts: list[str] = list(extra_parts or [])
+    stdout_preview = _preview_stream(stdout)
+    stderr_preview = _preview_stream(stderr)
+    if stdout_preview:
+        detail_parts.append(f"stdout={stdout_preview}")
+    if decoded_as:
+        detail_parts.append(f"decoded-as-{decoded_as}")
+    if stderr_preview:
+        detail_parts.append(f"stderr={stderr_preview}")
+    if not detail_parts:
+        return ""
+    return f" ({'; '.join(detail_parts)})"
 
 
 def _decode_json_object_stdout(
@@ -122,9 +151,11 @@ def _decode_json_object_stdout(
         try:
             payload = json.loads(payload_text)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(f"{bridge_label} returned invalid JSON stdout") from exc
+            detail = _build_stream_detail(stdout=stdout, stderr=stderr)
+            raise RuntimeError(f"{bridge_label} returned invalid JSON stdout{detail}") from exc
         if not isinstance(payload, dict):
-            raise RuntimeError(f"{bridge_label} returned non-object payload")
+            detail = _build_stream_detail(stdout=stdout, stderr=stderr)
+            raise RuntimeError(f"{bridge_label} returned non-object payload{detail}")
         return payload
 
     if not stdout.strip():
@@ -133,6 +164,7 @@ def _decode_json_object_stdout(
 
     decode_failures: list[str] = []
     last_json_error: tuple[str, json.JSONDecodeError] | None = None
+    last_non_object: tuple[str, Any] | None = None
     for encoding in _preferred_bridge_encodings():
         try:
             payload_text = stdout.decode(encoding)
@@ -147,22 +179,28 @@ def _decode_json_object_stdout(
             last_json_error = (encoding, exc)
             continue
         if not isinstance(payload, dict):
-            raise RuntimeError(f"{bridge_label} returned non-object payload")
+            last_non_object = (encoding, payload)
+            continue
         return payload
 
-    detail_parts: list[str] = []
-    if decode_failures:
-        detail_parts.append("decode failed for " + ", ".join(decode_failures))
-    stdout_preview = _preview_stream(stdout)
-    if stdout_preview:
-        detail_parts.append(f"stdout={stdout_preview}")
+    extra_parts = ["decode failed for " + ", ".join(decode_failures)] if decode_failures else []
     if last_json_error is not None:
-        detail_parts.append(f"decoded-as-{last_json_error[0]}")
-    if stderr_preview:
-        detail_parts.append(f"stderr={stderr_preview}")
-    detail = f" ({'; '.join(detail_parts)})" if detail_parts else ""
-    if last_json_error is not None:
+        detail = _build_stream_detail(
+            stdout=stdout,
+            stderr=stderr,
+            decoded_as=last_json_error[0],
+            extra_parts=extra_parts,
+        )
         raise RuntimeError(f"{bridge_label} returned invalid JSON stdout{detail}") from last_json_error[1]
+    if last_non_object is not None:
+        detail = _build_stream_detail(
+            stdout=stdout,
+            stderr=stderr,
+            decoded_as=last_non_object[0],
+            extra_parts=extra_parts,
+        )
+        raise RuntimeError(f"{bridge_label} returned non-object payload{detail}")
+    detail = _build_stream_detail(stdout=stdout, stderr=stderr, extra_parts=extra_parts)
     raise RuntimeError(f"{bridge_label} returned undecodable JSON stdout{detail}")
 
 
