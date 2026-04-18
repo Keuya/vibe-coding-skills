@@ -41,18 +41,34 @@ def _preview_stream(value: bytes | str | None) -> str | None:
         elif value.startswith(b"\xfe\xff"):
             text = value.decode("utf-16-be", errors="replace")
         else:
-            preview_encodings = ["utf-8-sig", str(locale.getpreferredencoding(False) or "").strip(), "latin-1"]
-            text = ""
+            preview_encodings = ["utf-8-sig", str(locale.getpreferredencoding(False) or "").strip()]
+            text: str | None = None
             for encoding in preview_encodings:
                 normalized = encoding.strip()
                 if not normalized:
                     continue
                 try:
-                    text = value.decode(normalized, errors="replace")
-                except LookupError:
+                    candidate = value.decode(normalized)
+                except (LookupError, UnicodeDecodeError):
                     continue
+                if "\ufffd" in candidate or "\x00" in candidate:
+                    continue
+                text = candidate
                 break
-            if not text:
+            if text is None:
+                for encoding in preview_encodings:
+                    normalized = encoding.strip()
+                    if not normalized:
+                        continue
+                    try:
+                        candidate = value.decode(normalized, errors="replace")
+                    except LookupError:
+                        continue
+                    if "\ufffd" in candidate or "\x00" in candidate:
+                        continue
+                    text = candidate
+                    break
+            if text is None:
                 text = value.decode("latin-1", errors="replace")
         text = text.replace("\x00", "")
     else:
