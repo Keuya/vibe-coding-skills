@@ -548,6 +548,102 @@ def set_directory_writable(path: Path) -> None:
 
 
 class VibeSpecialistConsultationTests(unittest.TestCase):
+    def test_bucketed_consultation_selection_keeps_stage_assistant_visible(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            temp_root = Path(tempdir)
+            primary_one = temp_root / "primary-one" / "SKILL.md"
+            primary_two = temp_root / "primary-two" / "SKILL.md"
+            stage_one = temp_root / "stage-one" / "SKILL.md"
+            stage_two = temp_root / "stage-two" / "SKILL.md"
+            for path in (primary_one, primary_two, stage_one, stage_two):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("# Skill\n", encoding="utf-8")
+
+            result = run_runtime_common_json(
+                f"""
+                . {_ps_single_quote(str(CONSULTATION_SCRIPT))}
+                $policy = [pscustomobject]@{{
+                    enabled = $true
+                    mode = 'direct_current_session_route'
+                    max_consults_per_window = 3
+                    selection_mode = 'bucketed_with_backfill'
+                    bucket_limits = [pscustomobject]@{{
+                        primary = 2
+                        stage_assistant = 1
+                    }}
+                    allowed_windows = @('discussion', 'planning')
+                    require_contract_complete = $true
+                    require_native_workflow = $true
+                    require_native_usage_required = $true
+                    require_entrypoint_path = $true
+                }}
+                $recommendations = @(
+                    [pscustomobject]@{{
+                        skill_id = 'ml-expert'
+                        source = 'route_ranked'
+                        native_skill_entrypoint = {_ps_single_quote(primary_one.as_posix())}
+                        reason = 'primary specialist one'
+                        contract_complete = $true
+                        must_preserve_workflow = $true
+                        native_usage_required = $true
+                        rank = 1
+                        confidence = 0.99
+                    }},
+                    [pscustomobject]@{{
+                        skill_id = 'science-plotting'
+                        source = 'route_ranked'
+                        native_skill_entrypoint = {_ps_single_quote(primary_two.as_posix())}
+                        reason = 'primary specialist two'
+                        contract_complete = $true
+                        must_preserve_workflow = $true
+                        native_usage_required = $true
+                        rank = 2
+                        confidence = 0.98
+                    }},
+                    [pscustomobject]@{{
+                        skill_id = 'brainstorming'
+                        source = 'route_stage_assistant'
+                        native_skill_entrypoint = {_ps_single_quote(stage_one.as_posix())}
+                        reason = 'stage assistant one'
+                        contract_complete = $true
+                        must_preserve_workflow = $true
+                        native_usage_required = $true
+                        rank = 3
+                        confidence = 0.70
+                    }},
+                    [pscustomobject]@{{
+                        skill_id = 'writing-plans'
+                        source = 'route_stage_assistant'
+                        native_skill_entrypoint = {_ps_single_quote(stage_two.as_posix())}
+                        reason = 'stage assistant two'
+                        contract_complete = $true
+                        must_preserve_workflow = $true
+                        native_usage_required = $true
+                        rank = 4
+                        confidence = 0.60
+                    }}
+                )
+                $result = Split-VibeSpecialistConsultationCandidates -Recommendations $recommendations -WindowId 'discussion' -Stage 'deep_interview' -Policy $policy
+                $result | ConvertTo-Json -Depth 20
+                """
+            )
+
+            assert isinstance(result, dict)
+            approved = list(result["approved_consultation"])
+            deferred = list(result["deferred_to_execution"])
+            self.assertEqual(
+                ["ml-expert", "science-plotting", "brainstorming"],
+                [item["skill_id"] for item in approved],
+            )
+            self.assertEqual(
+                ["primary", "primary", "stage_assistant"],
+                [item["consultation_bucket"] for item in approved],
+            )
+            self.assertEqual(1, len(deferred))
+            self.assertEqual("writing-plans", deferred[0]["skill_id"])
+            self.assertEqual("max_consults_per_window_reached", deferred[0]["reason"])
+            self.assertEqual("stage_assistant", deferred[0]["consultation_bucket"])
+
     def test_user_disclosure_projection_retains_entries_with_missing_or_invalid_entrypoints(self) -> None:
         result = run_runtime_common_json(
             """

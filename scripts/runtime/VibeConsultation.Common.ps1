@@ -4,6 +4,51 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'VibeRuntime.Common.ps1')
 . (Join-Path $PSScriptRoot 'VibeExecution.Common.ps1')
 
+function ConvertTo-VibeSpecialistConsultationBucketLimits {
+    param(
+        [AllowNull()] [object]$BucketLimits = $null
+    )
+
+    $resolved = @{}
+    if ($null -eq $BucketLimits) {
+        return $resolved
+    }
+
+    if ($BucketLimits -is [System.Collections.IDictionary]) {
+        foreach ($key in @($BucketLimits.Keys)) {
+            $name = if ($null -eq $key) { '' } else { [string]$key }
+            if ([string]::IsNullOrWhiteSpace($name)) {
+                continue
+            }
+            $limit = [int]$BucketLimits[$key]
+            if ($limit -le 0) {
+                continue
+            }
+            $resolved[$name.Trim().ToLowerInvariant()] = $limit
+        }
+        return $resolved
+    }
+
+    foreach ($property in @($BucketLimits.PSObject.Properties)) {
+        if ($null -eq $property) {
+            continue
+        }
+
+        $name = if ([string]::IsNullOrWhiteSpace([string]$property.Name)) { '' } else { [string]$property.Name }
+        if ([string]::IsNullOrWhiteSpace($name)) {
+            continue
+        }
+
+        $limit = [int]$property.Value
+        if ($limit -le 0) {
+            continue
+        }
+        $resolved[$name.Trim().ToLowerInvariant()] = $limit
+    }
+
+    return $resolved
+}
+
 function Get-VibeSpecialistConsultationPolicy {
     param(
         [AllowNull()] [object]$Policy = $null
@@ -47,12 +92,31 @@ function Get-VibeSpecialistConsultationPolicy {
         throw ("Unsupported specialist consultation mode: {0}" -f $consultationMode)
     }
 
+    $selectionMode = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'selection_mode') -and -not [string]::IsNullOrWhiteSpace([string]$resolvedPolicy.selection_mode)) {
+        [string]$resolvedPolicy.selection_mode
+    } else {
+        'flat_ranked'
+    }
+    $selectionMode = $selectionMode.Trim().ToLowerInvariant()
+    $allowedSelectionModes = @('flat_ranked', 'bucketed_with_backfill')
+    if ($selectionMode -notin $allowedSelectionModes) {
+        throw ("Unsupported specialist consultation selection mode: {0}" -f $selectionMode)
+    }
+
+    $bucketLimits = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'bucket_limits')) {
+        ConvertTo-VibeSpecialistConsultationBucketLimits -BucketLimits $resolvedPolicy.bucket_limits
+    } else {
+        @{}
+    }
+
     return [pscustomobject]@{
         enabled = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'enabled')) { [bool]$resolvedPolicy.enabled } else { $false }
         version = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'version')) { [int]$resolvedPolicy.version } else { 1 }
         policy_id = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'policy_id') -and -not [string]::IsNullOrWhiteSpace([string]$resolvedPolicy.policy_id)) { [string]$resolvedPolicy.policy_id } else { 'specialist-consultation-v1' }
         mode = $consultationMode
         max_consults_per_window = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'max_consults_per_window')) { [int]$resolvedPolicy.max_consults_per_window } else { 2 }
+        selection_mode = $selectionMode
+        bucket_limits = $bucketLimits
         allowed_windows = @($allowedWindows)
         require_contract_complete = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'require_contract_complete')) { [bool]$resolvedPolicy.require_contract_complete } else { $true }
         require_native_workflow = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'require_native_workflow')) { [bool]$resolvedPolicy.require_native_workflow } else { $true }
@@ -70,6 +134,26 @@ function Get-VibeSpecialistConsultationPolicy {
         fail_freeze_on_live_degraded_results = if ($null -ne $resolvedPolicy -and (Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'fail_freeze_on_live_degraded_results')) { [bool]$resolvedPolicy.fail_freeze_on_live_degraded_results } else { $true }
         window_prompts = $windowPrompts
     }
+}
+
+function Get-VibeSpecialistConsultationBucket {
+    param(
+        [Parameter(Mandatory)] [object]$Recommendation
+    )
+
+    $source = if (
+        (Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'source') -and
+        -not [string]::IsNullOrWhiteSpace([string]$Recommendation.source)
+    ) {
+        [string]$Recommendation.source
+    } else {
+        ''
+    }
+
+    if ([string]::Equals($source, 'route_stage_assistant', [System.StringComparison]::OrdinalIgnoreCase)) {
+        return 'stage_assistant'
+    }
+    return 'primary'
 }
 
 function Get-VibeSpecialistConsultationReceiptPath {
@@ -135,6 +219,7 @@ function New-VibeSpecialistConsultationCandidate {
     } else {
         [string]$defaults.consultation_reason
     }
+    $consultationBucket = Get-VibeSpecialistConsultationBucket -Recommendation $Recommendation
 
     return [pscustomobject]@{
         skill_id = [string]$Recommendation.skill_id
@@ -158,6 +243,7 @@ function New-VibeSpecialistConsultationCandidate {
         execution_priority = if ((Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'execution_priority') -and $null -ne $Recommendation.execution_priority) { [int]$Recommendation.execution_priority } else { 0 }
         rank = if ((Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'rank') -and $null -ne $Recommendation.rank) { [int]$Recommendation.rank } else { 9999 }
         confidence = if ((Test-VibeObjectHasProperty -InputObject $Recommendation -PropertyName 'confidence') -and $null -ne $Recommendation.confidence) { [double]$Recommendation.confidence } else { 0.0 }
+        consultation_bucket = $consultationBucket
     }
 }
 
@@ -173,7 +259,19 @@ function Split-VibeSpecialistConsultationCandidates {
     $approved = New-Object System.Collections.Generic.List[object]
     $deferred = New-Object System.Collections.Generic.List[object]
     $blocked = New-Object System.Collections.Generic.List[object]
+    $overflow = New-Object System.Collections.Generic.List[object]
     $seenSkillIds = @{}
+    $bucketUsage = @{}
+    $selectionMode = if ((Test-VibeObjectHasProperty -InputObject $resolvedPolicy -PropertyName 'selection_mode') -and -not [string]::IsNullOrWhiteSpace([string]$resolvedPolicy.selection_mode)) {
+        [string]$resolvedPolicy.selection_mode
+    } else {
+        'flat_ranked'
+    }
+    $bucketedSelectionEnabled = (
+        [string]::Equals($selectionMode, 'bucketed_with_backfill', [System.StringComparison]::OrdinalIgnoreCase) -and
+        $null -ne $resolvedPolicy.bucket_limits -and
+        $resolvedPolicy.bucket_limits.Count -gt 0
+    )
 
     if (-not [bool]$resolvedPolicy.enabled -or -not (@($resolvedPolicy.allowed_windows) -contains $WindowId)) {
         return [pscustomobject]@{
@@ -238,17 +336,86 @@ function Split-VibeSpecialistConsultationCandidates {
             ) | Out-Null
             continue
         }
+        $candidateBucket = if (
+            (Test-VibeObjectHasProperty -InputObject $candidate -PropertyName 'consultation_bucket') -and
+            -not [string]::IsNullOrWhiteSpace([string]$candidate.consultation_bucket)
+        ) {
+            [string]$candidate.consultation_bucket
+        } else {
+            'primary'
+        }
+        $candidateBucket = $candidateBucket.Trim().ToLowerInvariant()
+
+        if ($bucketedSelectionEnabled -and $resolvedPolicy.bucket_limits.ContainsKey($candidateBucket)) {
+            $bucketLimit = [int]$resolvedPolicy.bucket_limits[$candidateBucket]
+            $bucketUsed = if ($bucketUsage.ContainsKey($candidateBucket)) { [int]$bucketUsage[$candidateBucket] } else { 0 }
+            if ($bucketUsed -ge $bucketLimit) {
+                $overflow.Add(
+                    [pscustomobject]@{
+                        candidate = $candidate
+                        consultation_bucket = $candidateBucket
+                    }
+                ) | Out-Null
+                continue
+            }
+        }
         if ($approved.Count -ge [int]$resolvedPolicy.max_consults_per_window) {
             $deferred.Add(
                 [pscustomobject]@{
                     skill_id = $candidate.skill_id
                     reason = 'max_consults_per_window_reached'
+                    consultation_bucket = $candidateBucket
                 }
             ) | Out-Null
             continue
         }
 
         $approved.Add($candidate) | Out-Null
+        $bucketUsage[$candidateBucket] = if ($bucketUsage.ContainsKey($candidateBucket)) { [int]$bucketUsage[$candidateBucket] + 1 } else { 1 }
+    }
+
+    if ($bucketedSelectionEnabled -and $approved.Count -lt [int]$resolvedPolicy.max_consults_per_window) {
+        foreach ($overflowEntry in $overflow.ToArray()) {
+            if ($approved.Count -ge [int]$resolvedPolicy.max_consults_per_window) {
+                break
+            }
+
+            $candidate = $overflowEntry.candidate
+            if ($null -eq $candidate) {
+                continue
+            }
+
+            $approved.Add($candidate) | Out-Null
+            $candidateBucket = if ($null -eq $overflowEntry.consultation_bucket) { 'primary' } else { [string]$overflowEntry.consultation_bucket }
+            $bucketUsage[$candidateBucket] = if ($bucketUsage.ContainsKey($candidateBucket)) { [int]$bucketUsage[$candidateBucket] + 1 } else { 1 }
+        }
+    }
+
+    if ($overflow.Count -gt 0) {
+        $approvedSkillIndex = @{}
+        foreach ($approvedItem in $approved.ToArray()) {
+            if ($null -eq $approvedItem) {
+                continue
+            }
+            $approvedSkillIndex[[string]$approvedItem.skill_id] = $true
+        }
+
+        foreach ($overflowEntry in $overflow.ToArray()) {
+            $candidate = $overflowEntry.candidate
+            if ($null -eq $candidate) {
+                continue
+            }
+            if ($approvedSkillIndex.ContainsKey([string]$candidate.skill_id)) {
+                continue
+            }
+            $deferred.Add(
+                [pscustomobject]@{
+                    skill_id = $candidate.skill_id
+                    reason = 'max_consults_per_window_reached'
+                    consultation_bucket = if ($null -eq $overflowEntry.consultation_bucket) { 'primary' } else { [string]$overflowEntry.consultation_bucket }
+                }
+            ) | Out-Null
+        }
     }
 
     return [pscustomobject]@{
