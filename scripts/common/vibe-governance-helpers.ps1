@@ -1,4 +1,4 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Off
 
 $script:VgoGovernanceHelpersRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 

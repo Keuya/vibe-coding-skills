@@ -11,6 +11,16 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Ensure consistent UTF-8 encoding for Unicode path compatibility (e.g., Chinese username paths)
+if ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.Platform -eq 'Win32NT') {
+    # Windows PowerShell 5.x: set console encoding to UTF-8
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+} else {
+    # PowerShell Core 7+: already defaults to UTF-8, but ensure consistency
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+}
+
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $runtimeEntrypoint = Join-Path $PSScriptRoot 'invoke-vibe-runtime.ps1'
 $launcherPath = $PSCommandPath

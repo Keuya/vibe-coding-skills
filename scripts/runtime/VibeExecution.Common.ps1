@@ -1,4 +1,6 @@
-Set-StrictMode -Version Latest
+# Intentionally relaxed: runtime contracts are dynamic PSCustomObject payloads with optional fields.
+# Keep optional reads guarded with PSObject property checks / helper accessors.
+Set-StrictMode -Off
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')

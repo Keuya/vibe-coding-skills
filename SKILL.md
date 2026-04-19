@@ -13,7 +13,7 @@ Bootstrap sequence:
 
 1. Resolve `skill_root` as the directory that contains this `SKILL.md`.
 2. Resolve `workspace_root` as the current user task working root. This is where governed artifacts should be written when the user is working outside the Vibe installation itself.
-3. Resolve the current host adapter id. Use `codex` in Codex, `claude-code` in Claude Code, and `opencode` in OpenCode.
+3. Resolve the current host adapter id. Use `codex` in Codex, `claude-code` in Claude Code, `cursor` in Cursor, `windsurf` in Windsurf, `openclaw` in OpenClaw, and `opencode` in OpenCode.
 4. Launch the proof-complete canonical entry before reading repo files, protocol docs, prior run folders, or writing any runtime artifact.
 
 POSIX / bash launch:

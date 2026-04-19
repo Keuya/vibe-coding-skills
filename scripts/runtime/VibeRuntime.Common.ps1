@@ -1,7 +1,18 @@
-Set-StrictMode -Version Latest
+Set-StrictMode -Off
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot '..\common\vibe-governance-helpers.ps1')
+
+# Alias for compatibility with VibeExecution.Common.ps1 which calls Get-VibeHostAdapterIdentityProjection
+function global:Get-VibeHostAdapterIdentityProjection {
+    param(
+        [AllowNull()] [object]$HostAdapter,
+        [AllowEmptyString()] [string]$RequestedPropertyName = 'requested_id',
+        [AllowEmptyString()] [string]$EffectivePropertyName = 'id',
+        [AllowEmptyString()] [string]$FallbackHostId = ''
+    )
+    return New-VibeHostAdapterIdentityProjection -HostAdapter $HostAdapter -RequestedPropertyName $RequestedPropertyName -EffectivePropertyName $EffectivePropertyName -FallbackHostId $FallbackHostId
+}
 
 function Get-VibeHostAdapterEntry {
     param(
@@ -78,7 +89,105 @@ function Test-VibeObjectHasProperty {
     return ($propertyNames -contains $PropertyName)
 }
 
-function Get-VibeHostAdapterIdentityProjection {
+function Get-VibePropertySafe {
+    param(
+        [AllowNull()] [object]$InputObject,
+        [Parameter(Mandatory)] [string]$PropertyName,
+        [object]$DefaultValue = $null
+    )
+
+    if ($null -eq $InputObject) {
+        return $DefaultValue
+    }
+
+    if (-not (Test-VibeObjectHasProperty -InputObject $InputObject -PropertyName $PropertyName)) {
+        return $DefaultValue
+    }
+
+    try {
+        return $InputObject.$PropertyName
+    } catch {
+        return $DefaultValue
+    }
+}
+
+function Get-VibeSafeArrayCount {
+    param(
+        [AllowNull()] [object]$InputObject
+    )
+    
+    if ($null -eq $InputObject) {
+        return 0
+    }
+    
+    try {
+        # Handle arrays and collections
+        if ($InputObject -is [System.Collections.ICollection]) {
+            return [int]$InputObject.Count
+        }
+        # Handle objects with Count property
+        if (Test-VibeObjectHasProperty -InputObject $InputObject -PropertyName 'Count') {
+            return [int]$InputObject.Count
+        }
+        # Handle objects with Length property
+        if (Test-VibeObjectHasProperty -InputObject $InputObject -PropertyName 'Length') {
+            return [int]$InputObject.Length
+        }
+        # Treat scalar as count 1
+        return 1
+    } catch {
+        return 0
+    }
+}
+
+function Get-VibeNestedPropertySafe {
+    param(
+        [AllowNull()] [object]$InputObject,
+        [AllowNull()] [string[]]$PropertyPath,
+        [object]$DefaultValue = $null
+    )
+
+    if ($null -eq $InputObject) {
+        return $DefaultValue
+    }
+    
+    # Handle null or empty PropertyPath
+    if ($null -eq $PropertyPath) {
+        return $InputObject
+    }
+    
+    # Safely get Count (handles Set-StrictMode)
+    $pathCount = 0
+    try {
+        # Use @() to handle null/undefined PropertyPath safely
+        $pathCount = @($PropertyPath).Count
+    } catch {
+        return $DefaultValue
+    }
+    
+    if ($pathCount -eq 0) {
+        return $InputObject
+    }
+
+    $current = $InputObject
+    foreach ($prop in $PropertyPath) {
+        if ($null -eq $current) {
+            return $DefaultValue
+        }
+        if (-not (Test-VibeObjectHasProperty -InputObject $current -PropertyName $prop)) {
+            return $DefaultValue
+        }
+        try {
+            $current = $current.$prop
+        } catch {
+            return $DefaultValue
+        }
+    }
+
+    return $current
+}
+
+function New-VibeHostAdapterIdentityProjection {
     param(
         [AllowNull()] [object]$HostAdapter,
         [AllowEmptyString()] [string]$RequestedPropertyName = 'requested_id',
@@ -135,8 +244,9 @@ function New-VibeRuntimeHostAdapterProjection {
         [AllowEmptyString()] [string]$TargetRoot = ''
     )
 
-    $identity = Get-VibeHostAdapterIdentityProjection `
-        -HostAdapter $Runtime.host_adapter `
+    $hostAdapter = Get-VibePropertySafe -InputObject $Runtime -PropertyName 'host_adapter'
+    $identity = New-VibeHostAdapterIdentityProjection `
+        -HostAdapter $hostAdapter `
         -RequestedPropertyName 'requested_id' `
         -EffectivePropertyName 'id' `
         -FallbackHostId $FallbackHostId
@@ -177,7 +287,7 @@ function Get-VibeRuntimePacketHostAdapterAlignment {
         [AllowNull()] [object]$RuntimeInputPacket
     )
 
-    return Get-VibeHostAdapterIdentityProjection `
+    return New-VibeHostAdapterIdentityProjection `
         -HostAdapter $(if ($null -ne $RuntimeInputPacket -and $RuntimeInputPacket.PSObject.Properties.Name -contains 'host_adapter') { $RuntimeInputPacket.host_adapter } else { $null }) `
         -RequestedPropertyName 'requested_host_id' `
         -EffectivePropertyName 'effective_host_id'
@@ -191,11 +301,15 @@ function New-VibeRouteRuntimeAlignmentProjection {
 
     $hostAdapterIdentity = Get-VibeRuntimePacketHostAdapterAlignment -RuntimeInputPacket $RuntimeInputPacket
 
+    $routeSnapshot = Get-VibePropertySafe -InputObject $RuntimeInputPacket -PropertyName 'route_snapshot'
+    $authorityFlags = Get-VibePropertySafe -InputObject $RuntimeInputPacket -PropertyName 'authority_flags'
+    $divergenceShadow = Get-VibePropertySafe -InputObject $RuntimeInputPacket -PropertyName 'divergence_shadow'
+
     return [pscustomobject]@{
-        router_selected_skill = if ($null -ne $RuntimeInputPacket) { [string]$RuntimeInputPacket.route_snapshot.selected_skill } else { $null }
-        runtime_selected_skill = if ($null -ne $RuntimeInputPacket) { [string]$RuntimeInputPacket.authority_flags.explicit_runtime_skill } else { $DefaultRuntimeSkill }
-        skill_mismatch = if ($null -ne $RuntimeInputPacket) { [bool]$RuntimeInputPacket.divergence_shadow.skill_mismatch } else { $false }
-        confirm_required = if ($null -ne $RuntimeInputPacket) { [bool]$RuntimeInputPacket.route_snapshot.confirm_required } else { $false }
+        router_selected_skill = Get-VibeNestedPropertySafe -InputObject $routeSnapshot -PropertyPath @('selected_skill') -DefaultValue $null
+        runtime_selected_skill = Get-VibeNestedPropertySafe -InputObject $authorityFlags -PropertyPath @('explicit_runtime_skill') -DefaultValue $DefaultRuntimeSkill
+        skill_mismatch = Get-VibeNestedPropertySafe -InputObject $divergenceShadow -PropertyPath @('skill_mismatch') -DefaultValue $false
+        confirm_required = Get-VibeNestedPropertySafe -InputObject $routeSnapshot -PropertyPath @('confirm_required') -DefaultValue $false
         requested_host_adapter_id = $hostAdapterIdentity.requested_host_id
         effective_host_adapter_id = $hostAdapterIdentity.effective_host_id
     }
@@ -792,28 +906,28 @@ function New-VibeSpecialistDecisionProjection {
         $null
     }
 
-    $approvedDispatchArray = if (@($ApprovedDispatch).Count -gt 0) {
+    $approvedDispatchArray = if ((Get-VibeSafeArrayCount -InputObject $ApprovedDispatch) -gt 0) {
         @($ApprovedDispatch)
     } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'approved_dispatch')) {
         @($dispatchSource.approved_dispatch)
     } else {
         @()
     }
-    $localSuggestionArray = if (@($LocalSuggestions).Count -gt 0) {
+    $localSuggestionArray = if ((Get-VibeSafeArrayCount -InputObject $LocalSuggestions) -gt 0) {
         @($LocalSuggestions)
     } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'local_specialist_suggestions')) {
         @($dispatchSource.local_specialist_suggestions)
     } else {
         @()
     }
-    $blockedDispatchArray = if (@($BlockedDispatch).Count -gt 0) {
+    $blockedDispatchArray = if ((Get-VibeSafeArrayCount -InputObject $BlockedDispatch) -gt 0) {
         @($BlockedDispatch)
     } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'blocked')) {
         @($dispatchSource.blocked)
     } else {
         @()
     }
-    $degradedDispatchArray = if (@($DegradedDispatch).Count -gt 0) {
+    $degradedDispatchArray = if ((Get-VibeSafeArrayCount -InputObject $DegradedDispatch) -gt 0) {
         @($DegradedDispatch)
     } elseif ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'degraded')) {
         @($dispatchSource.degraded)
@@ -824,21 +938,21 @@ function New-VibeSpecialistDecisionProjection {
     $approvedDispatchSkillIds = @($approvedDispatchArray | ForEach-Object {
         if ($null -ne $_ -and (Test-VibeObjectHasProperty -InputObject $_ -PropertyName 'skill_id')) { [string]$_.skill_id } else { '' }
     } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
-    $localSuggestionSkillIds = if ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'local_suggestion_skill_ids') -and @($dispatchSource.local_suggestion_skill_ids).Count -gt 0) {
+    $localSuggestionSkillIds = if ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'local_suggestion_skill_ids') -and (Get-VibeSafeArrayCount -InputObject $dispatchSource.local_suggestion_skill_ids) -gt 0) {
         @($dispatchSource.local_suggestion_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     } else {
         @($localSuggestionArray | ForEach-Object {
             if ($null -ne $_ -and (Test-VibeObjectHasProperty -InputObject $_ -PropertyName 'skill_id')) { [string]$_.skill_id } else { '' }
         } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     }
-    $blockedSkillIds = if ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'blocked_skill_ids') -and @($dispatchSource.blocked_skill_ids).Count -gt 0) {
+    $blockedSkillIds = if ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'blocked_skill_ids') -and (Get-VibeSafeArrayCount -InputObject $dispatchSource.blocked_skill_ids) -gt 0) {
         @($dispatchSource.blocked_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     } else {
         @($blockedDispatchArray | ForEach-Object {
             if ($null -ne $_ -and (Test-VibeObjectHasProperty -InputObject $_ -PropertyName 'skill_id')) { [string]$_.skill_id } else { '' }
         } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     }
-    $degradedSkillIds = if ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'degraded_skill_ids') -and @($dispatchSource.degraded_skill_ids).Count -gt 0) {
+    $degradedSkillIds = if ($null -ne $dispatchSource -and (Test-VibeObjectHasProperty -InputObject $dispatchSource -PropertyName 'degraded_skill_ids') -and (Get-VibeSafeArrayCount -InputObject $dispatchSource.degraded_skill_ids) -gt 0) {
         @($dispatchSource.degraded_skill_ids | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
     } else {
         @($degradedDispatchArray | ForEach-Object {
@@ -988,7 +1102,8 @@ function New-VibeRuntimeInputPacketProjection {
     )
 
     $confirmRequired = ([string]$RouteResult.route_mode -eq 'confirm_required')
-    $routerSelectedSkill = if ($RouteResult.selected) { [string]$RouteResult.selected.skill } else { $null }
+    $selected = Get-VibePropertySafe -InputObject $RouteResult -PropertyName 'selected'
+    $routerSelectedSkill = if ($null -ne $selected) { [string]$selected.skill } else { $null }
 
     $customAdmission = if (
         $RouteResult.PSObject.Properties.Name -contains 'custom_admission' -and
@@ -1020,7 +1135,7 @@ function New-VibeRuntimeInputPacketProjection {
     return [pscustomobject]@{
         stage = 'runtime_input_freeze'
         run_id = $RunId
-        governance_scope = [string]$HierarchyState.governance_scope
+        governance_scope = Get-VibeNestedPropertySafe -InputObject $HierarchyState -PropertyPath @('governance_scope') -DefaultValue ''
         task = $Task
         entry_intent_id = if ([string]::IsNullOrWhiteSpace($EntryIntentId)) { $null } else { [string]$EntryIntentId }
         requested_stage_stop = if ([string]::IsNullOrWhiteSpace($RequestedStageStop)) { $null } else { [string]$RequestedStageStop }
@@ -1040,7 +1155,7 @@ function New-VibeRuntimeInputPacketProjection {
         }
         host_adapter = (New-VibeRuntimeHostAdapterProjection -Runtime $Runtime -FallbackHostId $RouterHostId -TargetRoot $RouterTargetRoot)
         route_snapshot = [pscustomobject]@{
-            selected_pack = if ($RouteResult.selected) { [string]$RouteResult.selected.pack_id } else { $null }
+            selected_pack = if ($null -ne $selected) { [string]$selected.pack_id } else { $null }
             selected_skill = $routerSelectedSkill
             route_mode = [string]$RouteResult.route_mode
             route_reason = [string]$RouteResult.route_reason
@@ -1069,10 +1184,10 @@ function New-VibeRuntimeInputPacketProjection {
             degraded_skill_ids = if ($SpecialistDispatch.PSObject.Properties.Name -contains 'degraded_skill_ids' -and $null -ne $SpecialistDispatch.degraded_skill_ids) { [object[]]@($SpecialistDispatch.degraded_skill_ids) } else { @() }
             ghost_match_skill_ids = if ($SpecialistDispatch.PSObject.Properties.Name -contains 'ghost_match_skill_ids' -and $null -ne $SpecialistDispatch.ghost_match_skill_ids) { [object[]]@($SpecialistDispatch.ghost_match_skill_ids) } else { @() }
             promotion_outcomes = if ($SpecialistDispatch.PSObject.Properties.Name -contains 'promotion_outcomes' -and $null -ne $SpecialistDispatch.promotion_outcomes) { [object[]]@($SpecialistDispatch.promotion_outcomes) } else { @() }
-            escalation_required = [bool]$SpecialistDispatch.escalation_required
-            escalation_status = [string]$SpecialistDispatch.escalation_status
-            approval_owner = if ($Policy.child_specialist_suggestion_contract.PSObject.Properties.Name -contains 'approval_owner') { [string]$Policy.child_specialist_suggestion_contract.approval_owner } else { 'root_vibe' }
-            status = if ($Policy.child_specialist_suggestion_contract.PSObject.Properties.Name -contains 'status') { [string]$Policy.child_specialist_suggestion_contract.status } else { 'auto_promote_when_safe_same_round' }
+            escalation_required = Get-VibeNestedPropertySafe -InputObject $SpecialistDispatch -PropertyPath @('escalation_required') -DefaultValue $false
+            escalation_status = Get-VibeNestedPropertySafe -InputObject $SpecialistDispatch -PropertyPath @('escalation_status') -DefaultValue ''
+            approval_owner = Get-VibeNestedPropertySafe -InputObject $Policy -PropertyPath @('child_specialist_suggestion_contract', 'approval_owner') -DefaultValue 'root_vibe'
+            status = Get-VibeNestedPropertySafe -InputObject $Policy -PropertyPath @('child_specialist_suggestion_contract', 'status') -DefaultValue 'auto_promote_when_safe_same_round'
         }
         specialist_decision = $packetSpecialistDecision
         overlay_decisions = @($OverlayDecisions)
@@ -1605,12 +1720,15 @@ function New-VibeRuntimeSummaryMemoryActivationProjection {
         return $null
     }
 
+    $policy = Get-VibePropertySafe -InputObject $MemoryActivationReport -PropertyName 'policy'
+    $summary = Get-VibePropertySafe -InputObject $MemoryActivationReport -PropertyName 'summary'
+
     return [pscustomobject]@{
-        policy_mode = [string]$MemoryActivationReport.policy.mode
-        routing_contract = [string]$MemoryActivationReport.policy.routing_contract
-        fallback_event_count = [int]$MemoryActivationReport.summary.fallback_event_count
-        artifact_count = [int]$MemoryActivationReport.summary.artifact_count
-        budget_guard_respected = [bool]$MemoryActivationReport.summary.budget_guard_respected
+        policy_mode = Get-VibeNestedPropertySafe -InputObject $policy -PropertyPath @('mode') -DefaultValue ''
+        routing_contract = Get-VibeNestedPropertySafe -InputObject $policy -PropertyPath @('routing_contract') -DefaultValue ''
+        fallback_event_count = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('fallback_event_count') -DefaultValue 0
+        artifact_count = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('artifact_count') -DefaultValue 0
+        budget_guard_respected = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('budget_guard_respected') -DefaultValue $false
     }
 }
 
@@ -1623,12 +1741,14 @@ function New-VibeRuntimeSummaryDeliveryAcceptanceProjection {
         return $null
     }
 
+    $summary = Get-VibePropertySafe -InputObject $DeliveryAcceptanceReport -PropertyName 'summary'
+
     return [pscustomobject]@{
-        gate_result = [string]$DeliveryAcceptanceReport.summary.gate_result
-        completion_language_allowed = [bool]$DeliveryAcceptanceReport.summary.completion_language_allowed
-        readiness_state = [string]$DeliveryAcceptanceReport.summary.readiness_state
-        manual_review_layer_count = [int]$DeliveryAcceptanceReport.summary.manual_review_layer_count
-        failing_layer_count = [int]$DeliveryAcceptanceReport.summary.failing_layer_count
+        gate_result = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('gate_result') -DefaultValue ''
+        completion_language_allowed = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('completion_language_allowed') -DefaultValue $false
+        readiness_state = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('readiness_state') -DefaultValue ''
+        manual_review_layer_count = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('manual_review_layer_count') -DefaultValue 0
+        failing_layer_count = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('failing_layer_count') -DefaultValue 0
     }
 }
 
@@ -2251,9 +2371,10 @@ function New-VibeHostUserBriefingSegmentProjection {
         default {
             if ($segmentId -match '^(discussion|planning)_consultation$') {
                 $windowId = [string]$Matches[1]
-                if ($ConsultationReceipt -and (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'freeze_gate') -and $null -ne $ConsultationReceipt.freeze_gate) {
-                    $gateStatus = if ([bool]$ConsultationReceipt.freeze_gate.passed) { 'passed' } else { 'failed' }
-                    $status = if ([bool]$ConsultationReceipt.freeze_gate.passed) { 'gate_passed' } else { 'gate_failed' }
+                $freezeGate = Get-VibePropertySafe -InputObject $ConsultationReceipt -PropertyName 'freeze_gate'
+                if ($freezeGate) {
+                    $gateStatus = if ([bool]$freezeGate.passed) { 'passed' } else { 'failed' }
+                    $status = if ([bool]$freezeGate.passed) { 'gate_passed' } else { 'gate_failed' }
                 } else {
                     $gateStatus = 'not_applicable'
                     $status = 'gate_unknown'
@@ -2277,26 +2398,9 @@ function New-VibeHostUserBriefingSegmentProjection {
                 } else {
                     @()
                 }
-                $consultedCount = if (
-                    $ConsultationReceipt -and
-                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'summary') -and
-                    $null -ne $ConsultationReceipt.summary -and
-                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt.summary -PropertyName 'consulted_unit_count')
-                ) {
-                    [int]$ConsultationReceipt.summary.consulted_unit_count
-                } else {
-                    @($consultedUnits).Count
-                }
-                $routedCount = if (
-                    $ConsultationReceipt -and
-                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt -PropertyName 'summary') -and
-                    $null -ne $ConsultationReceipt.summary -and
-                    (Test-VibeObjectHasProperty -InputObject $ConsultationReceipt.summary -PropertyName 'routed_unit_count')
-                ) {
-                    [int]$ConsultationReceipt.summary.routed_unit_count
-                } else {
-                    @($routedUnits).Count
-                }
+                $summary = Get-VibePropertySafe -InputObject $ConsultationReceipt -PropertyName 'summary'
+                $consultedCount = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('consulted_unit_count') -DefaultValue @($consultedUnits).Count
+                $routedCount = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('routed_unit_count') -DefaultValue @($routedUnits).Count
                 if ($routedCount -gt 0 -and $consultedCount -eq 0) {
                     $segmentLines += ('Vibe routed these Skills for direct current-session consultation during {0}; freeze gate: {1}.' -f $windowId, $gateStatus)
                 } elseif ($consultedCount -gt 0 -and $routedCount -eq 0) {

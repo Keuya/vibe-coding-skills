@@ -13,7 +13,7 @@ param(
     [AllowEmptyString()] [string]$ParentUnitId = ''
 )
 
-Set-StrictMode -Version Latest
+Set-StrictMode -Off
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'VibeRuntime.Common.ps1')
