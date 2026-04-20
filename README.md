@@ -723,6 +723,7 @@ Fork → Modify → Pull Request → Merge ✅
 <br/>
 
 > ⭐ If this project helps you, a **Star** is the greatest support you can give!
+> Its underlying philosophy has been well-received; however, the current codebase carries some technical debt, and certain features still require refinement. We welcome you to point out any such issues in the Issues section.
 > Your support is the enriched uranium that fuels this nuclear-powered donkey 🫏
 
 <br/>
