@@ -1661,7 +1661,19 @@ function New-VibeRuntimeSummaryArtifactProjection {
         [AllowEmptyString()] [string]$MemoryActivationReportPath = '',
         [AllowEmptyString()] [string]$MemoryActivationMarkdownPath = '',
         [AllowEmptyString()] [string]$DelegationEnvelopePath = '',
-        [AllowEmptyString()] [string]$DelegationValidationReceiptPath = ''
+        [AllowEmptyString()] [string]$DelegationValidationReceiptPath = '',
+        [AllowEmptyString()] [string]$ObservedFailurePatternsPath = '',
+        [AllowEmptyString()] [string]$ObservedPitfallEventsPath = '',
+        [AllowEmptyString()] [string]$AtomicSkillCallChainPath = '',
+        [AllowEmptyString()] [string]$ProposalLayerPath = '',
+        [AllowEmptyString()] [string]$ProposalLayerMarkdownPath = '',
+        [AllowEmptyString()] [string]$ApplicationReadinessReportPath = '',
+        [AllowEmptyString()] [string]$ApplicationReadinessMarkdownPath = '',
+        [AllowEmptyString()] [string]$WarningCardsPath = '',
+        [AllowEmptyString()] [string]$PreflightChecklistPath = '',
+        [AllowEmptyString()] [string]$RemediationNotesPath = '',
+        [AllowEmptyString()] [string]$CandidateCompositeSkillDraftPath = '',
+        [AllowEmptyString()] [string]$ThresholdPolicySuggestionPath = ''
     )
 
     return [pscustomobject]@{
@@ -1690,6 +1702,18 @@ function New-VibeRuntimeSummaryArtifactProjection {
         memory_activation_markdown = if ([string]::IsNullOrWhiteSpace($MemoryActivationMarkdownPath)) { $null } else { $MemoryActivationMarkdownPath }
         delegation_envelope = if ([string]::IsNullOrWhiteSpace($DelegationEnvelopePath)) { $null } else { $DelegationEnvelopePath }
         delegation_validation_receipt = if ([string]::IsNullOrWhiteSpace($DelegationValidationReceiptPath)) { $null } else { $DelegationValidationReceiptPath }
+        observed_failure_patterns = if ([string]::IsNullOrWhiteSpace($ObservedFailurePatternsPath)) { $null } else { $ObservedFailurePatternsPath }
+        observed_pitfall_events = if ([string]::IsNullOrWhiteSpace($ObservedPitfallEventsPath)) { $null } else { $ObservedPitfallEventsPath }
+        atomic_skill_call_chain = if ([string]::IsNullOrWhiteSpace($AtomicSkillCallChainPath)) { $null } else { $AtomicSkillCallChainPath }
+        proposal_layer = if ([string]::IsNullOrWhiteSpace($ProposalLayerPath)) { $null } else { $ProposalLayerPath }
+        proposal_layer_markdown = if ([string]::IsNullOrWhiteSpace($ProposalLayerMarkdownPath)) { $null } else { $ProposalLayerMarkdownPath }
+        application_readiness_report = if ([string]::IsNullOrWhiteSpace($ApplicationReadinessReportPath)) { $null } else { $ApplicationReadinessReportPath }
+        application_readiness_markdown = if ([string]::IsNullOrWhiteSpace($ApplicationReadinessMarkdownPath)) { $null } else { $ApplicationReadinessMarkdownPath }
+        warning_cards = if ([string]::IsNullOrWhiteSpace($WarningCardsPath)) { $null } else { $WarningCardsPath }
+        preflight_checklist = if ([string]::IsNullOrWhiteSpace($PreflightChecklistPath)) { $null } else { $PreflightChecklistPath }
+        remediation_notes = if ([string]::IsNullOrWhiteSpace($RemediationNotesPath)) { $null } else { $RemediationNotesPath }
+        candidate_composite_skill_draft = if ([string]::IsNullOrWhiteSpace($CandidateCompositeSkillDraftPath)) { $null } else { $CandidateCompositeSkillDraftPath }
+        threshold_policy_suggestion = if ([string]::IsNullOrWhiteSpace($ThresholdPolicySuggestionPath)) { $null } else { $ThresholdPolicySuggestionPath }
     }
 }
 
@@ -1750,6 +1774,991 @@ function New-VibeRuntimeSummaryDeliveryAcceptanceProjection {
         manual_review_layer_count = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('manual_review_layer_count') -DefaultValue 0
         failing_layer_count = Get-VibeNestedPropertySafe -InputObject $summary -PropertyPath @('failing_layer_count') -DefaultValue 0
     }
+}
+
+function Read-VibeJsonArtifactIfExists {
+    param([AllowEmptyString()] [string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch {
+        return $null
+    }
+}
+
+function Get-VibePropertyCount {
+    param(
+        [AllowNull()] [object]$Map,
+        [Parameter(Mandatory)] [string]$Name
+    )
+
+    if ($null -eq $Map) {
+        return 0
+    }
+    $property = $Map.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return 0
+    }
+
+    try {
+        return [int]$property.Value
+    } catch {
+        return 0
+    }
+}
+
+function Get-VibeObservedMemberValue {
+    param(
+        [AllowNull()] [object]$InputObject,
+        [Parameter(Mandatory)] [string]$Name
+    )
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        if ($InputObject.Contains($Name)) {
+            return $InputObject[$Name]
+        }
+        return $null
+    }
+    foreach ($property in @($InputObject.PSObject.Properties)) {
+        if ([string]$property.Name -eq $Name) {
+            return $property.Value
+        }
+    }
+    return $null
+}
+
+function ConvertTo-VibeObservedArray {
+    param([AllowNull()] [object]$InputObject)
+
+    if ($null -eq $InputObject) {
+        return @()
+    }
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        if ($InputObject.Count -eq 0) {
+            return @()
+        }
+        return @($InputObject)
+    }
+    $properties = @($InputObject.PSObject.Properties)
+    if ($properties.Count -eq 0 -and -not ($InputObject -is [string])) {
+        return @()
+    }
+    return @($InputObject)
+}
+
+function Get-VibeProcessHealthObservationContext {
+    param([AllowNull()] [object]$CleanupReceipt)
+
+    $auditPath = $null
+    $cleanupPreviewPath = $null
+    if ($null -ne $CleanupReceipt -and (Test-VibeObjectHasProperty -InputObject $CleanupReceipt -PropertyName 'cleanup_result') -and $null -ne $CleanupReceipt.cleanup_result) {
+        if (
+            (Test-VibeObjectHasProperty -InputObject $CleanupReceipt.cleanup_result -PropertyName 'node_audit') -and
+            $null -ne $CleanupReceipt.cleanup_result.node_audit -and
+            (Test-VibeObjectHasProperty -InputObject $CleanupReceipt.cleanup_result.node_audit -PropertyName 'artifact_path') -and
+            -not [string]::IsNullOrWhiteSpace([string]$CleanupReceipt.cleanup_result.node_audit.artifact_path)
+        ) {
+            $auditPath = [string]$CleanupReceipt.cleanup_result.node_audit.artifact_path
+        }
+        if (
+            (Test-VibeObjectHasProperty -InputObject $CleanupReceipt.cleanup_result -PropertyName 'node_cleanup_preview') -and
+            $null -ne $CleanupReceipt.cleanup_result.node_cleanup_preview -and
+            (Test-VibeObjectHasProperty -InputObject $CleanupReceipt.cleanup_result.node_cleanup_preview -PropertyName 'artifact_path') -and
+            -not [string]::IsNullOrWhiteSpace([string]$CleanupReceipt.cleanup_result.node_cleanup_preview.artifact_path)
+        ) {
+            $cleanupPreviewPath = [string]$CleanupReceipt.cleanup_result.node_cleanup_preview.artifact_path
+        }
+    }
+
+    return [pscustomobject]@{
+        audit_path = $auditPath
+        audit_payload = Read-VibeJsonArtifactIfExists -Path $auditPath
+        cleanup_preview_path = $cleanupPreviewPath
+        cleanup_preview_payload = Read-VibeJsonArtifactIfExists -Path $cleanupPreviewPath
+    }
+}
+
+function New-VibeObservedFailurePatternsArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ExecutionManifest,
+        [AllowNull()] [object]$CleanupReceipt,
+        [AllowNull()] [object]$DeliveryAcceptanceReport
+    )
+
+    $processHealth = Get-VibeProcessHealthObservationContext -CleanupReceipt $CleanupReceipt
+    $executionStatus = [string](Get-VibeObservedMemberValue -InputObject $ExecutionManifest -Name 'status')
+    $cleanupMode = [string](Get-VibeObservedMemberValue -InputObject $CleanupReceipt -Name 'cleanup_mode')
+    $deliverySummary = Get-VibeObservedMemberValue -InputObject $DeliveryAcceptanceReport -Name 'summary'
+    $gateResult = [string](Get-VibeObservedMemberValue -InputObject $deliverySummary -Name 'gate_result')
+    $runtimeStatus = [string](Get-VibeObservedMemberValue -InputObject $deliverySummary -Name 'runtime_status')
+    $readinessState = [string](Get-VibeObservedMemberValue -InputObject $deliverySummary -Name 'readiness_state')
+    $processSummary = Get-VibeObservedMemberValue -InputObject $processHealth.audit_payload -Name 'summary'
+    $classifications = Get-VibeObservedMemberValue -InputObject $processSummary -Name 'classifications'
+    $cleanupCandidateCount = [int](Get-VibeObservedMemberValue -InputObject $processSummary -Name 'cleanup_candidate_count')
+    $managedStaleCount = Get-VibePropertyCount -Map $classifications -Name 'managed_stale'
+    $managedMissingHeartbeatCount = Get-VibePropertyCount -Map $classifications -Name 'managed_missing_heartbeat'
+    $managedCompletedAliveCount = Get-VibePropertyCount -Map $classifications -Name 'managed_completed_process_alive'
+    $partialCompletion = (
+        (-not [string]::IsNullOrWhiteSpace($executionStatus) -and $executionStatus -ne 'completed' -and $executionStatus -ne 'failed') -or
+        (-not [string]::IsNullOrWhiteSpace($runtimeStatus) -and $runtimeStatus -ne 'completed' -and $runtimeStatus -ne 'failed')
+    )
+
+    $patterns = @(
+        [pscustomobject]@{
+            pattern_id = 'execution_failed'
+            classification = 'execution_failed'
+            failure_type = 'execution_failed'
+            active = ($executionStatus -eq 'failed')
+            severity = 'high'
+            evidence_refs = @('execution-manifest.json')
+            details = [pscustomobject]@{ execution_status = if ([string]::IsNullOrWhiteSpace($executionStatus)) { $null } else { $executionStatus } }
+        },
+        [pscustomobject]@{
+            pattern_id = 'partial_completion'
+            classification = 'partial_completion'
+            failure_type = 'partial_completion'
+            active = [bool]$partialCompletion
+            severity = 'medium'
+            evidence_refs = @('execution-manifest.json', 'delivery-acceptance-report.json')
+            details = [pscustomobject]@{
+                execution_status = if ([string]::IsNullOrWhiteSpace($executionStatus)) { $null } else { $executionStatus }
+                runtime_status = if ([string]::IsNullOrWhiteSpace($runtimeStatus)) { $null } else { $runtimeStatus }
+            }
+        },
+        [pscustomobject]@{
+            pattern_id = 'cleanup_degraded'
+            classification = 'cleanup_degraded'
+            failure_type = 'cleanup_degraded'
+            active = ($cleanupMode -eq 'cleanup_degraded')
+            severity = 'high'
+            evidence_refs = @('cleanup-receipt.json')
+            details = [pscustomobject]@{
+                cleanup_mode = if ([string]::IsNullOrWhiteSpace($cleanupMode)) { $null } else { $cleanupMode }
+                cleanup_error = [string](Get-VibeObservedMemberValue -InputObject $CleanupReceipt -Name 'cleanup_error')
+            }
+        },
+        [pscustomobject]@{
+            pattern_id = 'delivery_gate_failed'
+            classification = 'delivery_gate_failed'
+            failure_type = 'delivery_gate_failed'
+            active = (-not [string]::IsNullOrWhiteSpace($gateResult) -and $gateResult -ne 'pass')
+            severity = 'high'
+            evidence_refs = @('delivery-acceptance-report.json')
+            details = [pscustomobject]@{
+                gate_result = if ([string]::IsNullOrWhiteSpace($gateResult)) { $null } else { $gateResult }
+                readiness_state = if ([string]::IsNullOrWhiteSpace($readinessState)) { $null } else { $readinessState }
+            }
+        },
+        [pscustomobject]@{
+            pattern_id = 'process_health_risk'
+            classification = 'process_health_risk'
+            failure_type = 'process_health_risk'
+            active = (($cleanupCandidateCount + $managedStaleCount + $managedMissingHeartbeatCount + $managedCompletedAliveCount) -gt 0)
+            severity = 'medium'
+            evidence_refs = @($(if ($processHealth.audit_path) { $processHealth.audit_path } else { 'cleanup-receipt.json' }))
+            details = [pscustomobject]@{
+                cleanup_candidate_count = $cleanupCandidateCount
+                managed_stale_count = $managedStaleCount
+                managed_missing_heartbeat_count = $managedMissingHeartbeatCount
+                managed_completed_process_alive_count = $managedCompletedAliveCount
+            }
+        }
+    )
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        summary = [pscustomobject]@{
+            active_failure_pattern_count = @($patterns | Where-Object { $_.active }).Count
+            has_any_failure_pattern = [bool](@($patterns | Where-Object { $_.active }).Count -gt 0)
+        }
+        patterns = @($patterns)
+    }
+}
+
+function New-VibeObservedPitfallEventsArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$RuntimeInputPacket,
+        [AllowNull()] [object]$CleanupReceipt,
+        [AllowNull()] [object]$DeliveryAcceptanceReport
+    )
+
+    $processHealth = Get-VibeProcessHealthObservationContext -CleanupReceipt $CleanupReceipt
+    $routeSnapshot = Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'route_snapshot'
+    $deliverySummary = Get-VibeObservedMemberValue -InputObject $DeliveryAcceptanceReport -Name 'summary'
+    $processSummary = Get-VibeObservedMemberValue -InputObject $processHealth.audit_payload -Name 'summary'
+    $classifications = Get-VibeObservedMemberValue -InputObject $processSummary -Name 'classifications'
+    $cleanupCandidateCount = [int](Get-VibeObservedMemberValue -InputObject $processSummary -Name 'cleanup_candidate_count')
+    $managedStaleCount = Get-VibePropertyCount -Map $classifications -Name 'managed_stale'
+    $gateResult = [string](Get-VibeObservedMemberValue -InputObject $deliverySummary -Name 'gate_result')
+    $cleanupMode = [string](Get-VibeObservedMemberValue -InputObject $CleanupReceipt -Name 'cleanup_mode')
+
+    $events = @()
+    if ([bool](Get-VibeObservedMemberValue -InputObject $routeSnapshot -Name 'confirm_required')) {
+        $events += [pscustomobject]@{
+            pitfall_type = 'confirm_required_route'
+            source_layer = 'routing'
+            source_artifact = 'runtime-input-packet.json'
+            source_stage = 'runtime_input_packet'
+            trigger_field = 'route_snapshot.confirm_required'
+            trigger_value = $true
+            count = 1
+            confidence_level = 'high'
+        }
+    }
+    if ([bool](Get-VibeObservedMemberValue -InputObject $routeSnapshot -Name 'fallback_active')) {
+        $events += [pscustomobject]@{
+            pitfall_type = 'fallback_active_route'
+            source_layer = 'routing'
+            source_artifact = 'runtime-input-packet.json'
+            source_stage = 'runtime_input_packet'
+            trigger_field = 'route_snapshot.fallback_active'
+            trigger_value = $true
+            count = 1
+            confidence_level = 'high'
+        }
+    }
+    if ([bool](Get-VibeObservedMemberValue -InputObject $routeSnapshot -Name 'non_authoritative')) {
+        $events += [pscustomobject]@{
+            pitfall_type = 'non_authoritative_route'
+            source_layer = 'routing'
+            source_artifact = 'runtime-input-packet.json'
+            source_stage = 'runtime_input_packet'
+            trigger_field = 'route_snapshot.non_authoritative'
+            trigger_value = $true
+            count = 1
+            confidence_level = 'high'
+        }
+    }
+    if ($cleanupCandidateCount -gt 0) {
+        $events += [pscustomobject]@{
+            pitfall_type = 'cleanup_candidate_present'
+            source_layer = 'process_health'
+            source_artifact = if ($processHealth.audit_path) { $processHealth.audit_path } else { 'cleanup-receipt.json' }
+            source_stage = 'phase_cleanup'
+            trigger_field = 'summary.cleanup_candidate_count'
+            trigger_value = $cleanupCandidateCount
+            count = $cleanupCandidateCount
+            confidence_level = 'high'
+        }
+    }
+    if ($managedStaleCount -gt 0) {
+        $events += [pscustomobject]@{
+            pitfall_type = 'managed_stale_detected'
+            source_layer = 'process_health'
+            source_artifact = if ($processHealth.audit_path) { $processHealth.audit_path } else { 'cleanup-receipt.json' }
+            source_stage = 'phase_cleanup'
+            trigger_field = 'summary.classifications.managed_stale'
+            trigger_value = $managedStaleCount
+            count = $managedStaleCount
+            confidence_level = 'high'
+        }
+    }
+    if ($cleanupMode -eq 'cleanup_degraded') {
+        $events += [pscustomobject]@{
+            pitfall_type = 'cleanup_degraded'
+            source_layer = 'cleanup'
+            source_artifact = 'cleanup-receipt.json'
+            source_stage = 'phase_cleanup'
+            trigger_field = 'cleanup_mode'
+            trigger_value = $cleanupMode
+            count = 1
+            confidence_level = 'high'
+        }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($gateResult) -and $gateResult -ne 'pass') {
+        $events += [pscustomobject]@{
+            pitfall_type = 'delivery_gate_failed'
+            source_layer = 'delivery'
+            source_artifact = 'delivery-acceptance-report.json'
+            source_stage = 'phase_cleanup'
+            trigger_field = 'summary.gate_result'
+            trigger_value = $gateResult
+            count = 1
+            confidence_level = 'high'
+        }
+    }
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        summary = [pscustomobject]@{
+            pitfall_event_count = @($events).Count
+            has_any_pitfall_event = [bool](@($events).Count -gt 0)
+        }
+        events = @($events)
+    }
+}
+
+function Get-VibeProposalEvidenceLevel {
+    param(
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents,
+        [AllowNull()] [object]$AtomicSkillCallChain
+    )
+
+    $failureCount = if ($null -ne $ObservedFailurePatterns -and (Test-VibeObjectHasProperty -InputObject $ObservedFailurePatterns -PropertyName 'summary')) { [int]$ObservedFailurePatterns.summary.active_failure_pattern_count } else { 0 }
+    $pitfallCount = if ($null -ne $ObservedPitfallEvents -and (Test-VibeObjectHasProperty -InputObject $ObservedPitfallEvents -PropertyName 'summary')) { [int]$ObservedPitfallEvents.summary.pitfall_event_count } else { 0 }
+    $skillEventCount = if ($null -ne $AtomicSkillCallChain -and (Test-VibeObjectHasProperty -InputObject $AtomicSkillCallChain -PropertyName 'summary')) { [int]$AtomicSkillCallChain.summary.event_count } else { 0 }
+    if ($failureCount -gt 0 -or $pitfallCount -gt 0) { return 'strong' }
+    if ($skillEventCount -gt 0) { return 'moderate' }
+    return 'limited'
+}
+
+function New-VibeAtomicSkillCallChainArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$RuntimeInputPacket,
+        [AllowNull()] [object]$ExecutionTopology,
+        [AllowNull()] [object]$ExecutionManifest,
+        [AllowNull()] [object]$StageLineage
+    )
+
+    $events = @()
+    $sequence = 0
+    $runtimeInputGeneratedAt = [string](Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'generated_at')
+    $authorityFlags = Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'authority_flags'
+    $routeSnapshot = Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'route_snapshot'
+    $specialistDispatch = Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'specialist_dispatch'
+    $governorSkillId = [string](Get-VibeObservedMemberValue -InputObject $authorityFlags -Name 'explicit_runtime_skill')
+    if ([string]::IsNullOrWhiteSpace($governorSkillId)) { $governorSkillId = [string](Get-VibeObservedMemberValue -InputObject $authorityFlags -Name 'runtime_entry') }
+    if ([string]::IsNullOrWhiteSpace($governorSkillId)) { $governorSkillId = [string](Get-VibeObservedMemberValue -InputObject $routeSnapshot -Name 'selected_skill') }
+    if ([string]::IsNullOrWhiteSpace($governorSkillId)) { $governorSkillId = 'vibe' }
+
+    $sequence += 1
+    $events += [pscustomobject]@{
+        event_id = ('{0}-{1:d4}' -f $RunId, $sequence)
+        sequence = $sequence
+        run_id = $RunId
+        observed_at = $runtimeInputGeneratedAt
+        event_type = 'runtime_governor_activated'
+        skill_id = $governorSkillId
+        stage = 'skeleton_check'
+        source_layer = 'runtime'
+        source_artifact = 'runtime-input-packet.json'
+        lane_id = $null
+        unit_id = $null
+        status = 'active'
+        reason = 'governed_runtime_entry'
+        dispatch_phase = $null
+        binding_profile = $null
+        write_scope = $null
+        review_mode = $null
+        confidence = $null
+        degraded = $false
+        verification_passed = $null
+        evidence_refs = @('runtime-input-packet.json', 'stage-lineage.json')
+    }
+
+    foreach ($candidate in @(ConvertTo-VibeObservedArray -InputObject $(Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'specialist_recommendations'))) {
+        $skillId = [string](Get-VibeObservedMemberValue -InputObject $candidate -Name 'skill_id')
+        if ([string]::IsNullOrWhiteSpace($skillId)) { continue }
+        $sequence += 1
+        $events += [pscustomobject]@{
+            event_id = ('{0}-{1:d4}' -f $RunId, $sequence)
+            sequence = $sequence
+            run_id = $RunId
+            observed_at = $runtimeInputGeneratedAt
+            event_type = 'skill_candidate_surfaced'
+            skill_id = $skillId
+            stage = 'runtime_input_freeze'
+            source_layer = 'routing'
+            source_artifact = 'runtime-input-packet.json'
+            lane_id = $null
+            unit_id = $null
+            status = 'candidate'
+            reason = [string](Get-VibeObservedMemberValue -InputObject $candidate -Name 'reason')
+            dispatch_phase = [string](Get-VibeObservedMemberValue -InputObject $candidate -Name 'dispatch_phase')
+            binding_profile = [string](Get-VibeObservedMemberValue -InputObject $candidate -Name 'binding_profile')
+            write_scope = [string](Get-VibeObservedMemberValue -InputObject $candidate -Name 'write_scope')
+            review_mode = [string](Get-VibeObservedMemberValue -InputObject $candidate -Name 'review_mode')
+            confidence = Get-VibeObservedMemberValue -InputObject $candidate -Name 'confidence'
+            degraded = $false
+            verification_passed = $null
+            evidence_refs = @('runtime-input-packet.json')
+        }
+    }
+
+    foreach ($dispatchType in @('approved_dispatch', 'blocked', 'degraded')) {
+        foreach ($dispatchEntry in @(ConvertTo-VibeObservedArray -InputObject $(Get-VibeObservedMemberValue -InputObject $specialistDispatch -Name $dispatchType))) {
+            $skillId = [string](Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'skill_id')
+            if ([string]::IsNullOrWhiteSpace($skillId)) { continue }
+            $sequence += 1
+            $events += [pscustomobject]@{
+                event_id = ('{0}-{1:d4}' -f $RunId, $sequence)
+                sequence = $sequence
+                run_id = $RunId
+                observed_at = $runtimeInputGeneratedAt
+                event_type = 'skill_dispatch_' + ($(if ($dispatchType -eq 'approved_dispatch') { 'approved' } else { $dispatchType }))
+                skill_id = $skillId
+                stage = 'runtime_input_freeze'
+                source_layer = 'routing'
+                source_artifact = 'runtime-input-packet.json'
+                lane_id = $null
+                unit_id = $null
+                status = if ($dispatchType -eq 'approved_dispatch') { 'approved' } else { [string]$dispatchType }
+                reason = [string](Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'recommended_promotion_action')
+                dispatch_phase = [string](Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'dispatch_phase')
+                binding_profile = [string](Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'binding_profile')
+                write_scope = [string](Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'write_scope')
+                review_mode = [string](Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'review_mode')
+                confidence = Get-VibeObservedMemberValue -InputObject $dispatchEntry -Name 'confidence'
+                degraded = [bool]($dispatchType -eq 'degraded')
+                verification_passed = $null
+                evidence_refs = @('runtime-input-packet.json')
+            }
+        }
+    }
+
+    foreach ($wave in @(ConvertTo-VibeObservedArray -InputObject $(Get-VibeObservedMemberValue -InputObject $ExecutionManifest -Name 'waves'))) {
+        foreach ($step in @(ConvertTo-VibeObservedArray -InputObject $(Get-VibeObservedMemberValue -InputObject $wave -Name 'steps'))) {
+            foreach ($unit in @(ConvertTo-VibeObservedArray -InputObject $(Get-VibeObservedMemberValue -InputObject $step -Name 'units'))) {
+                $skillId = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'skill_id')
+                if ([string]::IsNullOrWhiteSpace($skillId)) { continue }
+                $resultPath = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'result_path')
+                $evidenceRefs = @('execution-manifest.json')
+                if (-not [string]::IsNullOrWhiteSpace($resultPath)) { $evidenceRefs += $resultPath }
+                $sequence += 1
+                $events += [pscustomobject]@{
+                    event_id = ('{0}-{1:d4}' -f $RunId, $sequence)
+                    sequence = $sequence
+                    run_id = $RunId
+                    observed_at = [string](Get-VibeObservedMemberValue -InputObject $ExecutionManifest -Name 'generated_at')
+                    event_type = 'skill_execution_finished'
+                    skill_id = $skillId
+                    stage = 'plan_execute'
+                    source_layer = 'execution'
+                    source_artifact = 'execution-manifest.json'
+                    lane_id = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'lane_id')
+                    unit_id = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'unit_id')
+                    status = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'status')
+                    reason = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'execution_driver')
+                    dispatch_phase = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'dispatch_phase')
+                    binding_profile = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'binding_profile')
+                    write_scope = [string](Get-VibeObservedMemberValue -InputObject $unit -Name 'write_scope')
+                    review_mode = [string](Get-VibeObservedMemberValue -InputObject $step -Name 'review_mode')
+                    confidence = $null
+                    degraded = [bool](Get-VibeObservedMemberValue -InputObject $unit -Name 'degraded')
+                    verification_passed = Get-VibeObservedMemberValue -InputObject $unit -Name 'verification_passed'
+                    evidence_refs = @($evidenceRefs)
+                }
+            }
+        }
+    }
+
+    $skillIds = @($events | ForEach-Object { [string]$_.skill_id } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $executedSkillIds = @($events | Where-Object { $_.event_type -eq 'skill_execution_finished' } | ForEach-Object { [string]$_.skill_id } | Select-Object -Unique)
+    $degradedSkillIds = @($events | Where-Object { [bool]$_.degraded } | ForEach-Object { [string]$_.skill_id } | Select-Object -Unique)
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        summary = [pscustomobject]@{
+            event_count = @($events).Count
+            skill_count = @($skillIds).Count
+            executed_skill_count = @($executedSkillIds).Count
+            degraded_skill_count = @($degradedSkillIds).Count
+        }
+        events = @($events)
+    }
+}
+
+function New-VibeWarningCardsArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents,
+        [AllowNull()] [object]$DeliveryAcceptanceReport
+    )
+
+    $cards = @()
+    foreach ($pattern in @($(if ($null -ne $ObservedFailurePatterns -and (Test-VibeObjectHasProperty -InputObject $ObservedFailurePatterns -PropertyName 'patterns')) { $ObservedFailurePatterns.patterns } else { @() }) | Where-Object { $_.active })) {
+        $cards += [pscustomobject]@{
+            card_id = 'warning-' + [string]$pattern.pattern_id
+            severity = if ([string]::IsNullOrWhiteSpace([string]$pattern.severity)) { 'medium' } else { [string]$pattern.severity }
+            title = ([string]$pattern.classification -replace '_', ' ')
+            summary = "Observed active failure pattern: $([string]$pattern.classification)."
+            source_signals = @([string]$pattern.classification)
+            evidence_refs = @($pattern.evidence_refs)
+            review_recommended = $true
+        }
+    }
+    foreach ($pitfall in @($(if ($null -ne $ObservedPitfallEvents -and (Test-VibeObjectHasProperty -InputObject $ObservedPitfallEvents -PropertyName 'events')) { $ObservedPitfallEvents.events } else { @() }))) {
+        $cards += [pscustomobject]@{
+            card_id = 'warning-pitfall-' + [string]$pitfall.pitfall_type
+            severity = if ([string]$pitfall.pitfall_type -match 'delivery|cleanup') { 'high' } else { 'medium' }
+            title = ([string]$pitfall.pitfall_type -replace '_', ' ')
+            summary = "Observed pitfall event: $([string]$pitfall.pitfall_type)."
+            source_signals = @([string]$pitfall.pitfall_type)
+            evidence_refs = @([string]$pitfall.source_artifact)
+            review_recommended = $true
+        }
+    }
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        summary = [pscustomobject]@{
+            card_count = @($cards).Count
+            high_severity_count = @(@($cards | Where-Object { [string]$_.severity -eq 'high' })).Count
+        }
+        cards = @($cards)
+    }
+}
+
+function New-VibePreflightChecklistArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents,
+        [AllowNull()] [object]$RuntimeSummary
+    )
+
+    $checks = @()
+    $seenIds = @{}
+    foreach ($pattern in @($(if ($null -ne $ObservedFailurePatterns -and (Test-VibeObjectHasProperty -InputObject $ObservedFailurePatterns -PropertyName 'patterns')) { $ObservedFailurePatterns.patterns } else { @() }) | Where-Object { $_.active })) {
+        $checkId = 'check-' + [string]$pattern.pattern_id
+        if ($seenIds.ContainsKey($checkId)) { continue }
+        $seenIds[$checkId] = $true
+        $checks += [pscustomobject]@{
+            check_id = $checkId
+            label = "review $([string]$pattern.classification)"
+            why = "Previous run observed active failure pattern '$([string]$pattern.classification)'."
+            source_signal = [string]$pattern.classification
+            required_before_next_run = $true
+        }
+    }
+    foreach ($pitfall in @($(if ($null -ne $ObservedPitfallEvents -and (Test-VibeObjectHasProperty -InputObject $ObservedPitfallEvents -PropertyName 'events')) { $ObservedPitfallEvents.events } else { @() }))) {
+        $checkId = 'check-pitfall-' + [string]$pitfall.pitfall_type
+        if ($seenIds.ContainsKey($checkId)) { continue }
+        $seenIds[$checkId] = $true
+        $checks += [pscustomobject]@{
+            check_id = $checkId
+            label = "review $([string]$pitfall.pitfall_type)"
+            why = "Previous run observed pitfall event '$([string]$pitfall.pitfall_type)'."
+            source_signal = [string]$pitfall.pitfall_type
+            required_before_next_run = $true
+        }
+    }
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        summary = [pscustomobject]@{ check_count = @($checks).Count }
+        checks = @($checks)
+    }
+}
+
+function New-VibeRemediationNotesArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents,
+        [AllowNull()] [object]$AtomicSkillCallChain
+    )
+
+    $notes = @()
+    foreach ($pattern in @($(if ($null -ne $ObservedFailurePatterns -and (Test-VibeObjectHasProperty -InputObject $ObservedFailurePatterns -PropertyName 'patterns')) { $ObservedFailurePatterns.patterns } else { @() }) | Where-Object { $_.active })) {
+        $notes += [pscustomobject]@{
+            note_id = 'remediation-' + [string]$pattern.pattern_id
+            remediation_type = 'failure_pattern'
+            suggested_remediation = "Review and contain failure pattern '$([string]$pattern.classification)' before reuse."
+            evidence_level = 'pattern'
+        }
+    }
+    foreach ($pitfall in @($(if ($null -ne $ObservedPitfallEvents -and (Test-VibeObjectHasProperty -InputObject $ObservedPitfallEvents -PropertyName 'events')) { $ObservedPitfallEvents.events } else { @() }))) {
+        $notes += [pscustomobject]@{
+            note_id = 'remediation-pitfall-' + [string]$pitfall.pitfall_type
+            remediation_type = 'pitfall'
+            suggested_remediation = "Add review handling for pitfall '$([string]$pitfall.pitfall_type)'."
+            evidence_level = 'pitfall'
+        }
+    }
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        summary = [pscustomobject]@{ note_count = @($notes).Count }
+        notes = @($notes)
+    }
+}
+
+function New-VibeCandidateCompositeSkillDraftArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$AtomicSkillCallChain,
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents
+    )
+
+    $events = @($(if ($null -ne $AtomicSkillCallChain -and (Test-VibeObjectHasProperty -InputObject $AtomicSkillCallChain -PropertyName 'events')) { $AtomicSkillCallChain.events } else { @() }))
+    $approvedSpecialists = @(
+        $events |
+        Where-Object { [string]$_.event_type -eq 'skill_dispatch_approved' -and [string]$_.skill_id -ne 'vibe' } |
+        ForEach-Object { [string]$_.skill_id } |
+        Select-Object -Unique
+    )
+    $drafts = @()
+    if (@($approvedSpecialists).Count -gt 0) {
+        $drafts += [pscustomobject]@{
+            draft_id = 'draft-review-bundle'
+            title = 'review-oriented composite skill draft'
+            trigger_shape = 'repository review / governed verification task'
+            governor_skill = 'vibe'
+            component_skills = @($approvedSpecialists)
+            entry_conditions = @(
+                'Task requires governed review or verification.',
+                'Specialist dispatch surfaced review-oriented specialist skills.'
+            )
+            known_risks = @()
+            promotion_readiness = 'candidate'
+        }
+    }
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        summary = [pscustomobject]@{ draft_count = @($drafts).Count }
+        drafts = @($drafts)
+    }
+}
+
+function New-VibeThresholdPolicySuggestionArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents,
+        [AllowNull()] [object]$RuntimeInputPacket,
+        [AllowNull()] [object]$RuntimeSummary
+    )
+
+    $pitfallEvents = @($(if ($null -ne $ObservedPitfallEvents -and (Test-VibeObjectHasProperty -InputObject $ObservedPitfallEvents -PropertyName 'events')) { $ObservedPitfallEvents.events } else { @() }))
+    $suggestions = @()
+    if (@($pitfallEvents | Where-Object { [string]$_.pitfall_type -eq 'confirm_required_route' }).Count -gt 0) {
+        $suggestions += [pscustomobject]@{
+            suggestion_id = 'policy-confirm-review'
+            policy_area = 'routing_confirm'
+            current_signal = 'confirm_required_route'
+            suggested_change = 'Keep confirm-related routing under manual review until repeated sessions stop hitting confirm_required.'
+            expected_benefit = 'Reduce silent escalation of ambiguous routes.'
+            risk_if_applied = 'May increase manual review frequency.'
+            review_path = 'shadow-review'
+        }
+    }
+    $activeDeliveryFailure = @($(if ($null -ne $ObservedFailurePatterns -and (Test-VibeObjectHasProperty -InputObject $ObservedFailurePatterns -PropertyName 'patterns')) { $ObservedFailurePatterns.patterns } else { @() }) | Where-Object { [string]$_.classification -eq 'delivery_gate_failed' -and [bool]$_.active }).Count -gt 0
+    if ($activeDeliveryFailure) {
+        $suggestions += [pscustomobject]@{
+            suggestion_id = 'policy-delivery-gate'
+            policy_area = 'delivery_acceptance'
+            current_signal = 'delivery_gate_failed'
+            suggested_change = 'Treat delivery gate failures as a hard review stop for similar runs.'
+            expected_benefit = 'Prevent premature completion claims.'
+            risk_if_applied = 'Can slow down runs that are near-complete but still noisy.'
+            review_path = 'board-review'
+        }
+    }
+    $routeSnapshot = Get-VibeObservedMemberValue -InputObject $RuntimeInputPacket -Name 'route_snapshot'
+    if ([bool](Get-VibeObservedMemberValue -InputObject $routeSnapshot -Name 'fallback_active')) {
+        $suggestions += [pscustomobject]@{
+            suggestion_id = 'policy-fallback-shadow'
+            policy_area = 'routing_fallback'
+            current_signal = 'fallback_active_route'
+            suggested_change = 'Shadow-review fallback-active routes before loosening fallback thresholds.'
+            expected_benefit = 'Catch low-confidence task routing drift earlier.'
+            risk_if_applied = 'Adds temporary review overhead.'
+            review_path = 'shadow-review'
+        }
+    }
+
+    return [pscustomobject]@{
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        summary = [pscustomobject]@{ suggestion_count = @($suggestions).Count }
+        suggestions = @($suggestions)
+    }
+}
+
+function New-VibeProposalLayerArtifact {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ObservedFailurePatterns,
+        [AllowNull()] [object]$ObservedPitfallEvents,
+        [AllowNull()] [object]$AtomicSkillCallChain,
+        [AllowNull()] [object]$WarningCardsArtifact,
+        [AllowNull()] [object]$PreflightChecklistArtifact,
+        [AllowEmptyString()] [string]$WarningCardsPath = '',
+        [AllowEmptyString()] [string]$PreflightChecklistPath = '',
+        [AllowEmptyString()] [string]$RemediationNotesPath = '',
+        [AllowEmptyString()] [string]$CandidateCompositeSkillDraftPath = '',
+        [AllowEmptyString()] [string]$ThresholdPolicySuggestionPath = ''
+    )
+
+    $cards = @($(if ($null -ne $WarningCardsArtifact -and (Test-VibeObjectHasProperty -InputObject $WarningCardsArtifact -PropertyName 'cards')) { $WarningCardsArtifact.cards } else { @() }))
+    $checks = @($(if ($null -ne $PreflightChecklistArtifact -and (Test-VibeObjectHasProperty -InputObject $PreflightChecklistArtifact -PropertyName 'checks')) { $PreflightChecklistArtifact.checks } else { @() }))
+    return [pscustomobject]@{
+        schema_version = 1
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        summary = [pscustomobject]@{
+            evidence_level = Get-VibeProposalEvidenceLevel -ObservedFailurePatterns $ObservedFailurePatterns -ObservedPitfallEvents $ObservedPitfallEvents -AtomicSkillCallChain $AtomicSkillCallChain
+            warning_card_count = @($cards).Count
+            preflight_check_count = @($checks).Count
+        }
+        artifacts = [pscustomobject]@{
+            warning_cards = if ([string]::IsNullOrWhiteSpace($WarningCardsPath)) { $null } else { $WarningCardsPath }
+            preflight_checklist = if ([string]::IsNullOrWhiteSpace($PreflightChecklistPath)) { $null } else { $PreflightChecklistPath }
+            remediation_notes = if ([string]::IsNullOrWhiteSpace($RemediationNotesPath)) { $null } else { $RemediationNotesPath }
+            candidate_composite_skill_draft = if ([string]::IsNullOrWhiteSpace($CandidateCompositeSkillDraftPath)) { $null } else { $CandidateCompositeSkillDraftPath }
+            threshold_policy_suggestion = if ([string]::IsNullOrWhiteSpace($ThresholdPolicySuggestionPath)) { $null } else { $ThresholdPolicySuggestionPath }
+        }
+    }
+}
+
+function New-VibeProposalLayerMarkdownLines {
+    param(
+        [Parameter(Mandatory)] [object]$ProposalLayerArtifact,
+        [AllowNull()] [object]$WarningCardsArtifact = $null,
+        [AllowNull()] [object]$PreflightChecklistArtifact = $null
+    )
+
+    $lines = @(
+        '# Proposal Layer',
+        '',
+        ('- mode: `{0}`' -f [string]$ProposalLayerArtifact.mode),
+        ('- review_status: `{0}`' -f [string]$ProposalLayerArtifact.review_status),
+        ('- evidence_level: `{0}`' -f [string]$ProposalLayerArtifact.summary.evidence_level),
+        ''
+    )
+    if ($WarningCardsArtifact) {
+        $lines += '## Warning Cards'
+        foreach ($card in @($WarningCardsArtifact.cards)) {
+            $lines += ('- {0}: {1}' -f [string]$card.card_id, [string]$card.summary)
+        }
+        $lines += ''
+    }
+    if ($PreflightChecklistArtifact) {
+        $lines += '## Preflight Checklist'
+        foreach ($check in @($PreflightChecklistArtifact.checks)) {
+            $lines += ('- {0}: {1}' -f [string]$check.check_id, [string]$check.why)
+        }
+        $lines += ''
+    }
+    return @($lines)
+}
+
+function New-VibeApplicationReadinessReport {
+    param(
+        [Parameter(Mandatory)] [string]$RunId,
+        [Parameter(Mandatory)] [string]$SessionRoot,
+        [AllowNull()] [object]$ProposalLayerArtifact,
+        [AllowNull()] [object]$WarningCardsArtifact,
+        [AllowNull()] [object]$PreflightChecklistArtifact,
+        [AllowNull()] [object]$RemediationNotesArtifact,
+        [AllowNull()] [object]$CandidateCompositeSkillDraftArtifact,
+        [AllowNull()] [object]$ThresholdPolicySuggestionArtifact,
+        [AllowEmptyString()] [string]$ProposalLayerPath = '',
+        [AllowEmptyString()] [string]$WarningCardsPath = '',
+        [AllowEmptyString()] [string]$PreflightChecklistPath = '',
+        [AllowEmptyString()] [string]$RemediationNotesPath = '',
+        [AllowEmptyString()] [string]$CandidateCompositeSkillDraftPath = '',
+        [AllowEmptyString()] [string]$ThresholdPolicySuggestionPath = ''
+    )
+
+    $laneACandidates = @()
+    foreach ($card in @($(if ($null -ne $WarningCardsArtifact -and (Test-VibeObjectHasProperty -InputObject $WarningCardsArtifact -PropertyName 'cards')) { $WarningCardsArtifact.cards } else { @() }))) {
+        $evidenceRefs = @($(if ($card.PSObject.Properties.Name -contains 'evidence_refs') { $card.evidence_refs } else { @() }))
+        $laneACandidates += [pscustomobject]@{
+            candidate_id = 'lane-a-warning-' + [string]$card.card_id
+            proposal_type = 'warning_card'
+            source_ref = if ([string]::IsNullOrWhiteSpace($WarningCardsPath)) { [string]$card.card_id } else { $WarningCardsPath + '#' + [string]$card.card_id }
+            recommended_surface = 'warning_surface'
+            activation_mode = 'advisory'
+            target_stage = 'session_start'
+            readiness = if (@($evidenceRefs).Count -eq 0) { 'needs_more_review' } else { 'ready_for_review' }
+            blocked_by = if (@($evidenceRefs).Count -eq 0) { @('missing_evidence_refs') } else { @() }
+            required_manual_actions = @('Confirm the warning text and trigger before enabling a shared warning surface.')
+            evidence_refs = @($evidenceRefs)
+            boundary_impact = 'none'
+            coupling_risk = 'low'
+            regression_risk = 'low'
+        }
+    }
+    foreach ($check in @($(if ($null -ne $PreflightChecklistArtifact -and (Test-VibeObjectHasProperty -InputObject $PreflightChecklistArtifact -PropertyName 'checks')) { $PreflightChecklistArtifact.checks } else { @() }))) {
+        $sourceSignal = [string](Get-VibeObservedMemberValue -InputObject $check -Name 'source_signal')
+        $laneACandidates += [pscustomobject]@{
+            candidate_id = 'lane-a-preflight-' + [string]$check.check_id
+            proposal_type = 'preflight_check'
+            source_ref = if ([string]::IsNullOrWhiteSpace($PreflightChecklistPath)) { [string]$check.check_id } else { $PreflightChecklistPath + '#' + [string]$check.check_id }
+            recommended_surface = 'preflight_rule_set'
+            activation_mode = if ([bool](Get-VibeObservedMemberValue -InputObject $check -Name 'required_before_next_run')) { 'guarded' } else { 'advisory' }
+            target_stage = 'before_execute'
+            readiness = if ([string]::IsNullOrWhiteSpace($sourceSignal)) { 'needs_more_review' } else { 'ready_for_review' }
+            blocked_by = if ([string]::IsNullOrWhiteSpace($sourceSignal)) { @('missing_source_signal') } else { @() }
+            required_manual_actions = @('Classify the check as soft-check or hard-check before reuse.')
+            evidence_refs = @($sourceSignal)
+            boundary_impact = 'none'
+            coupling_risk = 'low'
+            regression_risk = if ([bool](Get-VibeObservedMemberValue -InputObject $check -Name 'required_before_next_run')) { 'medium' } else { 'low' }
+        }
+    }
+    foreach ($note in @($(if ($null -ne $RemediationNotesArtifact -and (Test-VibeObjectHasProperty -InputObject $RemediationNotesArtifact -PropertyName 'notes')) { $RemediationNotesArtifact.notes } else { @() }))) {
+        $laneACandidates += [pscustomobject]@{
+            candidate_id = 'lane-a-remediation-' + [string]$note.note_id
+            proposal_type = 'remediation_note'
+            source_ref = if ([string]::IsNullOrWhiteSpace($RemediationNotesPath)) { [string]$note.note_id } else { $RemediationNotesPath + '#' + [string]$note.note_id }
+            recommended_surface = 'remediation_playbook'
+            activation_mode = 'review_assist'
+            target_stage = 'post_cleanup_review'
+            readiness = 'ready_for_review'
+            blocked_by = @()
+            required_manual_actions = @('Confirm the remediation text before promoting it into a reusable playbook entry.')
+            evidence_refs = @([string]$note.evidence_level)
+            boundary_impact = 'none'
+            coupling_risk = 'low'
+            regression_risk = 'low'
+        }
+    }
+
+    $laneBCandidates = @()
+    foreach ($draft in @($(if ($null -ne $CandidateCompositeSkillDraftArtifact -and (Test-VibeObjectHasProperty -InputObject $CandidateCompositeSkillDraftArtifact -PropertyName 'drafts')) { $CandidateCompositeSkillDraftArtifact.drafts } else { @() }))) {
+        $componentSkills = @($(if ($draft.PSObject.Properties.Name -contains 'component_skills') { $draft.component_skills } else { @() }))
+        $laneBCandidates += [pscustomobject]@{
+            candidate_id = 'lane-b-draft-' + [string]$draft.draft_id
+            proposal_type = 'composite_skill_draft'
+            source_ref = if ([string]::IsNullOrWhiteSpace($CandidateCompositeSkillDraftPath)) { [string]$draft.draft_id } else { $CandidateCompositeSkillDraftPath + '#' + [string]$draft.draft_id }
+            recommended_surface = 'shadow_candidate'
+            governance_path = 'lifecycle.shadow'
+            target_scope = 'composite_skill_bundle'
+            manual_review_required = $true
+            shadow_required = $true
+            shadow_plan_status = if (@($componentSkills).Count -eq 0) { 'missing_prerequisites' } else { 'ready_to_prepare' }
+            board_review_required = $false
+            replay_evidence_refs = @($ProposalLayerPath, $CandidateCompositeSkillDraftPath)
+            rollback_plan_required = $true
+            readiness = if (@($componentSkills).Count -eq 0) { 'blocked' } else { 'ready_for_shadow_review' }
+            blocked_by = if (@($componentSkills).Count -eq 0) { @('missing_component_skills') } else { @() }
+            required_manual_actions = @('Confirm module ownership and write scope before any shadow run.', 'Write an explicit rollback note before promoting beyond shadow.')
+            boundary_impact = 'module_boundary_review'
+            coupling_risk = if (@($componentSkills).Count -gt 2) { 'medium' } else { 'low' }
+            regression_risk = 'low'
+        }
+    }
+    foreach ($suggestion in @($(if ($null -ne $ThresholdPolicySuggestionArtifact -and (Test-VibeObjectHasProperty -InputObject $ThresholdPolicySuggestionArtifact -PropertyName 'suggestions')) { $ThresholdPolicySuggestionArtifact.suggestions } else { @() }))) {
+        $reviewPath = [string](Get-VibeObservedMemberValue -InputObject $suggestion -Name 'review_path')
+        $policyArea = [string](Get-VibeObservedMemberValue -InputObject $suggestion -Name 'policy_area')
+        $boundaryImpact = switch ($policyArea) {
+            'routing_confirm' { 'routing_policy' }
+            'routing_fallback' { 'routing_policy' }
+            'delivery_acceptance' { 'delivery_policy' }
+            default { 'policy_review' }
+        }
+        $laneBCandidates += [pscustomobject]@{
+            candidate_id = 'lane-b-policy-' + [string]$suggestion.suggestion_id
+            proposal_type = 'threshold_policy_suggestion'
+            source_ref = if ([string]::IsNullOrWhiteSpace($ThresholdPolicySuggestionPath)) { [string]$suggestion.suggestion_id } else { $ThresholdPolicySuggestionPath + '#' + [string]$suggestion.suggestion_id }
+            recommended_surface = 'policy_shadow_candidate'
+            governance_path = if ($boundaryImpact -eq 'delivery_policy') { 'policy.board_review' } else { 'policy.shadow' }
+            target_scope = if ([string]::IsNullOrWhiteSpace($policyArea)) { 'policy_scope_unknown' } else { $policyArea }
+            manual_review_required = $true
+            shadow_required = $true
+            shadow_plan_status = if ([string]::IsNullOrWhiteSpace($reviewPath)) { 'missing_prerequisites' } elseif ($boundaryImpact -eq 'delivery_policy') { 'needs_board_bundle' } else { 'ready_to_prepare' }
+            board_review_required = [bool]($boundaryImpact -eq 'delivery_policy')
+            replay_evidence_refs = @($ProposalLayerPath, $ThresholdPolicySuggestionPath)
+            rollback_plan_required = $true
+            readiness = if ([string]::IsNullOrWhiteSpace($reviewPath)) { 'blocked' } else { 'ready_for_shadow_review' }
+            blocked_by = if ([string]::IsNullOrWhiteSpace($reviewPath)) { @('missing_review_path') } else { @() }
+            required_manual_actions = @('Confirm the target policy scope before any shadow rollout.', 'Prepare rollback wording before applying any threshold change.')
+            boundary_impact = $boundaryImpact
+            coupling_risk = if ($policyArea -like 'routing_*') { 'medium' } else { 'low' }
+            regression_risk = 'medium'
+        }
+    }
+
+    $readyForReviewCount = @($laneACandidates | Where-Object { [string]$_.readiness -eq 'ready_for_review' }).Count
+    $readyForShadowReviewCount = @($laneBCandidates | Where-Object { [string]$_.readiness -eq 'ready_for_shadow_review' }).Count
+    $blockedCount = @($laneACandidates + $laneBCandidates | Where-Object { [string]$_.readiness -eq 'blocked' }).Count
+    $highRiskFindings = @($laneBCandidates | Where-Object { [string]$_.regression_risk -eq 'medium' -or [string]$_.coupling_risk -eq 'medium' } | ForEach-Object { [string]$_.candidate_id } | Select-Object -Unique)
+
+    return [pscustomobject]@{
+        gate_version = 1
+        run_id = $RunId
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        session_root = $SessionRoot
+        mode = 'report-only'
+        review_status = 'pending-review'
+        input_artifacts = [pscustomobject]@{
+            proposal_layer = if ([string]::IsNullOrWhiteSpace($ProposalLayerPath)) { $null } else { $ProposalLayerPath }
+            warning_cards = if ([string]::IsNullOrWhiteSpace($WarningCardsPath)) { $null } else { $WarningCardsPath }
+            preflight_checklist = if ([string]::IsNullOrWhiteSpace($PreflightChecklistPath)) { $null } else { $PreflightChecklistPath }
+            remediation_notes = if ([string]::IsNullOrWhiteSpace($RemediationNotesPath)) { $null } else { $RemediationNotesPath }
+            candidate_composite_skill_draft = if ([string]::IsNullOrWhiteSpace($CandidateCompositeSkillDraftPath)) { $null } else { $CandidateCompositeSkillDraftPath }
+            threshold_policy_suggestion = if ([string]::IsNullOrWhiteSpace($ThresholdPolicySuggestionPath)) { $null } else { $ThresholdPolicySuggestionPath }
+        }
+        lane_a_candidates = @($laneACandidates)
+        lane_b_candidates = @($laneBCandidates)
+        summary = [pscustomobject]@{
+            lane_a_candidate_count = @($laneACandidates).Count
+            lane_b_candidate_count = @($laneBCandidates).Count
+            ready_for_review_count = $readyForReviewCount
+            ready_for_shadow_review_count = $readyForShadowReviewCount
+            blocked_count = $blockedCount
+            highest_risk_findings = @($highRiskFindings)
+        }
+    }
+}
+
+function New-VibeApplicationReadinessMarkdownLines {
+    param([Parameter(Mandatory)] [object]$ApplicationReadinessReport)
+
+    $lines = @(
+        '# Application Readiness Report',
+        '',
+        ('- mode: `{0}`' -f [string]$ApplicationReadinessReport.mode),
+        ('- review_status: `{0}`' -f [string]$ApplicationReadinessReport.review_status),
+        ('- lane_a_candidate_count: `{0}`' -f [int]$ApplicationReadinessReport.summary.lane_a_candidate_count),
+        ('- lane_b_candidate_count: `{0}`' -f [int]$ApplicationReadinessReport.summary.lane_b_candidate_count),
+        ''
+    )
+    return @($lines)
 }
 
 function Get-VibeStageLineageExecutedStageOrder {
