@@ -23,11 +23,15 @@ All six public hosts now follow one shared, non-blocking MCP contract:
 - failure does not block the base install; failures are summarized only in the final report
 - the final report separates `installed locally`, `vibe host-ready`, `mcp native auto-provision attempted`, per-MCP `host-visible readiness`, `manual follow-up`, and `online-ready`
 
-Public Linux / macOS prerequisites:
+Public platform prerequisites:
 
+- Windows: install **PowerShell 7** first and make sure `pwsh` is available in `PATH`
+- Linux: install **PowerShell 7** first and make sure `pwsh` is available in `PATH`
+- macOS: install **PowerShell 7** and make sure `pwsh` is available in `PATH` if you plan to use the PowerShell command surface
 - the shell entrypoints are maintained against the macOS system Bash 3.2 baseline
 - `python3` / `python` must satisfy **Python 3.10+**
 - launching from `zsh` is not the actual problem; the real compatibility boundary is the resolved `bash` / `python3` version
+- the shell entrypoints remain supported, but the full governed runtime and verification surface also depends on PowerShell 7
 
 ## Supported Hosts and Default Paths
 

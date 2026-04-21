@@ -2,6 +2,16 @@
 
 This directory contains the public install, upgrade, and custom-integration docs.
 
+## Runtime Prerequisites
+
+Before using the documented install, check, upgrade, or one-shot commands:
+
+- Windows: install **PowerShell 7** and make sure `pwsh` is available in `PATH`
+- Linux: install **PowerShell 7** and make sure `pwsh` is available in `PATH`
+- macOS: install **PowerShell 7** and make sure `pwsh` is available in `PATH` if you plan to use the PowerShell command surface
+- all platforms: `python3` / `python` must satisfy **Python 3.10+** for the wrapper-driven install surface
+- shell entrypoints are still available on Linux / macOS, but the full governed runtime and verification surface also depends on PowerShell 7
+
 ## Quick Navigation
 
 ### Public Install Entry

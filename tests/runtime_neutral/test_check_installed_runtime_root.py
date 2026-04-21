@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import locale
 import shutil
 import subprocess
-import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 
@@ -26,22 +27,59 @@ def resolve_powershell() -> str | None:
     return None
 
 
+def _to_bash_path(path: Path) -> str:
+    resolved = str(path.resolve()).replace("\\", "/")
+    if len(resolved) >= 3 and resolved[1:3] == ':/':
+        return f"/mnt/{resolved[0].lower()}/{resolved[3:]}"
+    return resolved
+
+
+def _to_windows_path(path: Path) -> str:
+    converted = subprocess.run(
+        ["cygpath", "-w", str(path)],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return converted.stdout.strip()
+
+
+def _capture_text_kwargs() -> dict[str, object]:
+    encoding = "utf-8"
+    if not shutil.which("pwsh") and not shutil.which("pwsh.exe"):
+        encoding = locale.getpreferredencoding(False) or "utf-8"
+    return {
+        "capture_output": True,
+        "text": True,
+        "encoding": encoding,
+        "errors": "replace",
+    }
+
+
+def _repo_temp_dir() -> Path:
+    root = REPO_ROOT / ".pytest_tmp" / f"check-installed-runtime-root-{uuid.uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 def install_minimal_codex_runtime(target_root: Path) -> None:
     result = subprocess.run(
         [
             "bash",
-            str(REPO_ROOT / "install.sh"),
+            "install.sh",
             "--host",
             "codex",
             "--profile",
             "minimal",
             "--skip-runtime-freshness-gate",
             "--target-root",
-            str(target_root),
+            _to_bash_path(target_root),
         ],
         cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
+        **_capture_text_kwargs(),
     )
     if result.returncode != 0:
         raise AssertionError(f"install failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
@@ -49,27 +87,27 @@ def install_minimal_codex_runtime(target_root: Path) -> None:
 
 class CheckInstalledRuntimeRootTests(unittest.TestCase):
     def test_check_sh_accepts_installed_runtime_root(self) -> None:
-        with tempfile.TemporaryDirectory() as tempdir:
-            target_root = Path(tempdir) / ".codex"
-            install_minimal_codex_runtime(target_root)
-            installed_root = target_root / "skills" / "vibe"
+        temp_root = _repo_temp_dir()
+        self.addCleanup(lambda: shutil.rmtree(temp_root, ignore_errors=True))
+        target_root = temp_root / ".codex"
+        install_minimal_codex_runtime(target_root)
+        installed_root = target_root / "skills" / "vibe"
 
-            result = subprocess.run(
-                [
-                    "bash",
-                    str(REPO_ROOT / "check.sh"),
-                    "--host",
-                    "codex",
-                    "--profile",
-                    "minimal",
-                    "--skip-runtime-freshness-gate",
-                    "--target-root",
-                    str(installed_root),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-            )
+        result = subprocess.run(
+            [
+                "bash",
+                "check.sh",
+                "--host",
+                "codex",
+                "--profile",
+                "minimal",
+                "--skip-runtime-freshness-gate",
+                "--target-root",
+                _to_bash_path(installed_root),
+            ],
+            cwd=REPO_ROOT,
+            **_capture_text_kwargs(),
+        )
 
         self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}")
         self.assertNotIn("skills/vibe/skills/vibe", result.stdout)
@@ -79,31 +117,31 @@ class CheckInstalledRuntimeRootTests(unittest.TestCase):
         if powershell is None:
             self.skipTest("PowerShell executable not available in PATH")
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            target_root = Path(tempdir) / ".codex"
-            install_minimal_codex_runtime(target_root)
-            installed_root = target_root / "skills" / "vibe"
+        temp_root = _repo_temp_dir()
+        self.addCleanup(lambda: shutil.rmtree(temp_root, ignore_errors=True))
+        target_root = temp_root / ".codex"
+        install_minimal_codex_runtime(target_root)
+        installed_root = target_root / "skills" / "vibe"
 
-            result = subprocess.run(
-                [
-                    powershell,
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                    str(installed_root / "check.ps1"),
-                    "-HostId",
-                    "codex",
-                    "-Profile",
-                    "minimal",
-                    "-SkipRuntimeFreshnessGate",
-                    "-TargetRoot",
-                    str(installed_root),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-            )
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                _to_windows_path(installed_root / "check.ps1"),
+                "-HostId",
+                "codex",
+                "-Profile",
+                "minimal",
+                "-SkipRuntimeFreshnessGate",
+                "-TargetRoot",
+                _to_windows_path(installed_root),
+            ],
+            cwd=REPO_ROOT,
+            **_capture_text_kwargs(),
+        )
 
         self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}")
         normalized_stdout = result.stdout.replace("\\", "/")
@@ -114,52 +152,52 @@ class CheckInstalledRuntimeRootTests(unittest.TestCase):
         if powershell is None:
             self.skipTest("PowerShell executable not available in PATH")
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            target_root = Path(tempdir) / ".codex"
-            install_minimal_codex_runtime(target_root)
-            installed_root = target_root / "skills" / "vibe"
-            installed_governance = json.loads(
-                (installed_root / "config" / "version-governance.json").read_text(encoding="utf-8-sig")
+        temp_root = _repo_temp_dir()
+        self.addCleanup(lambda: shutil.rmtree(temp_root, ignore_errors=True))
+        target_root = temp_root / ".codex"
+        install_minimal_codex_runtime(target_root)
+        installed_root = target_root / "skills" / "vibe"
+        installed_governance = json.loads(
+            (installed_root / "config" / "version-governance.json").read_text(encoding="utf-8-sig")
+        )
+        release = installed_governance.get("release") or {}
+        receipt_path = installed_root / "outputs" / "runtime-freshness-receipt.json"
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text(
+            json.dumps(
+                {
+                    "gate_result": "PASS",
+                    "receipt_version": "abc",
+                    "target_root": str(target_root),
+                    "installed_root": str(installed_root),
+                    "release": {
+                        "version": str(release.get("version") or ""),
+                        "updated": str(release.get("updated") or ""),
+                    },
+                }
             )
-            release = installed_governance.get("release") or {}
-            receipt_path = installed_root / "outputs" / "runtime-freshness-receipt.json"
-            receipt_path.parent.mkdir(parents=True, exist_ok=True)
-            receipt_path.write_text(
-                json.dumps(
-                    {
-                        "gate_result": "PASS",
-                        "receipt_version": "abc",
-                        "target_root": str(target_root),
-                        "installed_root": str(installed_root),
-                        "release": {
-                            "version": str(release.get("version") or ""),
-                            "updated": str(release.get("updated") or ""),
-                        },
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
-            )
+            + "\n",
+            encoding="utf-8",
+        )
 
-            result = subprocess.run(
-                [
-                    powershell,
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                    str(installed_root / "check.ps1"),
-                    "-HostId",
-                    "codex",
-                    "-Profile",
-                    "minimal",
-                    "-TargetRoot",
-                    str(target_root),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-            )
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                _to_windows_path(installed_root / "check.ps1"),
+                "-HostId",
+                "codex",
+                "-Profile",
+                "minimal",
+                "-TargetRoot",
+                _to_windows_path(target_root),
+            ],
+            cwd=REPO_ROOT,
+            **_capture_text_kwargs(),
+        )
 
         self.assertNotEqual(0, result.returncode)
         self.assertIn("[FAIL] vibe runtime freshness receipt version", result.stdout)
@@ -170,54 +208,54 @@ class CheckInstalledRuntimeRootTests(unittest.TestCase):
         if powershell is None:
             self.skipTest("PowerShell executable not available in PATH")
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            target_root = Path(tempdir) / ".codex"
-            install_minimal_codex_runtime(target_root)
-            installed_root = target_root / "skills" / "vibe"
-            governance_path = installed_root / "config" / "version-governance.json"
-            installed_governance = json.loads(governance_path.read_text(encoding="utf-8-sig"))
-            installed_governance["runtime"]["installed_runtime"]["receipt_contract_version"] = "abc"
-            governance_path.write_text(json.dumps(installed_governance) + "\n", encoding="utf-8")
+        temp_root = _repo_temp_dir()
+        self.addCleanup(lambda: shutil.rmtree(temp_root, ignore_errors=True))
+        target_root = temp_root / ".codex"
+        install_minimal_codex_runtime(target_root)
+        installed_root = target_root / "skills" / "vibe"
+        governance_path = installed_root / "config" / "version-governance.json"
+        installed_governance = json.loads(governance_path.read_text(encoding="utf-8-sig"))
+        installed_governance["runtime"]["installed_runtime"]["receipt_contract_version"] = "abc"
+        governance_path.write_text(json.dumps(installed_governance) + "\n", encoding="utf-8")
 
-            release = installed_governance.get("release") or {}
-            receipt_path = installed_root / "outputs" / "runtime-freshness-receipt.json"
-            receipt_path.parent.mkdir(parents=True, exist_ok=True)
-            receipt_path.write_text(
-                json.dumps(
-                    {
-                        "gate_result": "PASS",
-                        "receipt_version": 2,
-                        "target_root": str(target_root),
-                        "installed_root": str(installed_root),
-                        "release": {
-                            "version": str(release.get("version") or ""),
-                            "updated": str(release.get("updated") or ""),
-                        },
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
+        release = installed_governance.get("release") or {}
+        receipt_path = installed_root / "outputs" / "runtime-freshness-receipt.json"
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text(
+            json.dumps(
+                {
+                    "gate_result": "PASS",
+                    "receipt_version": 2,
+                    "target_root": str(target_root),
+                    "installed_root": str(installed_root),
+                    "release": {
+                        "version": str(release.get("version") or ""),
+                        "updated": str(release.get("updated") or ""),
+                    },
+                }
             )
+            + "\n",
+            encoding="utf-8",
+        )
 
-            result = subprocess.run(
-                [
-                    powershell,
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                    str(installed_root / "check.ps1"),
-                    "-HostId",
-                    "codex",
-                    "-Profile",
-                    "minimal",
-                    "-TargetRoot",
-                    str(target_root),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-            )
+        result = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                _to_windows_path(installed_root / "check.ps1"),
+                "-HostId",
+                "codex",
+                "-Profile",
+                "minimal",
+                "-TargetRoot",
+                _to_windows_path(target_root),
+            ],
+            cwd=REPO_ROOT,
+            **_capture_text_kwargs(),
+        )
 
         self.assertNotEqual(0, result.returncode)
         self.assertIn("[FAIL] vibe runtime freshness receipt version", result.stdout)

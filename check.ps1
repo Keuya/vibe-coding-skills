@@ -287,6 +287,28 @@ function Normalize-ComparablePath {
   return [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\','/')).ToLowerInvariant()
 }
 
+function Resolve-LocalPathForCheck {
+  param([string]$Path)
+
+  if ([string]::IsNullOrWhiteSpace($Path)) {
+    return $Path
+  }
+
+  if ($Path -match '^/mnt/([a-zA-Z])/(.*)$') {
+    $drive = $Matches[1].ToUpperInvariant()
+    $rest = ($Matches[2] -replace '/', '\')
+    return "${drive}:\\$rest"
+  }
+
+  if ($Path -match '^/([a-zA-Z])/(.*)$') {
+    $drive = $Matches[1].ToUpperInvariant()
+    $rest = ($Matches[2] -replace '/', '\')
+    return "${drive}:\\$rest"
+  }
+
+  return $Path
+}
+
 function ConvertTo-IntCheckValue {
   param(
     [object]$Value,
@@ -750,7 +772,7 @@ function Invoke-AdapterSpecificChecks {
     if ($null -ne $hostClosure -and $hostClosure.PSObject.Properties.Name -contains 'specialist_wrapper' -and $null -ne $hostClosure.specialist_wrapper) {
       $launcherPath = if ($hostClosure.specialist_wrapper.PSObject.Properties.Name -contains 'launcher_path') { [string]$hostClosure.specialist_wrapper.launcher_path } else { '' }
       if (-not [string]::IsNullOrWhiteSpace($launcherPath)) {
-        Check-Path -Label "specialist wrapper launcher" -Path $launcherPath
+        Check-Path -Label "specialist wrapper launcher" -Path (Resolve-LocalPathForCheck -Path $launcherPath)
       }
     }
   }

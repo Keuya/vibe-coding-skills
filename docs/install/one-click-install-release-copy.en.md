@@ -7,6 +7,15 @@ It takes you to the four retained base install prompt docs.
 
 If this is your first install, the default path is simple:
 
+> Prerequisites:
+>
+> - Windows: install **PowerShell 7** first and make sure `pwsh` is available in `PATH`
+> - Linux: install **PowerShell 7** first and make sure `pwsh` is available in `PATH`
+> - macOS: install **PowerShell 7** and make sure `pwsh` is available in `PATH` if you plan to use the PowerShell command surface
+> - all platforms: `python3` / `python` must satisfy **Python 3.10+**
+>
+> The shell entrypoints remain available, but the full governed runtime and verification surface also depends on PowerShell 7.
+
 1. choose your host
 2. choose `install`
 3. if you are unsure, choose `Full Version + Customizable Governance`
