@@ -112,7 +112,7 @@ If your AI supports skills, VibeSkills works. 340+ skills spanning coding, resea
 > [!IMPORTANT]
 > ### 🎯 Core Vision
 >
-> VibeSkills evolves with the times — ensuring it stays genuinely useful while **dramatically lowering the barrier to cutting-edge vibecoding technology**, eliminating the cognitive anxiety and steep learning curve that comes with new AI tools.
+> Vibe-Skills aims to create a new form of skills that integrates harnessing capabilities, expert-level skills, and context management into a unified, general-purpose skills package—thereby reducing the cognitive burden associated with learning and utilizing AI.
 >
 > **Whether or not you have a programming background, you can directly harness the most advanced AI capabilities with minimal effort.**
 > Productivity gains from AI should be available to everyone.
